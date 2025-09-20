@@ -1,0 +1,266 @@
+import React, { useState } from 'react';
+import { Menu, X, Globe, Smartphone, Download, LogOut, ChevronDown, BookOpen, Target, MessageCircle, Trophy, BarChart3, PlusCircle, Brain, Award } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const Header = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [language, setLanguage] = useState('EN');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated, signOut } = useAuth();
+
+  const publicNavItems = [
+    { name: 'Home', href: '/', path: '/', icon: null, highlight: false },
+    { name: 'Why Us', href: '/why-us', path: '/why-us', icon: null, highlight: false },
+    { name: 'Pricing', href: '/pricing', path: '/pricing', icon: null, highlight: false },
+  ];
+
+  const protectedNavItems = [
+    { name: 'Dashboard', href: '/dashboard', path: '/dashboard', icon: BarChart3 },
+    { name: 'Study Now', href: '/study-now', path: '/study-now', icon: BookOpen, highlight: true },
+    { name: 'Tests', href: '/tests', path: '/tests', icon: Target },
+    { name: 'Certificates', href: '/certificates', path: '/certificates', icon: Award },
+  ];
+
+  const featureDropdownItems = [
+    { name: 'All Features', path: '/features', icon: BarChart3, description: 'Explore all platform features' },
+  ];
+
+  const navItems = isAuthenticated ? protectedNavItems : publicNavItems;
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'EN' ? 'हिं' : 'EN');
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setIsMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    signOut();
+    navigate('/');
+    setIsMenuOpen(false);
+  };
+
+  const handleDownloadApp = () => {
+    window.open('https://play.google.com/store/apps/details?id=com.jeenius.app', '_blank');
+  };
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200">
+      {/* Mobile App Promotion Bar */}
+      <div className="bg-gradient-to-r from-green-500 to-blue-600 text-white text-center py-2 text-sm">
+        <div className="flex items-center justify-center space-x-2">
+          <Smartphone className="w-4 h-4" />
+          <span>📱 Get the full JEEnius experience - Download our Android App now!</span>
+          <Button 
+            size="sm" 
+            variant="secondary" 
+            className="ml-2 bg-white text-green-600 text-xs py-1 px-2 h-6"
+            onClick={handleDownloadApp}
+          >
+            <Download className="w-3 h-3 mr-1" />
+            Download
+          </Button>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <div 
+            className="flex items-center space-x-3 cursor-pointer"
+            onClick={() => navigate('/')}
+          >
+          <img 
+            src="/logo.png" 
+            alt="JEEnius Logo" 
+            className="w-10 h-10 object-contain rounded-lg"
+          />
+            <div>
+              <span className="text-xl font-bold text-primary">JEEnius</span>
+              <div className="text-xs text-gray-500">AI Learning Platform</div>
+            </div>
+          </div>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
+            {navItems.map((item) => (
+              <button
+                key={item.name}
+                onClick={() => handleNavigation(item.path)}
+                className={`transition-colors duration-200 font-medium px-3 py-2 rounded-lg flex items-center space-x-2 ${
+                  location.pathname === item.path
+                    ? 'text-white bg-primary'
+                    : item.highlight 
+                    ? 'text-primary bg-primary/10 hover:bg-primary hover:text-white'
+                    : 'text-gray-700 hover:text-primary hover:bg-gray-100'
+                }`}
+              >
+                {item.icon && <item.icon className="w-4 h-4" />}
+                <span>{item.name}</span>
+              </button>
+            ))}
+          </nav>
+
+          {/* Language Toggle & Auth Buttons */}
+          <div className="hidden md:flex items-center space-x-4">
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors"
+            >
+              <Globe className="w-4 h-4" />
+              <span className="text-sm font-medium">{language}</span>
+            </button>
+            
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-3">
+                <Button 
+                  variant="outline"
+                  onClick={() => handleNavigation('/settings')}
+                  size="sm"
+                >
+                  Settings
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2"
+                  size="sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button 
+                  variant="outline"
+                  onClick={() => navigate('/login')}
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  className="bg-primary hover:bg-primary/90 text-white px-6"
+                  onClick={() => navigate('/signup')}
+                >
+                  Start Free Trial
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden p-2"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? (
+              <X className="w-6 h-6 text-gray-600" />
+            ) : (
+              <Menu className="w-6 h-6 text-gray-600" />
+            )}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden py-4 border-t border-gray-200">
+            <nav className="flex flex-col space-y-4">
+              {navItems.map((item) => (
+                <button
+                  key={item.name}
+                  onClick={() => handleNavigation(item.path)}
+                  className={`text-left font-medium transition-colors flex items-center space-x-2 p-2 rounded ${
+                    location.pathname === item.path
+                      ? 'text-white bg-primary'
+                      : 'text-gray-700 hover:text-primary hover:bg-gray-100'
+                  }`}
+                >
+                  {item.icon && <item.icon className="w-4 h-4" />}
+                  <span>{item.name}</span>
+                </button>
+              ))}
+              
+              {/* Mobile Feature Links */}
+              <div className="border-t pt-4 space-y-2">
+                <div className="text-sm font-medium text-gray-500 px-2">Features</div>
+                {featureDropdownItems.map((item) => (
+                  <button
+                    key={item.path}
+                    onClick={() => handleNavigation(item.path)}
+                    className="text-left flex items-center space-x-3 p-2 rounded hover:bg-gray-100 w-full"
+                  >
+                    <item.icon className="w-4 h-4 text-primary" />
+                    <div>
+                      <div className="font-medium text-sm">{item.name}</div>
+                      <div className="text-xs text-gray-500">{item.description}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              
+              <div className="pt-4 space-y-3 border-t">
+                {isAuthenticated ? (
+                  <>
+                    <Button 
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleNavigation('/settings')}
+                    >
+                      Settings
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={handleLogout}
+                      className="w-full flex items-center justify-center space-x-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleNavigation('/login')}
+                    >
+                      Sign In
+                    </Button>
+                    <Button 
+                      className="w-full bg-primary hover:bg-primary/90 text-white"
+                      onClick={() => handleNavigation('/signup')}
+                    >
+                      Start Free Trial
+                    </Button>
+                  </>
+                )}
+                <button
+                  onClick={toggleLanguage}
+                  className="flex items-center justify-center space-x-1 text-gray-600 w-full py-2"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span className="text-sm font-medium">{language}</span>
+                </button>
+              </div>
+            </nav>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+};
+
+// IMPORTANT: Make sure to export as default
+export default Header;

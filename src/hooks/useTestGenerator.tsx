@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface TestGenerationParams {
@@ -25,6 +24,14 @@ interface TestGenerationResult {
   error?: string;
 }
 
+// Mock subjects and chapters data
+const mockSubjects = ['Mathematics', 'Physics', 'Chemistry'];
+const mockChapters = {
+  'Mathematics': ['Calculus', 'Algebra', 'Trigonometry', 'Geometry', 'Statistics'],
+  'Physics': ['Mechanics', 'Thermodynamics', 'Electricity', 'Optics', 'Modern Physics'],
+  'Chemistry': ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry', 'Electrochemistry']
+};
+
 export const useTestGenerator = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,19 +46,53 @@ export const useTestGenerator = () => {
     setError(null);
 
     try {
-      const { data, error: functionError } = await supabase.functions.invoke('generate-test', {
-        body: params
-      });
+      // Simulate test generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      if (functionError) {
-        throw new Error(functionError.message);
+      const mockTestSeries = {
+        id: Date.now().toString(),
+        title: params.title,
+        description: params.description || '',
+        test_type: params.testType,
+        total_questions: params.questionCount,
+        duration_minutes: params.duration,
+        max_marks: params.questionCount * 4, // 4 marks per question
+        scheduled_date: new Date().toISOString(),
+        registration_deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        is_active: true,
+        created_at: new Date().toISOString()
+      };
+
+      // Save to localStorage
+      const existingTests = JSON.parse(localStorage.getItem('generatedTests') || '[]');
+      existingTests.push(mockTestSeries);
+      localStorage.setItem('generatedTests', JSON.stringify(existingTests));
+
+      const difficultyDistribution = {
+        easy: params.difficulty === 'easy' ? 100 : params.difficulty === 'mixed' ? 40 : 20,
+        medium: params.difficulty === 'medium' ? 100 : params.difficulty === 'mixed' ? 40 : 50,
+        hard: params.difficulty === 'hard' ? 100 : params.difficulty === 'mixed' ? 20 : 30
+      };
+
+      const topicDistribution: Record<string, number> = {};
+      if (params.subject && mockChapters[params.subject as keyof typeof mockChapters]) {
+        const chapters = mockChapters[params.subject as keyof typeof mockChapters];
+        const questionsPerChapter = Math.floor(params.questionCount / chapters.length);
+        chapters.forEach(chapter => {
+          topicDistribution[chapter] = questionsPerChapter;
+        });
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to generate test');
-      }
-
-      return data;
+      return {
+        success: true,
+        testSeries: mockTestSeries,
+        aiAnalysis: {
+          reasoning: `Generated a ${params.testType} test with ${params.questionCount} questions focusing on ${params.subject || 'multiple subjects'}. The test is designed to assess understanding at ${params.difficulty || 'mixed'} difficulty level.`,
+          difficultyDistribution,
+          topicDistribution,
+          selectedQuestions: params.questionCount
+        }
+      };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate test';
       setError(errorMessage);
@@ -62,79 +103,25 @@ export const useTestGenerator = () => {
   };
 
   const getAvailableSubjects = async () => {
-    try {
-      // Use secure function instead of direct table access
-      const { data, error } = await supabase.rpc('get_questions_for_test', {
-        question_count: 1000  // Large number to get all subjects
-      });
-
-      if (error) {
-        console.error('Error fetching subjects:', error);
-        return [];
-      }
-
-      // Get unique subjects
-      const uniqueSubjects = [...new Set((data || []).map((item: any) => item.subject))];
-      return uniqueSubjects.filter(Boolean);
-    } catch (err) {
-      console.error('Error fetching subjects:', err);
-      return [];
-    }
+    return mockSubjects;
   };
 
   const getAvailableChapters = async (subject?: string) => {
-    try {
-      // Use secure function instead of direct table access
-      const { data, error } = await supabase.rpc('get_questions_for_test', {
-        subject_filter: subject || null,
-        question_count: 1000  // Large number to get all topics
-      });
-
-      if (error) {
-        console.error('Error fetching chapters:', error);
-        return [];
-      }
-
-      // Filter by subject if provided
-      const filtered = subject 
-        ? (data || []).filter((item: any) => item.subject === subject)
-        : (data || []);
-
-      // Get unique topics with their subjects
-      const chapters = filtered.map((item: any) => ({
-        chapter: item.topic, // Using topic as chapter
-        subject: item.subject
-      }));
-
-      // Remove duplicates
-      return chapters.filter((item: any, index: number, self: any[]) =>
-        index === self.findIndex(t => t.chapter === item.chapter && t.subject === item.subject)
-      );
-    } catch (err) {
-      console.error('Error fetching chapters:', err);
+    if (!subject || !mockChapters[subject as keyof typeof mockChapters]) {
       return [];
     }
+
+    return mockChapters[subject as keyof typeof mockChapters].map(chapter => ({
+      chapter,
+      subject
+    }));
   };
 
   const getQuestionCount = async (subject?: string, chapter?: string) => {
-    try {
-      // Use secure function to get count
-      const { data, error } = await supabase.rpc('get_questions_for_test', {
-        subject_filter: subject || null,
-        topic_filter: chapter || null,
-        question_count: 10000  // Large number to get accurate count
-      });
-
-      if (error) {
-        console.error('Error getting question count:', error);
-        return 0;
-      }
-
-      return data?.length || 0;
-    } catch (err) {
-      console.error('Error getting question count:', err);
-      return 0;
-    }
+    // Return mock question counts
+    if (chapter) return 50;
+    if (subject) return 200;
+    return 500;
   };
 
   return {

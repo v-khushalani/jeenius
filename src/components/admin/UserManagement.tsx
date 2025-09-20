@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
 import { Search, Shield, ShieldCheck, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +17,39 @@ interface UserProfile {
   target_exam?: string;
   role?: 'user' | 'admin' | 'super_admin';
 }
+
+// Mock users data
+const mockUsers: UserProfile[] = [
+  {
+    id: '1',
+    user_id: 'user1',
+    email: 'student1@example.com',
+    full_name: 'Rahul Sharma',
+    joined_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    grade: 12,
+    target_exam: 'JEE Main',
+    role: 'user'
+  },
+  {
+    id: '2',
+    user_id: 'user2',
+    email: 'student2@example.com',
+    full_name: 'Priya Patel',
+    joined_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    grade: 11,
+    target_exam: 'JEE Advanced',
+    role: 'user'
+  },
+  {
+    id: '3',
+    user_id: 'admin1',
+    email: 'admin@example.com',
+    full_name: 'Admin User',
+    joined_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+    target_exam: 'N/A',
+    role: 'admin'
+  }
+];
 
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -40,35 +71,14 @@ export const UserManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch users with their roles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('joined_at', { ascending: false });
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        return;
-      }
-
-      // Fetch user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) {
-        console.error('Error fetching roles:', rolesError);
-      }
-
-      // Combine data
-      const rolesMap = new Map(rolesData?.map(r => [r.user_id, r.role]) || []);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      const usersWithRoles = profilesData?.map(user => ({
-        ...user,
-        role: rolesMap.get(user.user_id) || 'user'
-      })) || [];
-
-      setUsers(usersWithRoles);
+      // Load users from localStorage or use mock data
+      const storedUsers = localStorage.getItem('mockUserManagement');
+      const usersData = storedUsers ? JSON.parse(storedUsers) : mockUsers;
+      
+      setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -102,27 +112,15 @@ export const UserManagement: React.FC = () => {
 
   const updateUserRole = async (userId: string, newRole: 'user' | 'admin' | 'super_admin') => {
     try {
-      // First, delete existing role
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-
-      // Then insert new role if not 'user'
-      if (newRole !== 'user') {
-        const { error } = await supabase
-          .from('user_roles')
-          .insert({ user_id: userId, role: newRole });
-
-        if (error) {
-          throw error;
-        }
-      }
-
       // Update local state
-      setUsers(users.map(user => 
+      const updatedUsers = users.map(user => 
         user.user_id === userId ? { ...user, role: newRole } : user
-      ));
+      );
+      
+      setUsers(updatedUsers);
+      
+      // Save to localStorage
+      localStorage.setItem('mockUserManagement', JSON.stringify(updatedUsers));
 
       toast({
         title: "Success",

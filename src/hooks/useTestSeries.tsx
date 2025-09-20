@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface TestSeries {
@@ -38,6 +37,49 @@ export interface TestRegistration {
   registered_at: string;
 }
 
+// Mock data
+const mockTestSeries: TestSeries[] = [
+  {
+    id: '1',
+    title: 'JEE Main Mock Test 1',
+    description: 'Complete JEE Main practice test covering all subjects',
+    test_type: 'mock',
+    total_questions: 90,
+    duration_minutes: 180,
+    max_marks: 300,
+    scheduled_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    registration_deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+    is_active: true,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: '2',
+    title: 'Mathematics Chapter Test',
+    description: 'Calculus and Algebra practice test',
+    test_type: 'chapter',
+    total_questions: 30,
+    duration_minutes: 60,
+    max_marks: 120,
+    scheduled_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    registration_deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+    is_active: true,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: '3',
+    title: 'Physics Weekly Test',
+    description: 'Mechanics and Thermodynamics',
+    test_type: 'subject',
+    total_questions: 25,
+    duration_minutes: 45,
+    max_marks: 100,
+    scheduled_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+    registration_deadline: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+    is_active: true,
+    created_at: new Date().toISOString()
+  }
+];
+
 export const useTestSeries = () => {
   const { user, isAuthenticated } = useAuth();
   const [tests, setTests] = useState<TestSeries[]>([]);
@@ -57,14 +99,12 @@ export const useTestSeries = () => {
   const fetchTests = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('test_series')
-        .select('*')
-        .eq('is_active', true)
-        .order('scheduled_date', { ascending: true });
-
-      if (error) throw error;
-      setTests(data || []);
+      setError(null);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setTests(mockTestSeries);
     } catch (err) {
       console.error('Error fetching test series:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch tests');
@@ -77,14 +117,9 @@ export const useTestSeries = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('user_test_attempts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('submitted_at', { ascending: false });
-
-      if (error) throw error;
-      setUserAttempts(data || []);
+      const attempts = JSON.parse(localStorage.getItem('testAttempts') || '[]');
+      const userAttempts = attempts.filter((attempt: TestAttempt) => attempt.user_id === user.id);
+      setUserAttempts(userAttempts);
     } catch (err) {
       console.error('Error fetching user attempts:', err);
     }
@@ -94,13 +129,9 @@ export const useTestSeries = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('user_test_registrations')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      setUserRegistrations(data || []);
+      const registrations = JSON.parse(localStorage.getItem('testRegistrations') || '[]');
+      const userRegs = registrations.filter((reg: TestRegistration) => reg.user_id === user.id);
+      setUserRegistrations(userRegs);
     } catch (err) {
       console.error('Error fetching user registrations:', err);
     }
@@ -112,14 +143,26 @@ export const useTestSeries = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('user_test_registrations')
-        .insert({
-          user_id: user.id,
-          test_series_id: testId
-        });
+      const registrations = JSON.parse(localStorage.getItem('testRegistrations') || '[]');
+      
+      // Check if already registered
+      const existingReg = registrations.find((reg: TestRegistration) => 
+        reg.user_id === user.id && reg.test_series_id === testId
+      );
+      
+      if (existingReg) {
+        throw new Error('Already registered for this test');
+      }
 
-      if (error) throw error;
+      const newRegistration: TestRegistration = {
+        id: Date.now().toString(),
+        user_id: user.id,
+        test_series_id: testId,
+        registered_at: new Date().toISOString()
+      };
+
+      registrations.push(newRegistration);
+      localStorage.setItem('testRegistrations', JSON.stringify(registrations));
       
       // Refresh registrations
       await fetchUserRegistrations();

@@ -3,6 +3,7 @@ import { Menu, X, Globe, Smartphone, Download, LogOut, ChevronDown, BookOpen, Ta
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,10 +46,49 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
-  const handleLogout = () => {
-    signOut();
-    navigate('/');
-    setIsMenuOpen(false);
+  // Enhanced logout function with multiple approaches
+  const handleLogout = async () => {
+    try {
+      console.log('🚪 Attempting logout...');
+      
+      // Method 1: Try AuthContext signOut first
+      if (signOut && typeof signOut === 'function') {
+        await signOut();
+        console.log('✅ AuthContext signOut successful');
+      }
+      
+      // Method 2: Directly call Supabase signOut as backup
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('❌ Supabase signOut error:', error);
+      } else {
+        console.log('✅ Supabase signOut successful');
+      }
+      
+      // Method 3: Clear localStorage as additional cleanup
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('userGoals');
+      localStorage.clear(); // Clear all localStorage
+      
+      console.log('🧹 Cleared localStorage');
+      
+      // Force navigation and close menu
+      setIsMenuOpen(false);
+      navigate('/', { replace: true });
+      
+      // Force page reload as final fallback
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+      
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      
+      // Fallback: Force logout by clearing everything and redirecting
+      localStorage.clear();
+      setIsMenuOpen(false);
+      window.location.href = '/';
+    }
   };
 
   const handleDownloadApp = () => {
@@ -134,7 +174,7 @@ const Header = () => {
                 <Button 
                   variant="outline"
                   onClick={handleLogout}
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                   size="sm"
                 >
                   <LogOut className="w-4 h-4" />
@@ -223,7 +263,7 @@ const Header = () => {
                     <Button 
                       variant="outline"
                       onClick={handleLogout}
-                      className="w-full flex items-center justify-center space-x-2"
+                      className="w-full flex items-center justify-center space-x-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Logout</span>

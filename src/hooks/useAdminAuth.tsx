@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+// Removed Supabase - using mock admin check
 
 export const useAdminAuth = () => {
   const { user, isAuthenticated } = useAuth();
@@ -8,36 +8,16 @@ export const useAdminAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!isAuthenticated || !user) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Check if user has admin role in profiles table
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error checking admin status:', error);
-          setIsAdmin(false);
-        } else {
-          setIsAdmin(profile?.role === 'admin' || profile?.role === 'super_admin');
-        }
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      }
-
+    // Mock admin check - for demo, make any authenticated user an admin
+    if (!isAuthenticated || !user) {
+      setIsAdmin(false);
       setLoading(false);
-    };
+      return;
+    }
 
-    checkAdminStatus();
+    // For demo purposes, any authenticated user is considered admin
+    setIsAdmin(true);
+    setLoading(false);
   }, [user, isAuthenticated]);
 
   return { isAdmin, loading };

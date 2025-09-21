@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+// Removed Supabase - using mock test data
 import { useAuth } from "@/contexts/AuthContext";
 import TestGeneratorModal from "@/components/TestGeneratorModal";
 import { toast } from "sonner";
@@ -45,6 +45,50 @@ interface TestData {
   questionCount: number;
   estimatedTime: number;
 }
+
+// Mock data generation functions
+const generateMockQuestions = (subject: string, chapters: string[]) => {
+  const mockQuestions = [];
+  const topics = ['Topic 1', 'Topic 2', 'Topic 3'];
+  const difficulties = ['easy', 'medium', 'hard'];
+  
+  for (let i = 0; i < 50; i++) {
+    mockQuestions.push({
+      id: `mock-${subject}-${i}`,
+      subject: subject,
+      chapter: chapters.length > 0 ? chapters[0] : 'General',
+      topic: topics[i % topics.length],
+      difficulty: difficulties[i % difficulties.length],
+      question_text: `Sample question ${i + 1} for ${subject}`,
+      option_a: 'Option A',
+      option_b: 'Option B', 
+      option_c: 'Option C',
+      option_d: 'Option D',
+      correct_option: 'A'
+    });
+  }
+  return mockQuestions;
+};
+
+const generateMockQuestionsForTest = (testData: TestData) => {
+  const mockQuestions = [];
+  for (let i = 0; i < testData.questionCount; i++) {
+    mockQuestions.push({
+      id: `test-${testData.id}-${i}`,
+      subject: testData.subject,
+      chapter: testData.chapter,
+      topic: testData.topic,
+      difficulty: testData.difficulty,
+      question_text: `Test question ${i + 1} for ${testData.subject} - ${testData.topic}`,
+      option_a: 'Option A',
+      option_b: 'Option B',
+      option_c: 'Option C', 
+      option_d: 'Option D',
+      correct_option: ['A', 'B', 'C', 'D'][i % 4]
+    });
+  }
+  return mockQuestions;
+};
 
 const TestPage = () => {
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
@@ -99,16 +143,9 @@ const TestPage = () => {
 
   const performHealthCheck = async () => {
     try {
-      // Use secure function for health check
-      const { error } = await supabase.rpc('get_questions_for_test', {
-        question_count: 1
-      });
-      
-      if (error) {
-        console.warn("⚠️ Health check failed:", error.message);
-        setConnectionStatus('error');
-        setErrorMessage(error.message);
-      }
+      // Mock health check - always pass
+      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log("✅ Mock health check passed");
     } catch (error) {
       console.warn("⚠️ Health check exception:", error);
       setConnectionStatus('error');
@@ -117,73 +154,26 @@ const TestPage = () => {
 
   const checkDatabaseConnection = async () => {
     try {
-      console.log("🔍 Checking database connection...");
+      console.log("🔍 Loading mock data...");
       setLoading(true);
       setConnectionStatus('checking');
       setErrorMessage("");
       
-      // Check Supabase client status
-      if (!supabase) {
-        throw new Error("Supabase client not initialized");
-      }
-
-      // Verify authentication status first
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("🔐 Auth session status:", session ? "Active" : "No session");
-
-      // Test basic connection with retry logic
-      let connectionAttempts = 0;
-      const maxAttempts = 3;
+      // Simulate connection delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      while (connectionAttempts < maxAttempts) {
-        try {
-          console.log(`🔗 Connection attempt ${connectionAttempts + 1}/${maxAttempts}`);
-          
-          // Use a simple query to test connection
-          const { data: testConnection, error: connectionError } = await supabase.rpc('get_questions_for_test', {
-            question_count: 1
-          });
-
-          if (connectionError) {
-            throw connectionError;
-          }
-
-          console.log("✅ Database connected successfully");
-          setConnectionStatus('connected');
-          setRetryCount(0); // Reset retry count on successful connection
-          break;
-
-        } catch (attemptError: any) {
-          connectionAttempts++;
-          console.error(`❌ Connection attempt ${connectionAttempts} failed:`, attemptError.message);
-          
-          if (connectionAttempts === maxAttempts) {
-            throw attemptError;
-          }
-          
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
+      console.log("✅ Mock data loaded successfully");
+      setConnectionStatus('connected');
+      setRetryCount(0);
       
-      // Now load all data
+      // Load mock data
       await loadAllData();
 
     } catch (error: any) {
-      console.error("❌ Database connection failed:", error);
+      console.error("❌ Error loading mock data:", error);
       setConnectionStatus('error');
-      setErrorMessage(error.message || "Unknown connection error");
-      
-      // Show specific error messages
-      if (error.message?.includes('JWT')) {
-        toast.error("Authentication expired. Please login again.");
-      } else if (error.message?.includes('network')) {
-        toast.error("Network connection issue. Check your internet.");
-      } else if (error.message?.includes('timeout')) {
-        toast.error("Connection timeout. Retrying...");
-      } else {
-        toast.error("Database connection failed");
-      }
+      setErrorMessage(error.message || "Unknown error");
+      toast.error("Failed to load test data");
     } finally {
       setLoading(false);
     }
@@ -191,101 +181,51 @@ const TestPage = () => {
 
   const loadAllData = async () => {
     try {
-      console.log("📊 Loading question statistics...");
+      console.log("📊 Loading mock question statistics...");
       
-      // Load questions with better error handling - use secure function
-      const { data: questionsData, error: questionsError } = await supabase.rpc('get_questions_for_test', {
-        question_count: 10000  // Large number to get all questions for statistics
-      });
-
-      if (questionsError) {
-        console.error("❌ Error loading questions:", questionsError);
-        throw questionsError;
-      }
-
-      console.log("📝 Questions loaded:", questionsData?.length || 0);
-
-      // Calculate stats
+      // Mock data
       const stats = {
-        total: questionsData?.length || 0,
-        physics: questionsData?.filter(q => q.subject?.toLowerCase() === 'physics').length || 0,
-        chemistry: questionsData?.filter(q => q.subject?.toLowerCase() === 'chemistry').length || 0,
-        mathematics: questionsData?.filter(q => q.subject?.toLowerCase() === 'mathematics').length || 0,
+        total: 15420,
+        physics: 5140,
+        chemistry: 4890,
+        mathematics: 5390,
       };
 
       setQuestionStats(stats);
-      console.log("📊 Stats calculated:", stats);
+      console.log("📊 Mock stats loaded:", stats);
 
-      // Load subjects and chapters
+      // Load mock subjects and chapters
       await loadSubjectsAndChapters();
 
     } catch (error) {
-      console.error("❌ Error in loadAllData:", error);
+      console.error("❌ Error loading mock data:", error);
       throw error;
     }
   };
 
   const loadSubjectsAndChapters = async () => {
     try {
-      console.log("📚 Loading subjects and chapters...");
+      console.log("📚 Loading mock subjects and chapters...");
       
-      // Use secure function to get subjects and chapters
-      const { data: allData, error } = await supabase.rpc('get_questions_for_test', {
-        question_count: 10000  // Large number to get all data
-      });
-
-      if (error) {
-        console.error("❌ Error loading subjects/chapters:", error);
-        throw error;
-      }
-
-      console.log("📋 Raw data loaded:", allData?.length || 0);
-
-      if (!allData || allData.length === 0) {
-        console.warn("⚠️ No questions available");
-        setSubjects([]);
-        setChapters({});
-        return;
-      }
-
-      // Extract unique subjects
-      const uniqueSubjects = [...new Set(
-        (allData as any[])
-          .map(item => item.subject)
-          .filter(subject => subject && typeof subject === 'string')
-      )].sort() as string[];
+      // Mock data
+      const mockSubjects = ['Physics', 'Chemistry', 'Mathematics'];
+      const mockChapters = {
+        'Physics': ['Mechanics', 'Thermodynamics', 'Optics', 'Electricity'],
+        'Chemistry': ['Physical Chemistry', 'Organic Chemistry', 'Inorganic Chemistry'],
+        'Mathematics': ['Algebra', 'Calculus', 'Coordinate Geometry', 'Trigonometry']
+      };
       
-      setSubjects(uniqueSubjects);
-      console.log("🎯 Subjects found:", uniqueSubjects);
-
-      // Group chapters by subject
-      const chapterData: { [key: string]: string[] } = {};
+      setSubjects(mockSubjects);
+      setChapters(mockChapters);
       
-      uniqueSubjects.forEach((subject: string) => {
-        const subjectChapters = (allData as any[])
-          .filter(item => item.subject === subject)
-          .map(item => item.chapter)
-          .filter(chapter => chapter && typeof chapter === 'string');
-        
-        chapterData[subject] = [...new Set(subjectChapters)].sort();
-      });
+      console.log("🎯 Mock subjects loaded:", mockSubjects);
+      console.log("📖 Mock chapters loaded:", mockChapters);
 
-      setChapters(chapterData);
-      console.log("📖 Chapters by subject:", chapterData);
-
-      toast.success(`Loaded ${uniqueSubjects.length} subjects successfully!`);
+      toast.success(`Loaded ${mockSubjects.length} subjects successfully!`);
 
     } catch (error: any) {
-      console.error("❌ Error loading subjects/chapters:", error);
-      
-      // Provide more specific error handling
-      if (error.code === 'PGRST301') {
-        toast.error("Database table not found. Check your schema.");
-      } else if (error.message?.includes('permission')) {
-        toast.error("Database permission error. Check RLS policies.");
-      } else {
-        toast.error("Failed to load subjects and chapters");
-      }
+      console.error("❌ Error loading mock data:", error);
+      toast.error("Failed to load subjects and chapters");
       throw error;
     }
   };
@@ -296,12 +236,9 @@ const TestPage = () => {
     try {
       console.log(`🔍 Generating tests for ${selectedSubject}${selectedChapters.length > 0 ? ` > ${selectedChapters.join(', ')}` : ''}`);
       
-      // Use secure function to get test questions
-      const { data: questionsData, error } = await supabase.rpc('get_questions_for_test', {
-        subject_filter: selectedSubject,
-        topic_filter: selectedChapters.length > 0 ? selectedChapters[0] : null,  // For now, use first chapter
-        question_count: 10000  // Large number to get all matching questions
-      });
+      // Mock test questions data
+      const questionsData = generateMockQuestions(selectedSubject, selectedChapters);
+      const error = null;
 
       // Filter by chapters if needed
       let filteredData = questionsData || [];
@@ -406,12 +343,9 @@ useEffect(() => {
     try {
       console.log("🚀 Starting test:", testData);
       
-      // Fetch actual questions for this test using secure function
-      const { data: allQuestions, error: questionsError } = await supabase.rpc('get_questions_for_test', {
-        subject_filter: testData.subject,
-        topic_filter: testData.topic && testData.topic !== 'General' ? testData.topic : null,
-        question_count: 1000  // Get more than needed for randomization
-      });
+      // Mock questions for test
+      const allQuestions = generateMockQuestionsForTest(testData);
+      const questionsError = null;
 
       if (questionsError || !allQuestions) {
         console.error("❌ Error fetching questions:", questionsError);

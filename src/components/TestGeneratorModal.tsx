@@ -57,7 +57,7 @@ const TestGeneratorModal: React.FC<TestGeneratorModalProps> = ({
   const loadChapters = async () => {
     const chapterList = await getAvailableChapters();
     // Convert string[] to expected format
-    const formattedChapters = chapterList.map(chapter => ({ chapter, subject: '' }));
+    const formattedChapters = (chapterList as unknown as string[]).map(chapter => ({ chapter, subject: '' }));
     setChapters(formattedChapters);
   };
 

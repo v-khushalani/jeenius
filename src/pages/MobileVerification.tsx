@@ -7,7 +7,7 @@ import { Phone, Shield, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+// Removed Supabase - using mock verification
 
 const MobileVerification = () => {
   const [step, setStep] = useState<'mobile' | 'otp'>('mobile');
@@ -40,19 +40,8 @@ const MobileVerification = () => {
     setMobileError('');
 
     try {
-      // Check if mobile is already registered
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('mobile', mobile)
-        .neq('id', user?.id)
-        .single();
-
-      if (existingUser) {
-        setMobileError('This mobile number is already registered with another account');
-        setIsLoading(false);
-        return;
-      }
+      // Mock check - always allow for demo
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Send OTP via your SMS service (you'll need to implement this)
       // For now, we'll simulate it
@@ -92,19 +81,11 @@ const MobileVerification = () => {
       const response = await verifyOTP(mobile, otp);
       
       if (response.success) {
-        // Update user profile with verified mobile
-        const { error } = await supabase
-          .from('profiles')
-          .update({ 
-            mobile: mobile,
-            mobile_verified: true,
-            mobile_verified_at: new Date().toISOString()
-          })
-          .eq('id', user?.id);
-
-        if (error) {
-          throw error;
-        }
+        // Mock profile update - store in localStorage
+        const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+        userProfile.mobile = mobile;
+        userProfile.mobile_verified = true;
+        localStorage.setItem('userProfile', JSON.stringify(userProfile));
 
         toast({
           title: "Mobile Verified!",

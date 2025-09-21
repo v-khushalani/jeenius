@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+// Removed Supabase - using localStorage for goals
 import { ChevronRight, Calendar, Target, BookOpen, Stethoscope, Calculator, Atom, FlaskConical, User, Clock, Trophy, Star } from 'lucide-react';
 
 const GoalSelectionPage = () => {
@@ -97,44 +97,7 @@ const GoalSelectionPage = () => {
       // Save to localStorage
       localStorage.setItem('userGoals', JSON.stringify(userGoals));
       
-      if (user?.id) {
-        // Update/create profile in Supabase
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.email.split('@')[0],
-            target_exam: selectedGoal,
-            target_year: new Date().getFullYear(),
-            daily_goal: selectedSubjects.length * 10, // 10 questions per subject
-            grade: selectedGrade,
-            subjects: selectedSubjects,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-
-        if (profileError) {
-          console.error('Profile update error:', profileError);
-        }
-
-        // Initialize user stats
-        const { error: statsError } = await supabase
-          .from('user_stats')
-          .upsert({
-            user_id: user.id,
-            total_questions: 0,
-            correct_answers: 0,
-            total_points: 0,
-            streak: 0,
-            accuracy: 0,
-            created_at: new Date().toISOString()
-          });
-
-        if (statsError) {
-          console.error('Stats initialization error:', statsError);
-        }
-      }
+      // Goals are now stored only in localStorage
       
       // Navigate to dashboard
       navigate('/dashboard');

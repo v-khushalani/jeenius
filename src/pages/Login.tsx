@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRateLimit } from '@/hooks/use-rate-limit';
 import { securityLogger } from '@/lib/security-logger';
-import { supabase } from '@/integrations/supabase/client';
+// Removed Supabase - using mock Google auth
 
 const Login = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -47,23 +47,18 @@ const Login = () => {
     timestamp: Date.now() 
   });
   
-  // Simple redirect - let Supabase handle everything
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: window.location.origin, // Just redirect to home, AuthContext will handle routing
-    }
-  });
+  // Mock Google login - will use signInWithGoogle from AuthContext
+  const result = await signInWithGoogle();
   
-  if (error) {
+  if (result.error) {
     securityLogger.log('google_login_failure', { 
-      error: error.message,
+      error: result.error,
       timestamp: Date.now()
     });
     
     toast({
       title: "Login Failed",
-      description: error.message,
+      description: result.error,
       variant: "destructive"
     });
     

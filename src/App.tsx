@@ -19,7 +19,6 @@ import NotFound from "./pages/NotFound";
 
 // Auth pages - Only Login needed for Google auth
 import Login from "./pages/Login";
-import VerifyEmail from "./pages/VerifyEmail";
 
 // Feature pages
 import Pricing from "./pages/Pricing";
@@ -39,7 +38,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import AITutor from "@/components/AIDoubtSolver";
 import AdminDashboard from "@/pages/AdminDashboard";
-import OAuthCallback from "@/components/OAuthCallback";
 
 // Mobile pages
 import MobileDashboard from "./pages/mobile/MobileDashboard";
@@ -77,8 +75,6 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Navigate to="/login" replace />} /> {/* Redirect signup to login since we only use Google */}
             
-            {/* Email Verification (might be needed for some Google accounts) */}
-            <Route path="/verify-email" element={<VerifyEmail />} />
             
             {/* Public Doubt Solver */}
             <Route path="/doubts" element={<DoubtSolver />} />
@@ -214,8 +210,6 @@ const App = () => (
               } 
             />
             
-            {/* OAuth Callback Route (for Google auth) */}
-            <Route path="/auth/callback" element={<OAuthCallback />} />
             
             {/* Mobile Verification Route (if needed) */}
             <Route 

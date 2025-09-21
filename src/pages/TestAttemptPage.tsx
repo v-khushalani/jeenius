@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+// Removed Supabase - using mock test submission
 import { toast } from "sonner";
 
 interface Question {
@@ -190,24 +190,12 @@ const TestAttemptPage = () => {
       for (const question of testSession.questions) {
         const userAnswer = userAnswers[question.id];
         
-        // Use secure server-side answer checking
+        // Mock answer checking - compare with correct option
         let isCorrect = false;
-        let correctOption = '';
+        let correctOption = question.correct_option;
         
         if (userAnswer?.selectedOption) {
-          try {
-            const { data: answerCheck, error } = await supabase.rpc('check_question_answer', {
-              question_id: question.id,
-              user_answer: userAnswer.selectedOption
-            });
-            
-            if (answerCheck && answerCheck.length > 0) {
-              isCorrect = answerCheck[0].is_correct;
-              correctOption = answerCheck[0].correct_answer;
-            }
-          } catch (error) {
-            console.error('Error checking answer:', error);
-          }
+          isCorrect = userAnswer.selectedOption === question.correct_option;
         }
 
         if (userAnswer?.selectedOption) {
@@ -229,21 +217,15 @@ const TestAttemptPage = () => {
       const percentage =
         totalAnswered > 0 ? (correctAnswers / totalAnswered) * 100 : 0;
 
-      // Save individual question attempts to database
-      try {
-        for (const result of results) {
-          await supabase.from("question_attempts").insert({
-            user_id: user.id,
-            question_id: result.questionId,
-            selected_answer: result.selectedOption,
-            is_correct: result.isCorrect,
-            time_taken_seconds: result.timeSpent
-          });
-        }
-      } catch (error) {
-        console.error("Error saving test results:", error);
-        toast.error("Failed to save results, but test completed");
-      }
+      // Mock saving - store results to localStorage
+      const savedResults = JSON.parse(localStorage.getItem('testHistory') || '[]');
+      savedResults.push({
+        testId: testSession.id,
+        userId: user.id,
+        results: results,
+        completedAt: new Date().toISOString()
+      });
+      localStorage.setItem('testHistory', JSON.stringify(savedResults));
 
       // Clear localStorage
       localStorage.removeItem("currentTest");

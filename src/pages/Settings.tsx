@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { User, Bell, Shield, Palette, LogOut, Save, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+// Removed Supabase - using localStorage for settings
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -50,80 +50,28 @@ const Settings = () => {
     try {
       setLoading(true);
       
-      // Get current user
-      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+      // Mock user from localStorage
+      const mockUser = {
+        id: 'demo-user-id',
+        email: 'demo@example.com',
+        user_metadata: JSON.parse(localStorage.getItem('userProfile') || '{}')
+      };
       
-      if (authError || !currentUser) {
-        console.error('Authentication error:', authError);
-        toast({
-          title: "Authentication Error",
-          description: "Please login again",
-          variant: "destructive"
-        });
-        navigate('/login');
-        return;
-      }
+      setUser(mockUser);
 
-      setUser(currentUser);
-
-      // Get profile data from profiles table
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .single();
-
-      if (profileError) {
-        console.error('Profile loading error:', profileError);
-        
-        // Create profile if it doesn't exist
-        if (profileError.code === 'PGRST116') {
-          console.log('Profile not found, creating new profile...');
-          const newProfile = {
-            user_id: currentUser.id,
-            email: currentUser.email,
-            full_name: currentUser.email, // temporary
-            grade: 12,
-            target_exam: 'JEE'
-          };
-          
-          const { error: createError } = await supabase
-            .from('profiles')
-            .insert(newProfile);
-            
-          if (createError) {
-            console.error('Failed to create profile:', createError);
-          }
-        }
-        
-        // Use auth user metadata as fallback
-        const userMeta = currentUser.user_metadata || {};
-        setProfile({
-          firstName: userMeta.firstName || '',
-          lastName: userMeta.lastName || '',
-          email: currentUser.email || '',
-          phone: userMeta.phone || '',
-          city: userMeta.city || '',
-          state: userMeta.state || '',
-          grade: userMeta.grade || '12th',
-          target_exam: userMeta.target_exam || 'JEE'
-        });
-      } else {
-        // Split full_name back to firstName/lastName
-        const nameParts = profileData.full_name?.split(' ') || ['', ''];
-        setProfile({
-          firstName: nameParts[0] || '',
-          lastName: nameParts.slice(1).join(' ') || '',
-          email: profileData.email || currentUser.email || '',
-          phone: profileData.phone || '',
-          city: profileData.city || '',
-          state: profileData.state || '',
-          grade: profileData.grade === 11 ? '11th' : 
-                 profileData.grade === 12 ? '12th' : 
-                 '12th-pass',
-          target_exam: profileData.target_exam || 'JEE'
-        });
-      }
+      // Load profile from localStorage
+      const savedProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+      
+      setProfile({
+        firstName: savedProfile.firstName || 'Demo',
+        lastName: savedProfile.lastName || 'User',
+        email: savedProfile.email || 'demo@example.com',
+        phone: savedProfile.phone || '',
+        city: savedProfile.city || '',
+        state: savedProfile.state || '',
+        grade: savedProfile.grade || '12th',
+        target_exam: savedProfile.target_exam || 'JEE'
+      });
 
       console.log('✅ Profile loaded successfully');
       
@@ -175,33 +123,8 @@ const Settings = () => {
 
       console.log('💾 Saving profile data:', updateData);
 
-      // Update profile in database
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('user_id', user.id)
-        .select();
-
-      if (error) {
-        throw error;
-      }
-
-      // Also update auth user metadata
-      const { error: authUpdateError } = await supabase.auth.updateUser({
-        data: {
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          phone: profile.phone,
-          city: profile.city,
-          state: profile.state,
-          grade: profile.grade,
-          target_exam: profile.target_exam
-        }
-      });
-
-      if (authUpdateError) {
-        console.warn('Auth metadata update failed:', authUpdateError);
-      }
+      // Save profile to localStorage
+      localStorage.setItem('userProfile', JSON.stringify(profile));
 
       setSaveStatus('success');
       toast({

@@ -12,6 +12,7 @@ const GoalSelectionPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [daysRemaining, setDaysRemaining] = useState(0);
   const [examDate, setExamDate] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Calculate exam dates and days remaining
   const examDates = {
@@ -20,6 +21,56 @@ const GoalSelectionPage = () => {
     'NEET': '2025-05-05',
     'Foundation': null
   };
+
+  // Check if user has already set up their goals
+  useEffect(() => {
+    const checkUserProfile = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Check if user already has goals set up
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('target_exam, grade, subjects')
+          .eq('id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Profile check error:', error);
+          setIsLoading(false);
+          return;
+        }
+
+        // If user already has goals, redirect to dashboard
+        if (profile && profile.target_exam && profile.grade) {
+          console.log('✅ User already has goals set up, redirecting to dashboard');
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+
+        // Also check localStorage for goals
+        const savedGoals = localStorage.getItem('userGoals');
+        if (savedGoals) {
+          const goals = JSON.parse(savedGoals);
+          if (goals.goal && goals.grade) {
+            console.log('✅ Goals found in localStorage, redirecting to dashboard');
+            navigate('/dashboard', { replace: true });
+            return;
+          }
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error checking user profile:', error);
+        setIsLoading(false);
+      }
+    };
+
+    checkUserProfile();
+  }, [user, navigate]);
 
   useEffect(() => {
     if (selectedGoal && examDates[selectedGoal]) {
@@ -94,6 +145,7 @@ const GoalSelectionPage = () => {
               grade: parseInt(selectedGrade),
               subjects: selectedSubjects,
               daily_goal: selectedSubjects.length * 10, // 10 questions per subject
+              goals_set: true, // Mark that goals have been set
               updated_at: new Date().toISOString()
             })
             .eq('id', user.id);

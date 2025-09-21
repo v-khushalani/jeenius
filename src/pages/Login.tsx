@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRateLimit } from '@/hooks/use-rate-limit';
 import { securityLogger } from '@/lib/security-logger';
-// Removed Supabase - using mock Google auth
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -47,7 +47,7 @@ const Login = () => {
     timestamp: Date.now() 
   });
   
-  // Mock Google login - will use signInWithGoogle from AuthContext
+  // Use real Google OAuth with Supabase
   const result = await signInWithGoogle();
   
   if (result.error) {
@@ -67,6 +67,7 @@ const Login = () => {
     securityLogger.log('google_login_success', { 
       timestamp: Date.now()
     });
+    // User will be redirected automatically by Supabase
   }
   // Don't set loading to false on success - redirect will happen
 };

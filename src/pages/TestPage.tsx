@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// Removed Supabase - using mock test data
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from "@/contexts/AuthContext";
 import TestGeneratorModal from "@/components/TestGeneratorModal";
 import { toast } from "sonner";
@@ -45,50 +45,6 @@ interface TestData {
   questionCount: number;
   estimatedTime: number;
 }
-
-// Mock data generation functions
-const generateMockQuestions = (subject: string, chapters: string[]) => {
-  const mockQuestions = [];
-  const topics = ['Topic 1', 'Topic 2', 'Topic 3'];
-  const difficulties = ['easy', 'medium', 'hard'];
-  
-  for (let i = 0; i < 50; i++) {
-    mockQuestions.push({
-      id: `mock-${subject}-${i}`,
-      subject: subject,
-      chapter: chapters.length > 0 ? chapters[0] : 'General',
-      topic: topics[i % topics.length],
-      difficulty: difficulties[i % difficulties.length],
-      question_text: `Sample question ${i + 1} for ${subject}`,
-      option_a: 'Option A',
-      option_b: 'Option B', 
-      option_c: 'Option C',
-      option_d: 'Option D',
-      correct_option: 'A'
-    });
-  }
-  return mockQuestions;
-};
-
-const generateMockQuestionsForTest = (testData: TestData) => {
-  const mockQuestions = [];
-  for (let i = 0; i < testData.questionCount; i++) {
-    mockQuestions.push({
-      id: `test-${testData.id}-${i}`,
-      subject: testData.subject,
-      chapter: testData.chapter,
-      topic: testData.topic,
-      difficulty: testData.difficulty,
-      question_text: `Test question ${i + 1} for ${testData.subject} - ${testData.topic}`,
-      option_a: 'Option A',
-      option_b: 'Option B',
-      option_c: 'Option C', 
-      option_d: 'Option D',
-      correct_option: ['A', 'B', 'C', 'D'][i % 4]
-    });
-  }
-  return mockQuestions;
-};
 
 const TestPage = () => {
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
@@ -143,9 +99,16 @@ const TestPage = () => {
 
   const performHealthCheck = async () => {
     try {
-      // Mock health check - always pass
-      await new Promise(resolve => setTimeout(resolve, 100));
-      console.log("✅ Mock health check passed");
+      // Simple health check by fetching a question count
+      const { data, error } = await supabase
+        .from('questions')
+        .select('id', { count: 'exact', head: true });
+      
+      if (error) {
+        console.warn("⚠️ Health check failed:", error.message);
+        setConnectionStatus('error');
+        setErrorMessage(error.message);
+      }
     } catch (error) {
       console.warn("⚠️ Health check exception:", error);
       setConnectionStatus('error');
@@ -154,26 +117,32 @@ const TestPage = () => {
 
   const checkDatabaseConnection = async () => {
     try {
-      console.log("🔍 Loading mock data...");
+      console.log("🔍 Checking database connection...");
       setLoading(true);
       setConnectionStatus('checking');
       setErrorMessage("");
       
-      // Simulate connection delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Test connection by fetching question count
+      const { data, error } = await supabase
+        .from('questions')
+        .select('id', { count: 'exact', head: true });
       
-      console.log("✅ Mock data loaded successfully");
+      if (error) {
+        throw error;
+      }
+      
+      console.log("✅ Database connected successfully");
       setConnectionStatus('connected');
       setRetryCount(0);
       
-      // Load mock data
+      // Load all data
       await loadAllData();
 
     } catch (error: any) {
-      console.error("❌ Error loading mock data:", error);
+      console.error("❌ Database connection failed:", error);
       setConnectionStatus('error');
-      setErrorMessage(error.message || "Unknown error");
-      toast.error("Failed to load test data");
+      setErrorMessage(error.message || "Unknown connection error");
+      toast.error("Database connection failed: " + (error.message || "Please try again"));
     } finally {
       setLoading(false);
     }
@@ -181,50 +150,92 @@ const TestPage = () => {
 
   const loadAllData = async () => {
     try {
-      console.log("📊 Loading mock question statistics...");
+      console.log("📊 Loading question statistics...");
       
-      // Mock data
+      // Get question statistics from database
+      const { data: questionsData, error: questionsError } = await supabase
+        .from('questions')
+        .select('subject');
+
+      if (questionsError) {
+        console.error("❌ Error loading questions:", questionsError);
+        throw questionsError;
+      }
+
+      console.log("📝 Questions loaded:", questionsData?.length || 0);
+
+      // Calculate stats
       const stats = {
-        total: 15420,
-        physics: 5140,
-        chemistry: 4890,
-        mathematics: 5390,
+        total: questionsData?.length || 0,
+        physics: questionsData?.filter(q => q.subject?.toLowerCase() === 'physics').length || 0,
+        chemistry: questionsData?.filter(q => q.subject?.toLowerCase() === 'chemistry').length || 0,
+        mathematics: questionsData?.filter(q => q.subject?.toLowerCase() === 'mathematics').length || 0,
       };
 
       setQuestionStats(stats);
-      console.log("📊 Mock stats loaded:", stats);
+      console.log("📊 Stats calculated:", stats);
 
-      // Load mock subjects and chapters
+      // Load subjects and chapters
       await loadSubjectsAndChapters();
 
     } catch (error) {
-      console.error("❌ Error loading mock data:", error);
+      console.error("❌ Error in loadAllData:", error);
       throw error;
     }
   };
 
   const loadSubjectsAndChapters = async () => {
     try {
-      console.log("📚 Loading mock subjects and chapters...");
+      console.log("📚 Loading subjects and chapters...");
       
-      // Mock data
-      const mockSubjects = ['Physics', 'Chemistry', 'Mathematics'];
-      const mockChapters = {
-        'Physics': ['Mechanics', 'Thermodynamics', 'Optics', 'Electricity'],
-        'Chemistry': ['Physical Chemistry', 'Organic Chemistry', 'Inorganic Chemistry'],
-        'Mathematics': ['Algebra', 'Calculus', 'Coordinate Geometry', 'Trigonometry']
-      };
-      
-      setSubjects(mockSubjects);
-      setChapters(mockChapters);
-      
-      console.log("🎯 Mock subjects loaded:", mockSubjects);
-      console.log("📖 Mock chapters loaded:", mockChapters);
+      // Get unique subjects and chapters from database
+      const { data: allData, error } = await supabase
+        .from('questions')
+        .select('subject, chapter');
 
-      toast.success(`Loaded ${mockSubjects.length} subjects successfully!`);
+      if (error) {
+        console.error("❌ Error loading subjects/chapters:", error);
+        throw error;
+      }
+
+      console.log("📋 Raw data loaded:", allData?.length || 0);
+
+      if (!allData || allData.length === 0) {
+        console.warn("⚠️ No questions available");
+        setSubjects([]);
+        setChapters({});
+        return;
+      }
+
+      // Extract unique subjects
+      const uniqueSubjects = [...new Set(
+        allData
+          .map(item => item.subject)
+          .filter(subject => subject && typeof subject === 'string')
+      )].sort();
+      
+      setSubjects(uniqueSubjects);
+      console.log("🎯 Subjects found:", uniqueSubjects);
+
+      // Group chapters by subject
+      const chapterData: { [key: string]: string[] } = {};
+      
+      uniqueSubjects.forEach((subject: string) => {
+        const subjectChapters = allData
+          .filter(item => item.subject === subject)
+          .map(item => item.chapter)
+          .filter(chapter => chapter && typeof chapter === 'string');
+        
+        chapterData[subject] = [...new Set(subjectChapters)].sort();
+      });
+
+      setChapters(chapterData);
+      console.log("📖 Chapters by subject:", chapterData);
+
+      toast.success(`Loaded ${uniqueSubjects.length} subjects successfully!`);
 
     } catch (error: any) {
-      console.error("❌ Error loading mock data:", error);
+      console.error("❌ Error loading subjects/chapters:", error);
       toast.error("Failed to load subjects and chapters");
       throw error;
     }
@@ -236,9 +247,12 @@ const TestPage = () => {
     try {
       console.log(`🔍 Generating tests for ${selectedSubject}${selectedChapters.length > 0 ? ` > ${selectedChapters.join(', ')}` : ''}`);
       
-      // Mock test questions data
-      const questionsData = generateMockQuestions(selectedSubject, selectedChapters);
-      const error = null;
+      // Get test questions from database
+      const { data: questionsData, error } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('subject', selectedSubject)
+        .in('chapter', selectedChapters.length > 0 ? selectedChapters : chapters[selectedSubject] || []);
 
       // Filter by chapters if needed
       let filteredData = questionsData || [];
@@ -343,9 +357,14 @@ useEffect(() => {
     try {
       console.log("🚀 Starting test:", testData);
       
-      // Mock questions for test
-      const allQuestions = generateMockQuestionsForTest(testData);
-      const questionsError = null;
+      // Fetch actual questions for this test from database
+      const { data: allQuestions, error: questionsError } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('subject', testData.subject)
+        .eq('chapter', testData.chapter)
+        .eq('difficulty', testData.difficulty)
+        .limit(Math.min(testData.questionCount * 2, 100)); // Get extra for randomization
 
       if (questionsError || !allQuestions) {
         console.error("❌ Error fetching questions:", questionsError);

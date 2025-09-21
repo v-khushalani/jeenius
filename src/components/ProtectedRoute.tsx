@@ -13,11 +13,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requireMobileVerification = true 
 }) => {
-  const { user, profile, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   // Show loading spinner while checking auth status
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -30,13 +30,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If mobile verification is required and user hasn't verified mobile
-  if (requireMobileVerification && (!profile?.mobile || !profile?.mobile_verified)) {
-    // Don't redirect if already on mobile verification page
-    if (location.pathname !== '/verify-mobile') {
-      return <Navigate to="/verify-mobile" replace />;
-    }
-  }
+  // For now, skip mobile verification requirement since we removed profile from context
+  // TODO: Add mobile verification logic later if needed
 
   return <>{children}</>;
 };

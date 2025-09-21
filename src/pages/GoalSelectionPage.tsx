@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-// Removed Supabase - using localStorage for goals
+import { supabase } from '@/integrations/supabase/client';
 import { ChevronRight, Calendar, Target, BookOpen, Stethoscope, Calculator, Atom, FlaskConical, User, Clock, Trophy, Star } from 'lucide-react';
 
 const GoalSelectionPage = () => {
@@ -97,7 +97,26 @@ const GoalSelectionPage = () => {
       // Save to localStorage
       localStorage.setItem('userGoals', JSON.stringify(userGoals));
       
-      // Goals are now stored only in localStorage
+      if (user?.id) {
+        // Update profile in Supabase with goals
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            target_exam: selectedGoal,
+            grade: parseInt(selectedGrade),
+            subjects: selectedSubjects,
+            daily_goal: selectedSubjects.length * 10, // 10 questions per subject
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+
+        if (profileError) {
+          console.error('Profile update error:', profileError);
+          throw profileError;
+        }
+
+        console.log('✅ User goals saved to profile');
+      }
       
       // Navigate to dashboard
       navigate('/dashboard');

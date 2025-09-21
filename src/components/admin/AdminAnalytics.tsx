@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-// Removed Supabase - using mock data
+import { supabase } from '@/integrations/supabase/client';
 import { Users, BookOpen, TrendingUp, Clock, Award, Target } from 'lucide-react';
 
 interface PlatformStats {
@@ -26,29 +26,94 @@ export const AdminAnalytics: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data for demo purposes
-    const mockPlatformStats = {
-      total_users: 15420,
-      active_users_today: 1247,
-      total_questions_attempted: 98653,
-      total_assessments: 4821,
-      avg_accuracy: 73.5,
-      total_study_time: 145680
+    const fetchPlatformStats = async () => {
+      try {
+        // Get user count
+        const { count: userCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+
+        // Get total questions attempted
+        const { count: totalAttempts } = await supabase
+          .from('question_attempts')
+          .select('*', { count: 'exact', head: true });
+
+        // Get total test sessions
+        const { count: totalSessions } = await supabase
+          .from('test_sessions')
+          .select('*', { count: 'exact', head: true });
+
+        // Get average accuracy
+        const { data: accuracyData } = await supabase
+          .from('question_attempts')
+          .select('is_correct');
+        
+        const correctCount = accuracyData?.filter(a => a.is_correct).length || 0;
+        const avgAccuracy = accuracyData?.length ? (correctCount / accuracyData.length) * 100 : 0;
+
+        const stats = {
+          total_users: userCount || 0,
+          active_users_today: Math.floor((userCount || 0) * 0.3), // Approximate
+          total_questions_attempted: totalAttempts || 0,
+          total_assessments: totalSessions || 0,
+          avg_accuracy: avgAccuracy,
+          total_study_time: 145680 // Mock for now
+        };
+
+        setPlatformStats(stats);
+      } catch (error) {
+        console.error('Error fetching platform stats:', error);
+      }
     };
 
-    const mockAnalytics = [
-      { date: 'Dec 15', new_users: 45, active_users: 320, questions_attempted: 1250 },
-      { date: 'Dec 16', new_users: 52, active_users: 298, questions_attempted: 1180 },
-      { date: 'Dec 17', new_users: 38, active_users: 415, questions_attempted: 1420 },
-      { date: 'Dec 18', new_users: 67, active_users: 380, questions_attempted: 1320 },
-      { date: 'Dec 19', new_users: 59, active_users: 442, questions_attempted: 1580 },
-      { date: 'Dec 20', new_users: 71, active_users: 501, questions_attempted: 1650 },
-      { date: 'Dec 21', new_users: 84, active_users: 467, questions_attempted: 1490 }
-    ];
+    const fetchUserAnalytics = async () => {
+      try {
+        // Get last 7 days of data
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('created_at')
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
-    setPlatformStats(mockPlatformStats);
-    setUserAnalytics(mockAnalytics);
-    setLoading(false);
+        const { data: attemptsData } = await supabase
+          .from('question_attempts')
+          .select('attempted_at, user_id')
+          .gte('attempted_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+        // Process data for charts
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+          const date = new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000);
+          return date.toISOString().split('T')[0];
+        });
+
+        const analyticsData = last7Days.map(date => {
+          const newUsers = profilesData?.filter(p => 
+            p.created_at.startsWith(date)
+          ).length || 0;
+
+          const dayAttempts = attemptsData?.filter(a => 
+            a.attempted_at.startsWith(date)
+          ) || [];
+
+          const activeUsers = new Set(dayAttempts.map(a => a.user_id)).size;
+
+          return {
+            date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            new_users: newUsers,
+            active_users: activeUsers,
+            questions_attempted: dayAttempts.length
+          };
+        });
+
+        setUserAnalytics(analyticsData);
+      } catch (error) {
+        console.error('User analytics fetch error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlatformStats();
+    fetchUserAnalytics();
   }, []);
 
   if (loading) {

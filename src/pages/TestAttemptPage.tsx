@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-// Removed Supabase - using mock test submission
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Question {
@@ -190,7 +190,7 @@ const TestAttemptPage = () => {
       for (const question of testSession.questions) {
         const userAnswer = userAnswers[question.id];
         
-        // Mock answer checking - compare with correct option
+        // Check answer against correct option from database
         let isCorrect = false;
         let correctOption = question.correct_option;
         
@@ -217,15 +217,38 @@ const TestAttemptPage = () => {
       const percentage =
         totalAnswered > 0 ? (correctAnswers / totalAnswered) * 100 : 0;
 
-      // Mock saving - store results to localStorage
-      const savedResults = JSON.parse(localStorage.getItem('testHistory') || '[]');
-      savedResults.push({
-        testId: testSession.id,
-        userId: user.id,
-        results: results,
-        completedAt: new Date().toISOString()
-      });
-      localStorage.setItem('testHistory', JSON.stringify(savedResults));
+      // Save individual question attempts to database
+      try {
+        for (const result of results) {
+          if (result.selectedOption) { // Only save if user actually answered
+            await supabase.from("question_attempts").insert({
+              user_id: user.id,
+              question_id: result.questionId,
+              selected_answer: result.selectedOption,
+              is_correct: result.isCorrect,
+              time_taken_seconds: result.timeSpent,
+              attempted_at: new Date().toISOString()
+            });
+          }
+        }
+
+        // Save test session
+        await supabase.from("test_sessions").insert({
+          user_id: user.id,
+          title: testSession.title,
+          test_type: "practice", // or determine from testSession
+          total_questions: testSession.questions.length,
+          duration_minutes: testSession.duration,
+          score: correctAnswers,
+          percentage: percentage,
+          completed_at: new Date().toISOString()
+        });
+
+        console.log('✅ Test results saved to database');
+      } catch (error) {
+        console.error("Error saving test results:", error);
+        toast.error("Failed to save results to database, but test completed");
+      }
 
       // Clear localStorage
       localStorage.removeItem("currentTest");

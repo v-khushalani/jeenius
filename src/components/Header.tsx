@@ -46,18 +46,19 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
-  // Enhanced logout function with multiple approaches
+  // Simplified and more reliable logout function
   const handleLogout = async () => {
     try {
-      console.log('🚪 Attempting logout...');
+      console.log('🚪 Logging out...');
       
-      // Method 1: Try AuthContext signOut first
-      if (signOut && typeof signOut === 'function') {
-        await signOut();
-        console.log('✅ AuthContext signOut successful');
-      }
+      // Close mobile menu first
+      setIsMenuOpen(false);
       
-      // Method 2: Directly call Supabase signOut as backup
+      // Clear localStorage immediately
+      localStorage.clear();
+      console.log('🧹 Cleared localStorage');
+      
+      // Call Supabase signOut
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('❌ Supabase signOut error:', error);
@@ -65,29 +66,26 @@ const Header = () => {
         console.log('✅ Supabase signOut successful');
       }
       
-      // Method 3: Clear localStorage as additional cleanup
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('userGoals');
-      localStorage.clear(); // Clear all localStorage
+      // Call AuthContext signOut if available
+      if (signOut && typeof signOut === 'function') {
+        try {
+          await signOut();
+          console.log('✅ AuthContext signOut successful');
+        } catch (authError) {
+          console.error('AuthContext signOut error:', authError);
+        }
+      }
       
-      console.log('🧹 Cleared localStorage');
-      
-      // Force navigation and close menu
-      setIsMenuOpen(false);
-      navigate('/', { replace: true });
-      
-      // Force page reload as final fallback
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
+      // Redirect to home page with replace to prevent back navigation
+      window.location.replace('/');
       
     } catch (error) {
       console.error('❌ Logout error:', error);
       
-      // Fallback: Force logout by clearing everything and redirecting
+      // Fallback: Force logout anyway
       localStorage.clear();
       setIsMenuOpen(false);
-      window.location.href = '/';
+      window.location.replace('/');
     }
   };
 
@@ -193,7 +191,7 @@ const Header = () => {
                   className="bg-primary hover:bg-primary/90 text-white px-6"
                   onClick={() => navigate('/signup')}
                 >
-                  Start Free Trial
+                  Get Started Free
                 </Button>
               </>
             )}
@@ -282,7 +280,7 @@ const Header = () => {
                       className="w-full bg-primary hover:bg-primary/90 text-white"
                       onClick={() => handleNavigation('/signup')}
                     >
-                      Start Free Trial
+                      Get Started Free
                     </Button>
                   </>
                 )}

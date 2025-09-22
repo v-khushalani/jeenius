@@ -117,59 +117,67 @@ const GoalSelectionPage = () => {
   };
 
   const handleNext = () => {
-    if (currentStep < 2) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
+  if (currentStep < 2) {
+    setCurrentStep(currentStep + 1);
+  }
+};
 
-  const handleStartJourney = async () => {
-    // Auto-select all subjects for the chosen goal
-    const selectedSubjects = subjects[selectedGoal] || [];
+// Add this new handleStartJourney function:
+const handleStartJourney = async () => {
+  if (!selectedGoal || !selectedGrade) {
+    console.error('Missing required selections');
+    return;
+  }
+
+  // Auto-select all subjects for the chosen goal
+  const selectedSubjects = subjects[selectedGoal] || [];
+  
+  try {
+    // Save user goals to profile
+    const userGoals = {
+      grade: selectedGrade,
+      goal: selectedGoal,
+      subjects: selectedSubjects,
+      daysRemaining: daysRemaining,
+      createdAt: new Date().toISOString()
+    };
     
-    try {
-      // Save user goals to profile
-      const userGoals = {
-        grade: selectedGrade,
-        goal: selectedGoal,
-        subjects: selectedSubjects, // All subjects auto-selected
-        daysRemaining: daysRemaining,
-        createdAt: new Date().toISOString()
-      };
-      
-      // Save to localStorage
-      localStorage.setItem('userGoals', JSON.stringify(userGoals));
-      
-      if (user?.id) {
-        // Update profile in Supabase with goals
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            target_exam: selectedGoal,
-            grade: parseInt(selectedGrade),
-            subjects: selectedSubjects,
-            daily_goal: selectedSubjects.length * 10, // 10 questions per subject
-            goals_set: true, // Mark that goals have been set
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
+    // Save to localStorage first
+    localStorage.setItem('userGoals', JSON.stringify(userGoals));
+    console.log('✅ Goals saved to localStorage:', userGoals);
+    
+    if (user?.id) {
+      // Update profile in Supabase
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          target_exam: selectedGoal,
+          grade: parseInt(selectedGrade),
+          subjects: selectedSubjects,
+          daily_goal: selectedSubjects.length * 10,
+          goals_set: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
 
-        if (profileError) {
-          console.error('Profile update error:', profileError);
-          throw profileError;
-        }
-
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        // Don't throw error, still navigate
+      } else {
         console.log('✅ User goals saved to profile');
       }
-      
-      // Navigate to dashboard
-      navigate('/dashboard');
-      
-    } catch (error) {
-      console.error('Error saving goals:', error);
-      // Still navigate even if save fails
-      navigate('/dashboard');
     }
-  };
+    
+    // Navigate to dashboard
+    console.log('🚀 Navigating to dashboard...');
+    navigate('/dashboard');
+    
+  } catch (error) {
+    console.error('Error saving goals:', error);
+    // Still navigate even if save fails
+    navigate('/dashboard');
+  }
+};
 
   const canProceed = () => {
     if (currentStep === 1) return selectedGrade;

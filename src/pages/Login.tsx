@@ -82,15 +82,15 @@ const Login = () => {
     <div className="h-screen overflow-hidden bg-gradient-to-br from-primary/5 via-blue-50 to-purple-50">
       <Header />
       
-      {/* Main Content Container - Full height minus header */}
-      <div className="h-[calc(100vh-64px)] flex items-center justify-center p-4">
+      {/* Main Content Container - Perfect centering */}
+      <div className="h-[calc(100vh-128px)] flex items-center justify-center p-4 mt-16">
         <div className="w-full max-w-7xl mx-auto">
           
           {/* Mobile Layout (< lg) */}
-          <div className="lg:hidden">
-            <div className="max-w-sm mx-auto space-y-4">
+          <div className="lg:hidden flex flex-col justify-center min-h-full">
+            <div className="max-w-sm mx-auto space-y-3">
               {/* Mobile Header */}
-              <div className="text-center mb-6">
+              <div className="text-center mb-4">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
                   Transform Your <span className="text-primary">JEE Prep!</span>
                 </h1>
@@ -99,16 +99,16 @@ const Login = () => {
 
               {/* Mobile Login Card - Compact */}
               <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
-                <CardHeader className="text-center pb-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <img src="/logo.png" alt="JEEnius Logo" className="w-12 h-12" />
+                <CardHeader className="text-center pb-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <img src="/logo.png" alt="JEEnius Logo" className="w-10 h-10" />
                   </div>
                   <CardTitle className="text-lg font-bold text-gray-900">
                     Welcome to JEEnius!
                   </CardTitle>
                 </CardHeader>
 
-                <CardContent className="space-y-4 pb-4">
+                <CardContent className="space-y-3 pb-3">
                   {/* Google Login Button - Compact */}
                   <Button
                     type="button"
@@ -144,19 +144,19 @@ const Login = () => {
                   )}
 
                   {/* Mobile Stats - Compact */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2 mt-3">
                     {demoStats.map((stat, index) => (
-                      <div key={index} className="text-center bg-white/60 rounded-lg p-2">
-                        <div className={`w-6 h-6 mx-auto mb-1 ${stat.color}`}>
-                          <stat.icon className="w-6 h-6" />
+                      <div key={index} className="text-center bg-white/60 rounded-lg p-1.5">
+                        <div className={`w-5 h-5 mx-auto mb-1 ${stat.color}`}>
+                          <stat.icon className="w-5 h-5" />
                         </div>
-                        <div className="text-sm font-bold text-gray-900">{stat.value}</div>
+                        <div className="text-xs font-bold text-gray-900">{stat.value}</div>
                         <div className="text-xs text-gray-600 leading-tight">{stat.label}</div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="text-center text-xs text-gray-500">
+                  <div className="text-center text-xs text-gray-500 mt-2">
                     By continuing, you agree to our Terms & Privacy Policy
                   </div>
                 </CardContent>
@@ -165,8 +165,8 @@ const Login = () => {
           </div>
 
           {/* Tablet Layout (lg) */}
-          <div className="hidden lg:block xl:hidden">
-            <div className="grid lg:grid-cols-2 gap-6 items-center h-full">
+          <div className="hidden lg:block xl:hidden flex items-center justify-center min-h-full">
+            <div className="grid lg:grid-cols-2 gap-6 items-center w-full max-w-5xl">
               
               {/* Left Side - Login Form */}
               <div className="flex justify-center">
@@ -279,8 +279,8 @@ const Login = () => {
           </div>
 
           {/* Desktop Layout (xl+) */}
-          <div className="hidden xl:block">
-            <div className="grid xl:grid-cols-2 gap-8 items-center h-full">
+          <div className="hidden xl:block flex items-center justify-center min-h-full">
+            <div className="grid xl:grid-cols-2 gap-8 items-center w-full max-w-6xl">
               
               {/* Left Side - Login Form */}
               <div className="flex justify-center">

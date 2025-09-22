@@ -208,31 +208,6 @@ const Login = () => {
                       </div>
                     ))}
                   </div>
-
-                  {/* Features */}
-                  <div className="space-y-3">
-                    {features.map((feature, index) => (
-                      <div
-                        key={index}
-                        className="flex items-start space-x-3 bg-white/40 backdrop-blur-sm rounded-lg p-3"
-                      >
-                        <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <feature.icon className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{feature.title}</h3>
-                          <p className="text-gray-600 text-sm">{feature.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-2xl p-6 text-white">
-                    <h3 className="text-xl font-bold mb-2">🎉 Free Trial Available!</h3>
-                    <p className="text-white/90">
-                      Get <span className="font-bold">30 days completely FREE</span> when you join today.
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>

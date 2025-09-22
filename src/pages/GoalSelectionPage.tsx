@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronRight, Calendar, Target, BookOpen, Stethoscope, Calculator, Atom, FlaskConical, User, Clock, Trophy, Star } from 'lucide-react';
+import { ChevronRight, Calendar, BookOpen, Stethoscope, Calculator, Clock } from 'lucide-react';
 
 const GoalSelectionPage = () => {
   const navigate = useNavigate();
@@ -116,56 +116,58 @@ const GoalSelectionPage = () => {
     'Foundation': ['Mathematics', 'Science', 'English']
   };
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (currentStep < 2) {
       setCurrentStep(currentStep + 1);
-    } else {
-      // Auto-select all subjects for the chosen goal
-      const selectedSubjects = subjects[selectedGoal] || [];
+    }
+  };
+
+  const handleStartJourney = async () => {
+    // Auto-select all subjects for the chosen goal
+    const selectedSubjects = subjects[selectedGoal] || [];
+    
+    try {
+      // Save user goals to profile
+      const userGoals = {
+        grade: selectedGrade,
+        goal: selectedGoal,
+        subjects: selectedSubjects, // All subjects auto-selected
+        daysRemaining: daysRemaining,
+        createdAt: new Date().toISOString()
+      };
       
-      try {
-        // Save user goals to profile
-        const userGoals = {
-          grade: selectedGrade,
-          goal: selectedGoal,
-          subjects: selectedSubjects, // All subjects auto-selected
-          daysRemaining: daysRemaining,
-          createdAt: new Date().toISOString()
-        };
-        
-        // Save to localStorage
-        localStorage.setItem('userGoals', JSON.stringify(userGoals));
-        
-        if (user?.id) {
-          // Update profile in Supabase with goals
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({
-              target_exam: selectedGoal,
-              grade: parseInt(selectedGrade),
-              subjects: selectedSubjects,
-              daily_goal: selectedSubjects.length * 10, // 10 questions per subject
-              goals_set: true, // Mark that goals have been set
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', user.id);
+      // Save to localStorage
+      localStorage.setItem('userGoals', JSON.stringify(userGoals));
+      
+      if (user?.id) {
+        // Update profile in Supabase with goals
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            target_exam: selectedGoal,
+            grade: parseInt(selectedGrade),
+            subjects: selectedSubjects,
+            daily_goal: selectedSubjects.length * 10, // 10 questions per subject
+            goals_set: true, // Mark that goals have been set
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
 
-          if (profileError) {
-            console.error('Profile update error:', profileError);
-            throw profileError;
-          }
-
-          console.log('✅ User goals saved to profile');
+        if (profileError) {
+          console.error('Profile update error:', profileError);
+          throw profileError;
         }
-        
-        // Navigate to dashboard
-        navigate('/dashboard');
-        
-      } catch (error) {
-        console.error('Error saving goals:', error);
-        // Still navigate even if save fails
-        navigate('/dashboard');
+
+        console.log('✅ User goals saved to profile');
       }
+      
+      // Navigate to dashboard
+      navigate('/dashboard');
+      
+    } catch (error) {
+      console.error('Error saving goals:', error);
+      // Still navigate even if save fails
+      navigate('/dashboard');
     }
   };
 
@@ -197,7 +199,7 @@ const GoalSelectionPage = () => {
           </h1>
           <p className="text-xl text-gray-600">Let's customize your learning journey</p>
           
-          {/* Progress Bar - Only 2 steps now */}
+          {/* Progress Bar - Only 2 steps */}
           <div className="flex justify-center mt-8 mb-4">
             <div className="flex space-x-4">
               {[1, 2].map((step) => (
@@ -212,7 +214,7 @@ const GoalSelectionPage = () => {
             </div>
           </div>
           <div className="text-sm text-gray-500">
-            Step {currentStep}: {currentStep === 1 ? 'Select Grade' : 'Choose Goal'}
+            Step {currentStep}: {currentStep === 1 ? 'Select Grade' : 'Choose Course'}
           </div>
         </div>
 
@@ -244,17 +246,10 @@ const GoalSelectionPage = () => {
           </div>
         )}
 
-        {/* Step 2: Goal Selection */}
+        {/* Step 2: Course Selection */}
         {currentStep === 2 && selectedGrade && (
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8" style={{color: '#013062'}}>What's your target? 🎯</h2>
-            
-            {/* Show which subjects will be included */}
-            <div className="mb-8 p-4 rounded-lg bg-blue-50 border border-blue-200">
-              <p className="text-center text-gray-700">
-                📚 All relevant subjects will be automatically included in your study plan
-              </p>
-            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {goals[selectedGrade]?.map((goal) => (
@@ -276,18 +271,6 @@ const GoalSelectionPage = () => {
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold mb-2" style={{color: '#013062'}}>{goal.name}</h3>
                   
-                  {/* Show subjects for this goal */}
-                  <div className="mt-3 mb-4">
-                    <p className="text-sm text-gray-600 mb-2">Subjects included:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {subjects[goal.id]?.map((subject) => (
-                        <span key={subject} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                          {subject}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  
                   {examDates[goal.id] && selectedGoal === goal.id && (
                     <div className="mt-4 p-3 rounded-lg" style={{backgroundColor: '#f8fafc', border: '1px solid #e2e8f0'}}>
                       <div className="flex items-center justify-between text-sm">
@@ -308,67 +291,51 @@ const GoalSelectionPage = () => {
           </div>
         )}
 
-        {/* Next Button */}
+        {/* Navigation Buttons */}
         <div className="text-center mt-12">
-          <button
-            onClick={handleNext}
-            disabled={!canProceed()}
-            className={`px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 transform text-white shadow-lg hover:shadow-xl ${
-              canProceed()
-                ? 'hover:scale-105'
-                : 'opacity-50 cursor-not-allowed'
-            }`}
-            style={{
-              backgroundColor: canProceed() ? '#013062' : '#9ca3af'
-            }}
-          >
-            {currentStep === 2 ? 'Start My Journey! 🚀' : 'Continue'}
-            {currentStep < 2 && <ChevronRight className="inline ml-2 w-5 h-5" />}
-          </button>
-          
-          {currentStep > 1 && (
+          {currentStep === 1 && (
             <button
-              onClick={() => setCurrentStep(currentStep - 1)}
-              className="ml-4 px-6 py-4 rounded-full border border-gray-400 text-gray-600 hover:bg-gray-100 transition-all duration-300"
+              onClick={handleNext}
+              disabled={!canProceed()}
+              className={`px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 transform text-white shadow-lg hover:shadow-xl ${
+                canProceed()
+                  ? 'hover:scale-105'
+                  : 'opacity-50 cursor-not-allowed'
+              }`}
+              style={{
+                backgroundColor: canProceed() ? '#013062' : '#9ca3af'
+              }}
             >
-              Back
+              Continue
+              <ChevronRight className="inline ml-2 w-5 h-5" />
             </button>
           )}
-        </div>
 
-        {/* Selected Summary */}
-        {(selectedGrade || selectedGoal) && (
-          <div className="mt-12 p-6 rounded-2xl max-w-2xl mx-auto bg-white shadow-lg" style={{border: '1px solid #e5e7eb'}}>
-            <h3 className="font-bold mb-4 text-center" style={{color: '#013062'}}>Your Selection Summary</h3>
-            <div className="space-y-2 text-sm" style={{color: '#4b5563'}}>
-              {selectedGrade && <div>📚 Grade: Class {selectedGrade}</div>}
-              {selectedGoal && <div>🎯 Goal: {selectedGoal}</div>}
-              {selectedGoal && <div>📖 Subjects: {subjects[selectedGoal]?.join(', ')}</div>}
-              {daysRemaining > 0 && <div>⏰ Days Remaining: {daysRemaining} days</div>}
+          {currentStep === 2 && (
+            <div className="space-x-4">
+              <button
+                onClick={handleStartJourney}
+                disabled={!selectedGoal}
+                className={`px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 transform text-white shadow-lg hover:shadow-xl ${
+                  selectedGoal
+                    ? 'hover:scale-105'
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+                style={{
+                  backgroundColor: selectedGoal ? '#013062' : '#9ca3af'
+                }}
+              >
+                Start My Journey! 🚀
+              </button>
+              
+              <button
+                onClick={() => setCurrentStep(1)}
+                className="px-6 py-4 rounded-full border border-gray-400 text-gray-600 hover:bg-gray-100 transition-all duration-300"
+              >
+                Back
+              </button>
             </div>
-          </div>
-        )}
-
-        {/* Study Tips */}
-        <div className="mt-16 max-w-6xl mx-auto">
-          <h3 className="text-2xl font-bold text-center mb-8" style={{color: '#013062'}}>Why JEEnius is Different 🌟</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 bg-white rounded-2xl shadow-lg text-center">
-              <div className="text-4xl mb-4">🎯</div>
-              <h4 className="font-bold mb-2" style={{color: '#013062'}}>Adaptive Learning</h4>
-              <p className="text-gray-600 text-sm">Questions adjust to your level - never too easy, never too hard</p>
-            </div>
-            <div className="p-6 bg-white rounded-2xl shadow-lg text-center">
-              <div className="text-4xl mb-4">📊</div>
-              <h4 className="font-bold mb-2" style={{color: '#013062'}}>Smart Analytics</h4>
-              <p className="text-gray-600 text-sm">Detailed insights into your strengths and improvement areas</p>
-            </div>
-            <div className="p-6 bg-white rounded-2xl shadow-lg text-center">
-              <div className="text-4xl mb-4">🏆</div>
-              <h4 className="font-bold mb-2" style={{color: '#013062'}}>Gamified Progress</h4>
-              <p className="text-gray-600 text-sm">Level up, earn points, compete with peers - learning made fun!</p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

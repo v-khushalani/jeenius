@@ -161,24 +161,34 @@ const Header = () => {
             </button>
             
             {isAuthenticated ? (
-              <div className="flex items-center space-x-3">
-                <Button 
-                  variant="outline"
-                  onClick={() => handleNavigation('/settings')}
-                  size="sm"
-                >
-                  Settings
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={handleLogout}
-                  className="flex items-center space-x-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
-                  size="sm"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Logout</span>
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">
+                      U
+                    </div>
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => handleNavigation('/profile')}>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded-full bg-primary"></div>
+                      <span>Profile</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNavigation('/settings')}>
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <Button 
                 className="bg-primary hover:bg-primary/90 text-white px-6"
@@ -243,6 +253,13 @@ const Header = () => {
               <div className="pt-4 space-y-3 border-t">
                 {isAuthenticated ? (
                   <>
+                    <Button 
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleNavigation('/profile')}
+                    >
+                      Profile
+                    </Button>
                     <Button 
                       variant="outline"
                       className="w-full"

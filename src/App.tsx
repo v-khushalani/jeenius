@@ -15,6 +15,7 @@ import TestAttemptPage from "./pages/TestAttemptPage";
 import TestResultsPage from "./pages/TestResultsPage";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 // Auth pages - Only Login needed for Google auth
@@ -157,6 +158,16 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Profile */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

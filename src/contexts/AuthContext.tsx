@@ -69,14 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await ensureUserProfile(session.user);
           toast.success('Successfully signed in!');
           
-          // Redirect to goal selection if it's a new user
+          // Check if user needs goal selection
           const { data: profile } = await supabase
             .from('profiles')
-            .select('target_exam, grade')
+            .select('target_exam, grade, goals_set')
             .eq('id', session.user.id)
             .single();
           
-          if (!profile?.target_exam || !profile?.grade) {
+          // Redirect new users to goal selection, existing users to dashboard
+          if (!profile?.target_exam || !profile?.grade || !profile?.goals_set) {
             window.location.href = '/goal-selection';
           } else {
             window.location.href = '/dashboard';

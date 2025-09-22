@@ -28,7 +28,6 @@ const Header = () => {
     { name: 'Dashboard', href: '/dashboard', path: '/dashboard', icon: BarChart3 },
     { name: 'Study Now', href: '/study-now', path: '/study-now', icon: BookOpen, highlight: true },
     { name: 'Tests', href: '/tests', path: '/tests', icon: Target },
-    { name: 'Certificates', href: '/certificates', path: '/certificates', icon: Award },
   ];
 
   const featureDropdownItems = [

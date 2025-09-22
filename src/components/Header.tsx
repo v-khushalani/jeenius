@@ -180,20 +180,12 @@ const Header = () => {
                 </Button>
               </div>
             ) : (
-              <>
-                <Button 
-                  variant="outline"
-                  onClick={() => navigate('/login')}
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  className="bg-primary hover:bg-primary/90 text-white px-6"
-                  onClick={() => navigate('/signup')}
-                >
-                  Get Started Free
-                </Button>
-              </>
+              <Button 
+                className="bg-primary hover:bg-primary/90 text-white px-6"
+                onClick={() => navigate('/login')}
+              >
+                Sign In / Get Started
+              </Button>
             )}
           </div>
 
@@ -268,21 +260,12 @@ const Header = () => {
                     </Button>
                   </>
                 ) : (
-                  <>
-                    <Button 
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => handleNavigation('/login')}
-                    >
-                      Sign In
-                    </Button>
-                    <Button 
-                      className="w-full bg-primary hover:bg-primary/90 text-white"
-                      onClick={() => handleNavigation('/signup')}
-                    >
-                      Get Started Free
-                    </Button>
-                  </>
+                  <Button 
+                    className="w-full bg-primary hover:bg-primary/90 text-white"
+                    onClick={() => handleNavigation('/login')}
+                  >
+                    Sign In / Get Started
+                  </Button>
                 )}
                 <button
                   onClick={toggleLanguage}

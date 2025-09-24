@@ -72,6 +72,74 @@ const FeaturesPage = () => {
   ];
 
   return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <div className="pt-24 pb-12">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* Hero Section */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Powerful Features for <span className="text-primary">JEE Success</span>
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Discover all the tools and features that make JEEnius the best platform for JEE preparation
+            </p>
+          </div>
+
+          {/* Main Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+            {features.map((feature, index) => (
+              <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
+                <CardHeader>
+                  <div className={`w-12 h-12 ${feature.color} rounded-lg flex items-center justify-center mb-4`}>
+                    <feature.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-xl">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 mb-4">{feature.description}</p>
+                  <ul className="space-y-2">
+                    {feature.benefits.map((benefit, idx) => (
+                      <li key={idx} className="flex items-center text-sm text-gray-700">
+                        <div className="w-2 h-2 bg-primary rounded-full mr-2"></div>
+                        {benefit}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Premium Features */}
+          <div className="bg-gradient-to-r from-primary/10 to-blue-50 rounded-2xl p-8 mb-12">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Premium Features</h2>
+              <p className="text-gray-600">Unlock advanced features with our premium plans</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {premiumFeatures.map((feature, index) => (
+                <div key={index} className="bg-white rounded-lg p-6 shadow-sm">
+                  <feature.icon className="w-8 h-8 text-primary mb-3" />
+                  <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-600">{feature.description}</p>
+                </div>
+              ))}
+            </div>
+            
+            <div className="text-center">
+              <Button 
+                size="lg" 
+                onClick={() => navigate('/pricing')}
+                className="bg-primary hover:bg-primary/90"
+              >
+                View Pricing Plans
+              </Button>
+            </div>
+          </div>
+
           {/* Feature Comparison */}
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div className="bg-gray-50 px-6 py-4">

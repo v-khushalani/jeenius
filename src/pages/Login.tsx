@@ -86,30 +86,33 @@ const Login = () => {
       <div className="h-[calc(100vh-128px)] flex items-center justify-center p-4 mt-16">
         <div className="w-full max-w-7xl mx-auto">
           
-          {/* Mobile Layout (< lg) */}
-          <div className="lg:hidden flex flex-col justify-center min-h-full">
-            <div className="max-w-sm mx-auto space-y-3">
+          {/* Mobile Layout (< lg) - Simplified with no stats */}
+          <div className="lg:hidden flex flex-col justify-center items-center min-h-full">
+            <div className="max-w-sm mx-auto w-full">
               {/* Mobile Header */}
-              <div className="text-center mb-4">
+              <div className="text-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                  Transform Your <span className="text-primary">JEE Prep!</span>
+                  Welcome to <span className="text-primary">JEEnius!</span>
                 </h1>
-                <p className="text-sm text-gray-600">AI-powered learning platform</p>
+                <p className="text-sm text-gray-600">AI-powered learning platform for JEE</p>
               </div>
 
-              {/* Mobile Login Card - Compact */}
+              {/* Mobile Login Card - Clean and centered */}
               <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
-                <CardHeader className="text-center pb-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <img src="/logo.png" alt="JEEnius Logo" className="w-10 h-10" />
+                <CardHeader className="text-center pb-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <img src="/logo.png" alt="JEEnius Logo" className="w-12 h-12" />
                   </div>
                   <CardTitle className="text-lg font-bold text-gray-900">
-                    Welcome to JEEnius!
+                    Sign In to Continue
                   </CardTitle>
+                  <p className="text-sm text-gray-600">
+                    Get started with your JEE preparation
+                  </p>
                 </CardHeader>
 
-                <CardContent className="space-y-3 pb-3">
-                  {/* Google Login Button - Compact */}
+                <CardContent className="space-y-4 pb-6">
+                  {/* Google Login Button */}
                   <Button
                     type="button"
                     className="w-full h-12 bg-white border-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-semibold text-sm shadow-lg"
@@ -135,7 +138,7 @@ const Login = () => {
                   </Button>
 
                   {isRateLimited && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                       <div className="flex items-center space-x-2 text-red-800 text-xs">
                         <AlertCircle className="w-3 h-3" />
                         <span>Too many attempts. Please wait.</span>
@@ -143,20 +146,7 @@ const Login = () => {
                     </div>
                   )}
 
-                  {/* Mobile Stats - Compact */}
-                  <div className="grid grid-cols-3 gap-2 mt-3">
-                    {demoStats.map((stat, index) => (
-                      <div key={index} className="text-center bg-white/60 rounded-lg p-1.5">
-                        <div className={`w-5 h-5 mx-auto mb-1 ${stat.color}`}>
-                          <stat.icon className="w-5 h-5" />
-                        </div>
-                        <div className="text-xs font-bold text-gray-900">{stat.value}</div>
-                        <div className="text-xs text-gray-600 leading-tight">{stat.label}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="text-center text-xs text-gray-500 mt-2">
+                  <div className="text-center text-xs text-gray-500 mt-4">
                     By continuing, you agree to our Terms & Privacy Policy
                   </div>
                 </CardContent>

@@ -177,16 +177,19 @@ const GoalSelectionPage = () => {
       }
       
       // Wait a bit for the animation
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Navigate to dashboard
-      console.log('🚀 Navigating to dashboard...');
-      navigate('/dashboard', { replace: true });
-      
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Navigate to dashboard
+    console.log('🚀 Navigating to dashboard...');
+    navigate('/dashboard', { replace: true });
+    
     } catch (error) {
-      console.error('Error saving goals:', error);
-      // Still navigate even if save fails
-      navigate('/dashboard', { replace: true });
+    console.error('Error saving goals:', error);
+    // Still navigate even if save fails
+    navigate('/dashboard', { replace: true });
+    } finally {
+    // Always reset loading state
+    setIsStartingJourney(false);
     }
   };
 

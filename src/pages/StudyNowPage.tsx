@@ -1,498 +1,278 @@
-// Enhanced StudyNowPage.tsx - Complete Practice-Based Learning System with Daily Reset
-import Header from '@/components/Header';
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-
-// Import services
-import progressService from '@/services/progressService';
-import { formatTime, getLevelColor, getAccuracyColor, formatPercentage } from '@/utils/helpers';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
   Brain, Target, BookOpen, Clock, Calendar, CheckCircle, TrendingUp, Users, Zap,
   PlayCircle, Star, Search, Filter, ArrowRight, Flame, Trophy, AlertCircle, ChevronRight,
   Play, Pause, RotateCcw, Beaker, Calculator, Award, MessageSquare, ChevronDown,
   ChevronUp, FileText, PenTool, Lightbulb, TrendingDown, BarChart3, Lock, Unlock,
-  Cpu, Layers, Gauge, BarChart, Activity
+  Cpu, Layers, Gauge, BarChart, Activity, Crown, Medal, Rocket, Lightning, 
+  Heart, Shield, Swords, Sparkles, FireIcon, ThumbsUp, Eye
 } from "lucide-react";
 
-// COMPREHENSIVE QUESTION DATABASE with Adaptive Levels
-const QUESTION_DATABASE = {
-  "physics-mechanics": {
-    topicName: "Mechanics & Motion",
-    levels: {
-      1: [
-        {
-          id: "mech_l1_1",
-          question: "A body at rest will remain at rest unless acted upon by:",
-          options: ["External force", "Internal force", "Gravity only", "Friction only"],
-          correct: 0,
-          explanation: "Newton's First Law - A body continues in its state of rest or uniform motion unless acted upon by an external force.",
-          difficulty: "easy",
-          tags: ["newton-laws", "inertia"]
-        },
-        {
-          id: "mech_l1_2", 
-          question: "If a car is moving at constant velocity, the net force acting on it is:",
-          options: ["Maximum", "Minimum", "Zero", "Cannot be determined"],
-          correct: 2,
-          explanation: "At constant velocity, acceleration is zero, so net force = ma = 0.",
-          difficulty: "easy",
-          tags: ["newton-laws", "velocity"]
-        },
-        {
-          id: "mech_l1_3",
-          question: "The SI unit of force is:",
-          options: ["Joule", "Newton", "Watt", "Pascal"],
-          correct: 1,
-          explanation: "Newton (N) is the SI unit of force, named after Sir Isaac Newton.",
-          difficulty: "easy",
-          tags: ["units", "force"]
-        },
-        {
-          id: "mech_l1_4",
-          question: "Which quantity has both magnitude and direction?",
-          options: ["Speed", "Distance", "Velocity", "Time"],
-          correct: 2,
-          explanation: "Velocity is a vector quantity with both magnitude and direction.",
-          difficulty: "easy",
-          tags: ["vectors", "velocity"]
-        },
-        {
-          id: "mech_l1_5",
-          question: "Acceleration is the rate of change of:",
-          options: ["Distance", "Displacement", "Velocity", "Speed"],
-          correct: 2,
-          explanation: "Acceleration = change in velocity / time taken",
-          difficulty: "easy",
-          tags: ["acceleration", "velocity"]
-        }
-      ],
-      2: [
-        {
-          id: "mech_l2_1",
-          question: "A 2kg object experiences a net force of 10N. Its acceleration is:",
-          options: ["5 m/s²", "20 m/s²", "12 m/s²", "8 m/s²"],
-          correct: 0,
-          explanation: "Using F = ma, a = F/m = 10N/2kg = 5 m/s²",
-          difficulty: "medium",
-          tags: ["newton-laws", "calculation"]
-        },
-        {
-          id: "mech_l2_2",
-          question: "A ball is thrown upward. At the highest point, which statement is correct?",
-          options: ["Velocity is maximum", "Acceleration is zero", "Velocity is zero", "Both velocity and acceleration are zero"],
-          correct: 2,
-          explanation: "At the highest point, velocity becomes zero but acceleration due to gravity (9.8 m/s²) remains constant.",
-          difficulty: "medium",
-          tags: ["projectile", "gravity"]
-        },
-        {
-          id: "mech_l2_3",
-          question: "Two forces of 3N and 4N act perpendicular to each other. The resultant force is:",
-          options: ["7N", "1N", "5N", "12N"],
-          correct: 2,
-          explanation: "Using Pythagoras theorem: R = √(3² + 4²) = √(9 + 16) = √25 = 5N",
-          difficulty: "medium",
-          tags: ["vectors", "resultant"]
-        }
-      ],
-      3: [
-        {
-          id: "mech_l3_1",
-          question: "A block slides down a 30° incline with coefficient of friction 0.2. If g=10m/s², the acceleration is:",
-          options: ["3.27 m/s²", "6.73 m/s²", "5.0 m/s²", "8.66 m/s²"],
-          correct: 0,
-          explanation: "a = g(sin30° - μcos30°) = 10(0.5 - 0.2×0.866) = 10(0.5 - 0.173) = 3.27 m/s²",
-          difficulty: "hard",
-          tags: ["friction", "incline", "forces"]
-        },
-        {
-          id: "mech_l3_2",
-          question: "A satellite orbits Earth at height h. If Earth's radius is R, the orbital velocity is proportional to:",
-          options: ["√(R+h)", "√(1/(R+h))", "1/(R+h)", "(R+h)²"],
-          correct: 1,
-          explanation: "Orbital velocity v = √(GM/(R+h)), so v ∝ √(1/(R+h))",
-          difficulty: "hard",
-          tags: ["orbital", "gravity", "satellite"]
-        }
-      ]
-    }
-  },
-  "chemistry-atomic": {
-    topicName: "Atomic Structure",
-    levels: {
-      1: [
-        {
-          id: "atom_l1_1",
-          question: "The nucleus of an atom contains:",
-          options: ["Protons only", "Neutrons only", "Protons and neutrons", "Electrons and protons"],
-          correct: 2,
-          explanation: "The nucleus contains protons (positive charge) and neutrons (no charge). Electrons orbit around the nucleus.",
-          difficulty: "easy",
-          tags: ["nucleus", "particles"]
-        },
-        {
-          id: "atom_l1_2",
-          question: "The atomic number represents:",
-          options: ["Number of neutrons", "Number of protons", "Number of electrons", "Mass of atom"],
-          correct: 1,
-          explanation: "Atomic number = number of protons in the nucleus, which defines the element.",
-          difficulty: "easy",
-          tags: ["atomic-number", "protons"]
-        },
-        {
-          id: "atom_l1_3",
-          question: "Electrons are found in:",
-          options: ["Nucleus", "Orbitals around nucleus", "Center of atom", "Between protons"],
-          correct: 1,
-          explanation: "Electrons move in orbitals (energy levels) around the nucleus.",
-          difficulty: "easy",
-          tags: ["electrons", "orbitals"]
-        }
-      ],
-      2: [
-        {
-          id: "atom_l2_1",
-          question: "An atom with 6 protons and 8 neutrons has mass number:",
-          options: ["6", "8", "14", "2"],
-          correct: 2,
-          explanation: "Mass number = number of protons + number of neutrons = 6 + 8 = 14",
-          difficulty: "medium",
-          tags: ["mass-number", "calculation"]
-        },
-        {
-          id: "atom_l2_2",
-          question: "Isotopes are atoms with:",
-          options: ["Same protons, different electrons", "Same neutrons, different protons", "Same protons, different neutrons", "Same mass number"],
-          correct: 2,
-          explanation: "Isotopes have the same number of protons but different numbers of neutrons.",
-          difficulty: "medium",
-          tags: ["isotopes", "neutrons"]
-        }
-      ],
-      3: [
-        {
-          id: "atom_l3_1",
-          question: "The electronic configuration of Chromium (Z=24) is:",
-          options: ["[Ar] 3d⁴ 4s²", "[Ar] 3d⁵ 4s¹", "[Ar] 3d⁶", "[Ar] 4s² 3d⁴"],
-          correct: 1,
-          explanation: "Chromium has exceptional configuration [Ar] 3d⁵ 4s¹ for extra stability due to half-filled d orbitals.",
-          difficulty: "hard",
-          tags: ["electronic-configuration", "exceptions"]
-        }
-      ]
-    }
-  },
-  "math-algebra": {
-    topicName: "Algebra & Equations",
-    levels: {
-      1: [
-        {
-          id: "alg_l1_1",
-          question: "Solve: 2x + 5 = 13",
-          options: ["x = 4", "x = 6", "x = 9", "x = 3"],
-          correct: 0,
-          explanation: "2x + 5 = 13 → 2x = 13 - 5 → 2x = 8 → x = 4",
-          difficulty: "easy",
-          tags: ["linear-equations", "solve"]
-        },
-        {
-          id: "alg_l1_2",
-          question: "What is the value of 3x² when x = 2?",
-          options: ["6", "12", "9", "18"],
-          correct: 1,
-          explanation: "3x² = 3 × (2)² = 3 × 4 = 12",
-          difficulty: "easy",
-          tags: ["substitution", "power"]
-        }
-      ],
-      2: [
-        {
-          id: "alg_l2_1",
-          question: "Factorize: x² - 9",
-          options: ["(x-3)(x-3)", "(x+3)(x+3)", "(x+3)(x-3)", "Cannot be factorized"],
-          correct: 2,
-          explanation: "x² - 9 = x² - 3² = (x+3)(x-3) [Difference of squares formula]",
-          difficulty: "medium",
-          tags: ["factorization", "difference-of-squares"]
-        }
-      ],
-      3: [
-        {
-          id: "alg_l3_1",
-          question: "Find the discriminant of 2x² + 3x - 1 = 0",
-          options: ["17", "7", "11", "5"],
-          correct: 0,
-          explanation: "Discriminant = b² - 4ac = 3² - 4(2)(-1) = 9 + 8 = 17",
-          difficulty: "hard",
-          tags: ["quadratic", "discriminant"]
-        }
-      ]
-    }
-  }
-};
-
-const StudyNowPage = () => {
-  // Core State
+const EnhancedStudyNowPage = () => {
+  const [selectedTab, setSelectedTab] = useState("practice");
   const [selectedSubject, setSelectedSubject] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [todayGoal, setTodayGoal] = useState(30);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLeaderboardView, setSelectedLeaderboardView] = useState("overall");
+  const [showMyRank, setShowMyRank] = useState(false);
 
-  // Progress tracking state
-  const [progressData, setProgressData] = useState(null);
-  const [overallStats, setOverallStats] = useState(null);
-  const [strengthWeaknessData, setStrengthWeaknessData] = useState(null);
-  
-  // Practice session state
-  const [activeTopic, setActiveTopic] = useState(null);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [showResult, setShowResult] = useState(false);
-  const [sessionQuestions, setSessionQuestions] = useState([]);
-  const [questionStartTime, setQuestionStartTime] = useState(null);
-  const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0, timeSpent: 0 });
-  const [levelUpNotification, setLevelUpNotification] = useState(null);
+  // Mock data for demonstration
+  const userStats = {
+    dailyQuestions: 18,
+    dailyAccuracy: 0.85,
+    totalQuestions: 2847,
+    studyStreak: 15,
+    dailyTopicsStudied: 4,
+    currentRank: 42,
+    totalPoints: 15680,
+    motivationalMessage: "You're on fire! Keep up the momentum!"
+  };
 
-  // Initialize progress on mount
-  useEffect(() => {
-    const initializeProgress = () => {
-      const data = progressService.initializeProgress();
-      const stats = progressService.getOverallStats();
-      const swAnalysis = progressService.getStrengthWeaknessAnalysis();
-      
-      setProgressData(data);
-      setOverallStats(stats);
-      setStrengthWeaknessData(swAnalysis);
-    };
+  // Enhanced leaderboard data
+  const leaderboardData = {
+    overall: [
+      {
+        id: 1,
+        name: "Arjun Sharma",
+        avatar: "AS",
+        rank: 1,
+        points: 28450,
+        accuracy: 94,
+        streak: 45,
+        questionsToday: 67,
+        badge: "Champion",
+        badgeColor: "bg-yellow-500",
+        isOnline: true,
+        level: 15,
+        achievements: 28
+      },
+      {
+        id: 2,
+        name: "Priya Patel",
+        avatar: "PP",
+        rank: 2,
+        points: 27230,
+        accuracy: 91,
+        streak: 38,
+        questionsToday: 52,
+        badge: "Expert",
+        badgeColor: "bg-purple-500",
+        isOnline: true,
+        level: 14,
+        achievements: 25
+      },
+      {
+        id: 3,
+        name: "Rohan Kumar",
+        avatar: "RK",
+        rank: 3,
+        points: 25890,
+        accuracy: 89,
+        streak: 34,
+        questionsToday: 48,
+        badge: "Master",
+        badgeColor: "bg-blue-500",
+        isOnline: false,
+        level: 13,
+        achievements: 22
+      },
+      {
+        id: 4,
+        name: "Sneha Gupta",
+        avatar: "SG",
+        rank: 4,
+        points: 24560,
+        accuracy: 87,
+        streak: 29,
+        questionsToday: 41,
+        badge: "Scholar",
+        badgeColor: "bg-green-500",
+        isOnline: true,
+        level: 12,
+        achievements: 20
+      },
+      {
+        id: 5,
+        name: "Karan Singh",
+        avatar: "KS",
+        rank: 5,
+        points: 23120,
+        accuracy: 85,
+        streak: 25,
+        questionsToday: 36,
+        badge: "Achiever",
+        badgeColor: "bg-orange-500",
+        isOnline: true,
+        level: 11,
+        achievements: 18
+      },
+      // Current user (highlighted)
+      {
+        id: 42,
+        name: "You",
+        avatar: "YU",
+        rank: 42,
+        points: 15680,
+        accuracy: 85,
+        streak: 15,
+        questionsToday: 18,
+        badge: "Rising Star",
+        badgeColor: "bg-pink-500",
+        isOnline: true,
+        level: 8,
+        achievements: 12,
+        isCurrentUser: true
+      }
+    ],
+    weekly: [
+      {
+        id: 1,
+        name: "Priya Patel",
+        avatar: "PP",
+        rank: 1,
+        points: 3420,
+        accuracy: 92,
+        streak: 7,
+        questionsToday: 52,
+        badge: "Week Star",
+        badgeColor: "bg-cyan-500",
+        isOnline: true,
+        level: 14,
+        achievements: 3
+      }
+    ],
+    monthly: [
+      {
+        id: 1,
+        name: "Arjun Sharma",
+        avatar: "AS",
+        rank: 1,
+        points: 12890,
+        accuracy: 94,
+        streak: 28,
+        questionsToday: 67,
+        badge: "Month Hero",
+        badgeColor: "bg-red-500",
+        isOnline: true,
+        level: 15,
+        achievements: 8
+      }
+    ]
+  };
 
-    initializeProgress();
-  }, []);
-
-  // Start question timer
-  useEffect(() => {
-    if (currentQuestion) {
-      setQuestionStartTime(Date.now());
-    }
-  }, [currentQuestion]);
-
-  // Smart Topic Data with Adaptive Levels
   const topics = [
     {
       id: "physics-mechanics",
       subject: "Physics", 
       name: "Mechanics & Motion",
-      description: "Newton's laws, motion, forces",
+      description: "Newton's laws, motion, forces, energy",
       icon: Target,
       color: "bg-blue-500",
-      totalQuestions: getTotalQuestionsForTopic("physics-mechanics"),
-      currentLevel: getTopicLevel("physics-mechanics"),
-      accuracy: getTopicAccuracy("physics-mechanics"),
-      questionsAttempted: getTopicQuestionsAttempted("physics-mechanics"),
+      totalQuestions: 145,
+      currentLevel: 3,
+      accuracy: 0.87,
+      questionsAttempted: 98,
       isUnlocked: true,
-      nextLevelRequirement: getNextLevelRequirement("physics-mechanics")
+      difficulty: "Medium",
+      estimatedTime: "25 min",
+      popularity: 92,
+      lastStudied: "2 hours ago"
     },
     {
-      id: "chemistry-atomic",
+      id: "chemistry-organic",
       subject: "Chemistry",
-      name: "Atomic Structure", 
-      description: "Atoms, electrons, periodic table",
+      name: "Organic Chemistry", 
+      description: "Hydrocarbons, functional groups, reactions",
       icon: Beaker,
       color: "bg-green-500",
-      totalQuestions: getTotalQuestionsForTopic("chemistry-atomic"),
-      currentLevel: getTopicLevel("chemistry-atomic"),
-      accuracy: getTopicAccuracy("chemistry-atomic"),
-      questionsAttempted: getTopicQuestionsAttempted("chemistry-atomic"),
+      totalQuestions: 132,
+      currentLevel: 2,
+      accuracy: 0.72,
+      questionsAttempted: 67,
       isUnlocked: true,
-      nextLevelRequirement: getNextLevelRequirement("chemistry-atomic")
+      difficulty: "Hard",
+      estimatedTime: "35 min",
+      popularity: 85,
+      lastStudied: "1 day ago"
+    },
+    {
+      id: "math-calculus",
+      subject: "Mathematics",
+      name: "Differential Calculus",
+      description: "Limits, derivatives, applications", 
+      icon: Calculator,
+      color: "bg-purple-500",
+      totalQuestions: 187,
+      currentLevel: 4,
+      accuracy: 0.91,
+      questionsAttempted: 156,
+      isUnlocked: true,
+      difficulty: "Hard",
+      estimatedTime: "30 min",
+      popularity: 89,
+      lastStudied: "30 min ago"
+    },
+    {
+      id: "physics-waves",
+      subject: "Physics",
+      name: "Waves & Oscillations",
+      description: "SHM, wave properties, sound, light",
+      icon: Activity,
+      color: "bg-indigo-500",
+      totalQuestions: 98,
+      currentLevel: 1,
+      accuracy: 0.64,
+      questionsAttempted: 23,
+      isUnlocked: true,
+      difficulty: "Medium",
+      estimatedTime: "20 min",
+      popularity: 76,
+      lastStudied: "3 days ago"
+    },
+    {
+      id: "chemistry-inorganic",
+      subject: "Chemistry",
+      name: "Inorganic Chemistry",
+      description: "Periodic table, coordination, metallurgy",
+      icon: Shield,
+      color: "bg-teal-500",
+      totalQuestions: 156,
+      currentLevel: 2,
+      accuracy: 0.78,
+      questionsAttempted: 89,
+      isUnlocked: true,
+      difficulty: "Medium",
+      estimatedTime: "28 min",
+      popularity: 81,
+      lastStudied: "5 hours ago"
     },
     {
       id: "math-algebra",
       subject: "Mathematics",
-      name: "Algebra & Equations",
-      description: "Linear, quadratic equations, factorization", 
-      icon: Calculator,
-      color: "bg-purple-500",
-      totalQuestions: getTotalQuestionsForTopic("math-algebra"),
-      currentLevel: getTopicLevel("math-algebra"),
-      accuracy: getTopicAccuracy("math-algebra"),
-      questionsAttempted: getTopicQuestionsAttempted("math-algebra"),
-      isUnlocked: true,
-      nextLevelRequirement: getNextLevelRequirement("math-algebra")
+      name: "Complex Numbers",
+      description: "Complex plane, operations, applications",
+      icon: Layers,
+      color: "bg-orange-500",
+      totalQuestions: 78,
+      currentLevel: 1,
+      accuracy: 0.58,
+      questionsAttempted: 34,
+      isUnlocked: false,
+      difficulty: "Hard",
+      estimatedTime: "40 min",
+      popularity: 69,
+      lastStudied: "Never"
     }
   ];
 
-  // Helper Functions
-  function getTotalQuestionsForTopic(topicId: string): number {
-    const topicData = (QUESTION_DATABASE as any)[topicId];
-    if (!topicData) return 0;
-    const levels = Object.values(topicData.levels) as Array<any[]>;
-    return levels.reduce((total, level) => total + (level?.length ?? 0), 0);
-  }
-
-  function getTopicLevel(topicId) {
-    const stats = progressService.getTopicStats(topicId);
-    return stats?.level || 1;
-  }
-
-  function getTopicAccuracy(topicId) {
-    const stats = progressService.getTopicStats(topicId);
-    return stats?.accuracy || 0;
-  }
-
-  function getTopicQuestionsAttempted(topicId) {
-    const stats = progressService.getTopicStats(topicId);
-    return stats?.questionsAttempted || 0;
-  }
-
-  function getNextLevelRequirement(topicId) {
-    const currentLevel = getTopicLevel(topicId);
-    const stats = progressService.getTopicStats(topicId);
-    const levelReq = progressService.LEVEL_REQUIREMENTS[currentLevel];
-    
-    if (!levelReq || currentLevel >= 3) return null;
-    
-    const questionsNeeded = Math.max(0, levelReq.questionsNeeded - (stats?.questionsAttempted || 0));
-    const accuracyNeeded = levelReq.accuracyRequired;
-    
-    return {
-      questionsNeeded,
-      accuracyNeeded,
-      currentAccuracy: stats?.accuracy || 0
-    };
-  }
-
-  // Smart Question Generation
-  function generateAdaptiveQuestions(topicId, count = 10) {
-    const topicData = QUESTION_DATABASE[topicId];
-    if (!topicData) return [];
-
-    const currentLevel = getTopicLevel(topicId);
-    const accuracy = getTopicAccuracy(topicId);
-    const questionsAttempted = getTopicQuestionsAttempted(topicId);
-    
-    let questions = [];
-    
-    // Adaptive Logic:
-    if (currentLevel === 1) {
-      questions = [...topicData.levels[1]];
-    } else if (currentLevel === 2) {
-      if (accuracy >= 0.8 && questionsAttempted >= 10) {
-        questions = [
-          ...topicData.levels[2],
-          ...(topicData.levels[3] || []).slice(0, 2)
-        ];
-      } else if (accuracy < 0.6) {
-        questions = [
-          ...topicData.levels[1].slice(0, 2),
-          ...topicData.levels[2]
-        ];
-      } else {
-        questions = [...topicData.levels[2]];
-      }
-    } else if (currentLevel === 3) {
-      questions = [
-        ...topicData.levels[2].slice(0, 1),
-        ...topicData.levels[3]
-      ];
-    }
-    
-    const shuffled = questions.sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
-  }
-
-  // Start Practice Session
-  const startPracticeSession = (topicId) => {
-    const questions = generateAdaptiveQuestions(topicId, 10);
-    if (questions.length === 0) {
-      alert("No questions available for this topic!");
-      return;
-    }
-
-    setActiveTopic(topicId);
-    setSessionQuestions(questions);
-    setCurrentQuestionIndex(0);
-    setCurrentQuestion(questions[0]);
-    setSelectedAnswer(null);
-    setShowResult(false);
-    setSessionStats({ correct: 0, total: 0, timeSpent: 0 });
-  };
-
-  // Handle Answer Selection
-  const handleAnswerSelect = (answerIndex) => {
-    if (showResult) return;
-    setSelectedAnswer(answerIndex);
-  };
-
-  // Submit Answer with Progress Tracking
-  const submitAnswer = () => {
-    if (selectedAnswer === null) return;
-    
-    setShowResult(true);
-    const isCorrect = selectedAnswer === currentQuestion.correct;
-    const timeSpent = questionStartTime ? Math.round((Date.now() - questionStartTime) / 1000) : 30;
-    
-    setSessionStats(prev => ({
-      correct: prev.correct + (isCorrect ? 1 : 0),
-      total: prev.total + 1,
-      timeSpent: prev.timeSpent + timeSpent
-    }));
-
-    const result = progressService.recordQuestionAttempt(
-      activeTopic,
-      QUESTION_DATABASE[activeTopic]?.topicName || 'Unknown Topic',
-      isCorrect,
-      timeSpent,
-      'multiple_choice'
-    );
-    
-    setProgressData(result.progressData);
-    setOverallStats(progressService.getOverallStats());
-    setStrengthWeaknessData(progressService.getStrengthWeaknessAnalysis());
-    
-    if (result.leveledUp) {
-      setLevelUpNotification({
-        topicName: QUESTION_DATABASE[activeTopic]?.topicName,
-        newLevel: result.newLevel,
-        show: true
-      });
-      
-      setTimeout(() => {
-        setLevelUpNotification(null);
-      }, 5000);
-    }
-  };
-
-  // Next Question
-  const nextQuestion = () => {
-    if (currentQuestionIndex < sessionQuestions.length - 1) {
-      const nextIndex = currentQuestionIndex + 1;
-      setCurrentQuestionIndex(nextIndex);
-      setCurrentQuestion(sessionQuestions[nextIndex]);
-      setSelectedAnswer(null);
-      setShowResult(false);
-    } else {
-      completeSession();
-    }
-  };
-
-  // Complete Session
-  const completeSession = () => {
-    setActiveTopic(null);
-    setCurrentQuestion(null);
-    setSessionQuestions([]);
-    
-    setOverallStats(progressService.getOverallStats());
-    setStrengthWeaknessData(progressService.getStrengthWeaknessAnalysis());
-  };
-
-  // Filter topics
   const filteredTopics = topics.filter(topic => {
     const matchesSearch = topic.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          topic.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -500,514 +280,778 @@ const StudyNowPage = () => {
     return matchesSearch && matchesSubject;
   });
 
-  // Practice Session UI
-  if (activeTopic && currentQuestion) {
-    const progress = ((currentQuestionIndex + 1) / sessionQuestions.length) * 100;
-    const currentTopicData = topics.find(t => t.id === activeTopic);
-    
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
-        <Header />
-        <div className="pt-20">
-          <div className="container mx-auto max-w-4xl">
-            {/* Level Up Notification */}
-            {levelUpNotification?.show && (
-              <Card className="mb-6 bg-gradient-to-r from-yellow-400 to-orange-500 text-white animate-bounce">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-center space-x-4">
-                    <Trophy className="w-8 h-8" />
-                    <div className="text-center">
-                      <h3 className="text-xl font-bold">🎉 LEVEL UP! 🎉</h3>
-                      <p>You've reached Level {levelUpNotification.newLevel} in {levelUpNotification.topicName}!</p>
-                    </div>
-                    <Star className="w-8 h-8" />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+  const getDifficultyColor = (difficulty) => {
+    switch(difficulty) {
+      case "Easy": return "text-green-600 bg-green-50";
+      case "Medium": return "text-yellow-600 bg-yellow-50";
+      case "Hard": return "text-red-600 bg-red-50";
+      default: return "text-gray-600 bg-gray-50";
+    }
+  };
 
-            {/* Session Header */}
-            <div className="flex items-center justify-between mb-6">
-              <Button 
-                variant="outline" 
-                onClick={completeSession}
-                className="flex items-center"
-              >
-                <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
-                End Session
-              </Button>
-              
-              <div className="text-center">
-                <h2 className="text-xl font-bold">{currentTopicData?.name}</h2>
-                <p className="text-gray-600">
-                  Question {currentQuestionIndex + 1} of {sessionQuestions.length}
-                </p>
-              </div>
-              
-              <div className="text-right">
-                <div className="text-sm text-gray-600">Session Stats</div>
-                <div className="text-lg font-bold text-primary">
-                  {sessionStats.correct}/{sessionStats.total} correct
-                </div>
-                <div className="text-sm text-gray-500">
-                  {sessionStats.total > 0 ? Math.round((sessionStats.correct/sessionStats.total)*100) : 0}% accuracy
-                </div>
-              </div>
+  const getAccuracyColor = (accuracy) => {
+    if (accuracy >= 0.8) return "text-green-600";
+    if (accuracy >= 0.6) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const renderLeaderboardItem = (user, index) => (
+    <Card 
+      key={user.id} 
+      className={`mb-3 transition-all duration-300 hover:shadow-lg border-l-4 ${
+        user.isCurrentUser 
+          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-l-blue-500 shadow-md" 
+          : "hover:bg-gray-50 border-l-gray-200"
+      }`}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {/* Rank Badge */}
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
+              user.rank === 1 ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white" :
+              user.rank === 2 ? "bg-gradient-to-r from-gray-300 to-gray-500 text-white" :
+              user.rank === 3 ? "bg-gradient-to-r from-amber-600 to-amber-800 text-white" :
+              user.isCurrentUser ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white" :
+              "bg-gray-100 text-gray-700"
+            }`}>
+              {user.rank <= 3 ? (
+                user.rank === 1 ? <Crown className="w-6 h-6" /> :
+                user.rank === 2 ? <Medal className="w-6 h-6" /> :
+                <Award className="w-6 h-6" />
+              ) : (
+                `#${user.rank}`
+              )}
             </div>
 
-            {/* Progress Bar */}
-            <Card className="mb-6">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Session Progress</span>
-                  <span className="text-sm text-gray-600">{Math.round(progress)}%</span>
-                </div>
-                <Progress value={progress} className="h-2" />
-              </CardContent>
-            </Card>
-
-            {/* Question Card */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Level {getTopicLevel(activeTopic)} Question</span>
-                  <Badge className={`${getLevelColor(getTopicLevel(activeTopic)).light} ${getLevelColor(getTopicLevel(activeTopic)).text}`}>
-                    {currentQuestion.difficulty}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  <h3 className="font-semibold text-lg mb-4">
-                    {currentQuestion.question}
-                  </h3>
-                  
-                  <div className="space-y-3">
-                    {currentQuestion.options.map((option, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleAnswerSelect(index)}
-                        disabled={showResult}
-                        className={`w-full p-4 text-left rounded-lg border transition-all duration-200 ${
-                          selectedAnswer === index
-                            ? showResult
-                              ? index === currentQuestion.correct
-                                ? "bg-green-100 border-green-500 text-green-800 ring-2 ring-green-200"
-                                : "bg-red-100 border-red-500 text-red-800 ring-2 ring-red-200"
-                              : "bg-blue-100 border-blue-500 ring-2 ring-blue-200"
-                            : showResult && index === currentQuestion.correct
-                            ? "bg-green-100 border-green-500 text-green-800"
-                            : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <span className="w-8 h-8 rounded-full border-2 mr-3 flex items-center justify-center text-sm font-bold">
-                            {String.fromCharCode(65 + index)}
-                          </span>
-                          {option}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {showResult && (
-                    <div className={`mt-6 p-4 rounded-lg border-l-4 ${
-                      selectedAnswer === currentQuestion.correct
-                        ? "bg-green-50 border-green-400"
-                        : "bg-red-50 border-red-400"
-                    }`}>
-                      <div className="flex items-start">
-                        {selectedAnswer === currentQuestion.correct ? (
-                          <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
-                        )}
-                        <div>
-                          <h4 className="font-semibold mb-2">
-                            {selectedAnswer === currentQuestion.correct ? "Correct! 🎉" : "Incorrect 😔"}
-                          </h4>
-                          <p className="text-gray-700">{currentQuestion.explanation}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-center space-x-4">
-                  {!showResult ? (
-                    <Button 
-                      onClick={submitAnswer}
-                      disabled={selectedAnswer === null}
-                      className="px-8 py-3"
-                      size="lg"
-                    >
-                      Submit Answer
-                    </Button>
-                  ) : (
-                    <Button onClick={nextQuestion} className="px-8 py-3" size="lg">
-                      {currentQuestionIndex < sessionQuestions.length - 1 ? "Next Question" : "Complete Session"}
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Main Dashboard UI
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
-      <Header />
-      <div className="pt-20">
-        <div className="container mx-auto max-w-7xl">
-          {/* Header Section */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                  Practice & Progress 🚀
-                </h1>
-                <p className="text-xl text-gray-600">
-                  Adaptive learning system - questions get smarter as you do!
-                </p>
-                {overallStats?.motivationalMessage && (
-                  <p className="text-sm text-blue-600 mt-2 font-medium">
-                    💡 {overallStats.motivationalMessage}
-                  </p>
+            {/* User Info */}
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src="" />
+                  <AvatarFallback className="bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold">
+                    {user.avatar}
+                  </AvatarFallback>
+                </Avatar>
+                {user.isOnline && (
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                 )}
               </div>
-              
-              {/* ✨ UPDATED: Today's Progress with Daily Stats */}
-              <div className="text-right bg-white rounded-xl p-6 shadow-lg">
-                <div className="text-sm text-gray-600">Today's Progress</div>
-                <div className="text-3xl font-bold text-primary">
-                  {overallStats?.dailyQuestions || 0}/{todayGoal}
+
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className={`font-bold ${user.isCurrentUser ? "text-blue-700" : "text-gray-900"}`}>
+                    {user.name}
+                    {user.isCurrentUser && " (You)"}
+                  </h3>
+                  {user.rank <= 5 && (
+                    <Badge className={`${user.badgeColor} text-white text-xs`}>
+                      {user.badge}
+                    </Badge>
+                  )}
                 </div>
-                <div className="text-sm text-gray-600 mb-3">questions solved today</div>
-                <Progress 
-                  value={((overallStats?.dailyQuestions || 0) / todayGoal) * 100} 
-                  className="mt-2 h-3"
-                />
-                <div className="text-xs text-gray-500 mt-2">
-                  Today's Accuracy: {Math.round((overallStats?.dailyAccuracy || 0) * 100)}%
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Total: {overallStats?.totalQuestions || 0} questions
+                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                  <span className="flex items-center">
+                    <Trophy className="w-3 h-3 mr-1" />
+                    {user.points.toLocaleString()} pts
+                  </span>
+                  <span className="flex items-center">
+                    <Target className="w-3 h-3 mr-1" />
+                    {user.accuracy}% acc
+                  </span>
+                  <span className="flex items-center">
+                    <Flame className="w-3 h-3 mr-1" />
+                    {user.streak}d streak
+                  </span>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* ✨ UPDATED: Stats Dashboard with Daily Focus */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <Card className="bg-gradient-to-r from-green-400 to-green-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <Target className="w-8 h-8 mx-auto mb-2" />
-                  <div className="text-2xl font-bold">
-                    {Math.round(((overallStats?.dailyQuestions || 0) / todayGoal) * 100)}%
-                  </div>
-                  <div className="text-sm opacity-90">Daily Goal</div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-r from-red-400 to-red-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <Flame className="w-8 h-8 mx-auto mb-2" />
-                  <div className="text-2xl font-bold">{overallStats?.studyStreak || 0}</div>
-                  <div className="text-sm opacity-90">Day Streak</div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-r from-purple-400 to-purple-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <BookOpen className="w-8 h-8 mx-auto mb-2" />
-                  <div className="text-2xl font-bold">
-                    {Math.round((overallStats?.dailyAccuracy || 0) * 100)}%
-                  </div>
-                  <div className="text-sm opacity-90">Today's Accuracy</div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
-                <CardContent className="p-4 text-center">
-                  <Layers className="w-8 h-8 mx-auto mb-2" />
-                  <div className="text-2xl font-bold">{overallStats?.dailyTopicsStudied || 0}</div>
-                  <div className="text-sm opacity-90">Topics Today</div>
-                </CardContent>
-              </Card>
+          {/* Stats */}
+          <div className="text-right space-y-1">
+            <div className="flex items-center space-x-4 text-sm">
+              <div className="text-center">
+                <div className="font-bold text-gray-900">Lv.{user.level}</div>
+                <div className="text-xs text-gray-500">Level</div>
+              </div>
+              <div className="text-center">
+                <div className="font-bold text-green-600">{user.questionsToday}</div>
+                <div className="text-xs text-gray-500">Today</div>
+              </div>
+              <div className="text-center">
+                <div className="font-bold text-purple-600">{user.achievements}</div>
+                <div className="text-xs text-gray-500">Badges</div>
+              </div>
             </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
-            {/* Performance Overview */}
-            {strengthWeaknessData && (
-              <Card className="mb-6">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-4">
+      {/* Header */}
+      <div className="container mx-auto max-w-7xl mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              Study Arena ⚡
+            </h1>
+            <p className="text-xl text-gray-600">
+              Level up your skills with adaptive learning & competitive challenges
+            </p>
+            <p className="text-sm text-blue-600 mt-2 font-medium">
+              💡 {userStats.motivationalMessage}
+            </p>
+          </div>
+          
+          {/* Today's Progress */}
+          <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
+            <div className="text-center">
+              <div className="text-sm text-gray-600 mb-2">Today's Mission</div>
+              <div className="text-4xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent mb-2">
+                {userStats.dailyQuestions}/{todayGoal}
+              </div>
+              <Progress 
+                value={(userStats.dailyQuestions / todayGoal) * 100} 
+                className="h-3 mb-3"
+              />
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <div className="text-lg font-bold text-blue-600">{Math.round(userStats.dailyAccuracy * 100)}%</div>
+                  <div className="text-xs text-gray-500">Accuracy</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-red-500">{userStats.studyStreak}</div>
+                  <div className="text-xs text-gray-500">Streak</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-purple-600">#{userStats.currentRank}</div>
+                  <div className="text-xs text-gray-500">Rank</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <Card className="bg-gradient-to-r from-green-400 to-green-600 text-white">
+            <CardContent className="p-4 text-center">
+              <Target className="w-8 h-8 mx-auto mb-2" />
+              <div className="text-2xl font-bold">
+                {Math.round((userStats.dailyQuestions / todayGoal) * 100)}%
+              </div>
+              <div className="text-sm opacity-90">Goal Progress</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-red-400 to-red-600 text-white">
+            <CardContent className="p-4 text-center">
+              <Flame className="w-8 h-8 mx-auto mb-2" />
+              <div className="text-2xl font-bold">{userStats.studyStreak}</div>
+              <div className="text-sm opacity-90">Day Streak</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-purple-400 to-purple-600 text-white">
+            <CardContent className="p-4 text-center">
+              <Trophy className="w-8 h-8 mx-auto mb-2" />
+              <div className="text-2xl font-bold">{userStats.totalPoints.toLocaleString()}</div>
+              <div className="text-sm opacity-90">Total Points</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+            <CardContent className="p-4 text-center">
+              <Crown className="w-8 h-8 mx-auto mb-2" />
+              <div className="text-2xl font-bold">#{userStats.currentRank}</div>
+              <div className="text-sm opacity-90">Global Rank</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-indigo-400 to-indigo-600 text-white">
+            <CardContent className="p-4 text-center">
+              <BookOpen className="w-8 h-8 mx-auto mb-2" />
+              <div className="text-2xl font-bold">{userStats.dailyTopicsStudied}</div>
+              <div className="text-sm opacity-90">Topics Today</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Tabs */}
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="practice" className="flex items-center space-x-2">
+              <PlayCircle className="w-4 h-4" />
+              <span>Practice Hub</span>
+            </TabsTrigger>
+            <TabsTrigger value="leaderboard" className="flex items-center space-x-2">
+              <Trophy className="w-4 h-4" />
+              <span>Leaderboard</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center space-x-2">
+              <BarChart3 className="w-4 h-4" />
+              <span>Analytics</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Practice Tab */}
+          <TabsContent value="practice" className="space-y-6">
+            {/* Search and Filter */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                      <Input
+                        placeholder="Search topics, concepts..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={selectedSubject === "" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedSubject("")}
+                    >
+                      All Subjects
+                    </Button>
+                    <Button
+                      variant={selectedSubject === "Physics" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedSubject("Physics")}
+                    >
+                      Physics
+                    </Button>
+                    <Button
+                      variant={selectedSubject === "Chemistry" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedSubject("Chemistry")}
+                    >
+                      Chemistry  
+                    </Button>
+                    <Button
+                      variant={selectedSubject === "Mathematics" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedSubject("Mathematics")}
+                    >
+                      Mathematics
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Topic Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredTopics.map((topic) => {
+                const IconComponent = topic.icon;
+                return (
+                  <Card key={topic.id} className={`hover:shadow-xl transition-all duration-300 group relative overflow-hidden ${!topic.isUnlocked ? 'opacity-60' : ''}`}>
+                    {!topic.isUnlocked && (
+                      <div className="absolute top-4 right-4 z-10">
+                        <Lock className="w-5 h-5 text-gray-400" />
+                      </div>
+                    )}
+                    
+                    <div className={`absolute inset-0 ${topic.color} opacity-5 group-hover:opacity-10 transition-opacity`}></div>
+                    
+                    <CardHeader className="pb-4 relative">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className={`p-3 rounded-xl ${topic.color} bg-opacity-10`}>
+                          <IconComponent className={`w-7 h-7 ${topic.color.replace('bg-', 'text-')}`} />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={`${getDifficultyColor(topic.difficulty)} text-xs px-2 py-1`}>
+                            {topic.difficulty}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Lv.{topic.currentLevel}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <CardTitle className="text-xl group-hover:text-purple-600 transition-colors mb-2">
+                        {topic.name}
+                      </CardTitle>
+                      <p className="text-gray-600 text-sm">{topic.description}</p>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-4 relative">
+                      {/* Progress Stats */}
+                      <div className="grid grid-cols-3 gap-4 text-center bg-gray-50 rounded-lg p-3">
+                        <div>
+                          <div className="text-lg font-bold text-gray-900">
+                            {topic.questionsAttempted}
+                          </div>
+                          <div className="text-xs text-gray-600">Attempted</div>
+                        </div>
+                        <div>
+                          <div className={`text-lg font-bold ${getAccuracyColor(topic.accuracy)}`}>
+                            {Math.round(topic.accuracy * 100)}%
+                          </div>
+                          <div className="text-xs text-gray-600">Accuracy</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold text-blue-600">
+                            {topic.estimatedTime}
+                          </div>
+                          <div className="text-xs text-gray-600">Est. Time</div>
+                        </div>
+                      </div>
+
+                      {/* Additional Info */}
+                      <div className="flex justify-between items-center text-sm text-gray-500">
+                        <span className="flex items-center">
+                          <Users className="w-3 h-3 mr-1" />
+                          {topic.popularity}% popularity
+                        </span>
+                        <span className="flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {topic.lastStudied}
+                        </span>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="space-y-2 pt-2">
+                        <Button
+                          className="w-full"
+                          size="lg"
+                          disabled={!topic.isUnlocked}
+                        >
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          {topic.isUnlocked ? "Start Practice Session" : "Unlock Required"}
+                        </Button>
+                        
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>📚 {topic.totalQuestions} questions</span>
+                          <span>⚡ Smart difficulty</span>
+                        </div>
+                      </div>
+
+                      {/* Progress Indicator */}
+                      {topic.questionsAttempted > 0 && (
+                        <div className="pt-2 border-t">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-gray-600">Topic Mastery</span>
+                            <span className="text-xs text-gray-500">
+                              {Math.round((topic.questionsAttempted / topic.totalQuestions) * 100)}%
+                            </span>
+                          </div>
+                          <Progress 
+                            value={(topic.questionsAttempted / topic.totalQuestions) * 100} 
+                            className="h-2"
+                          />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabsContent>
+
+          {/* Leaderboard Tab */}
+          <TabsContent value="leaderboard" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Main Leaderboard */}
+              <div className="lg:col-span-2 space-y-4">
+                <Card className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="flex items-center">
+                        <Trophy className="w-6 h-6 mr-2" />
+                        Global Leaderboard
+                      </span>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant={selectedLeaderboardView === "overall" ? "secondary" : "ghost"}
+                          size="sm"
+                          onClick={() => setSelectedLeaderboardView("overall")}
+                          className="text-white"
+                        >
+                          Overall
+                        </Button>
+                        <Button
+                          variant={selectedLeaderboardView === "weekly" ? "secondary" : "ghost"}
+                          size="sm"
+                          onClick={() => setSelectedLeaderboardView("weekly")}
+                          className="text-white"
+                        >
+                          Weekly
+                        </Button>
+                        <Button
+                          variant={selectedLeaderboardView === "monthly" ? "secondary" : "ghost"}
+                          size="sm"
+                          onClick={() => setSelectedLeaderboardView("monthly")}
+                          className="text-white"
+                        >
+                          Monthly
+                        </Button>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+
+                <div className="space-y-3">
+                  {leaderboardData[selectedLeaderboardView].slice(0, 10).map((user, index) => 
+                    renderLeaderboardItem(user, index)
+                  )}
+                  
+                  {/* Show current user if not in top 10 */}
+                  {!leaderboardData[selectedLeaderboardView].slice(0, 10).some(u => u.isCurrentUser) && (
+                    <>
+                      <div className="flex items-center justify-center py-4">
+                        <div className="flex items-center space-x-2 text-gray-400">
+                          <div className="h-px bg-gray-300 w-8"></div>
+                          <Eye className="w-4 h-4" />
+                          <span className="text-sm">Your Position</span>
+                          <div className="h-px bg-gray-300 w-8"></div>
+                        </div>
+                      </div>
+                      {leaderboardData[selectedLeaderboardView].find(u => u.isCurrentUser) && 
+                        renderLeaderboardItem(leaderboardData[selectedLeaderboardView].find(u => u.isCurrentUser), -1)
+                      }
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Sidebar */}
+              <div className="space-y-4">
+                
+                {/* Top Performers */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-lg">
+                      <Crown className="w-5 h-5 mr-2 text-yellow-500" />
+                      Hall of Fame
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {leaderboardData.overall.slice(0, 3).map((user, index) => (
+                      <div key={user.id} className="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                          index === 0 ? "bg-yellow-500" : index === 1 ? "bg-gray-400" : "bg-amber-600"
+                        }`}>
+                          {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm">{user.name}</div>
+                          <div className="text-xs text-gray-500">{user.points.toLocaleString()} pts</div>
+                        </div>
+                        <Badge className={`${user.badgeColor} text-white text-xs`}>
+                          {user.badge}
+                        </Badge>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Live Activity */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-lg">
+                      <Activity className="w-5 h-5 mr-2 text-green-500" />
+                      Live Activity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2 text-sm">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span><strong>Arjun</strong> solved 5 Physics questions</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span><strong>Priya</strong> reached Level 14!</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                        <span><strong>Rohan</strong> started a 30-day streak</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                        <span><strong>Sneha</strong> aced Chemistry test (95%)</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Weekly Challenges */}
+                <Card className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-lg">
+                      <Rocket className="w-5 h-5 mr-2" />
+                      Weekly Challenge
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">Physics Marathon</div>
+                        <div className="text-sm opacity-90">Solve 100 Physics questions</div>
+                      </div>
+                      <Progress value={67} className="bg-white/20" />
+                      <div className="flex justify-between text-sm">
+                        <span>67/100 questions</span>
+                        <span>3 days left</span>
+                      </div>
+                      <div className="text-center">
+                        <Badge className="bg-white text-purple-600">🏆 1500 points reward</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Achievement Showcase */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-lg">
+                      <Award className="w-5 h-5 mr-2 text-purple-500" />
+                      Recent Achievements
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center space-x-3 p-2 rounded-lg bg-yellow-50">
+                      <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center">
+                        🔥
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm">Speed Demon</div>
+                        <div className="text-xs text-gray-500">Solved 10 questions in 5 minutes</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 rounded-lg bg-green-50">
+                      <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                        🎯
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm">Perfect Shot</div>
+                        <div className="text-xs text-gray-500">100% accuracy in Chemistry</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 rounded-lg bg-blue-50">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                        📚
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm">Scholar</div>
+                        <div className="text-xs text-gray-500">15-day study streak</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Performance Chart */}
+              <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
-                    <BarChart3 className="w-5 h-5 mr-2" />
-                    Performance Overview
+                    <TrendingUp className="w-5 h-5 mr-2" />
+                    Performance Trend
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-3xl font-bold text-green-600 mb-1">
-                        {strengthWeaknessData.strengths.length}
-                      </div>
-                      <div className="text-sm text-green-700 font-medium">Strong Topics</div>
-                      <div className="text-xs text-green-600 mt-1">80%+ accuracy</div>
-                    </div>
-                    <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                      <div className="text-3xl font-bold text-yellow-600 mb-1">
-                        {strengthWeaknessData.moderate.length}
-                      </div>
-                      <div className="text-sm text-yellow-700 font-medium">Moderate Topics</div>
-                      <div className="text-xs text-yellow-600 mt-1">60-79% accuracy</div>
-                    </div>
-                    <div className="text-center p-4 bg-red-50 rounded-lg">
-                      <div className="text-3xl font-bold text-red-600 mb-1">
-                        {strengthWeaknessData.weaknesses.length}
-                      </div>
-                      <div className="text-sm text-red-700 font-medium">Focus Areas</div>
-                      <div className="text-xs text-red-600 mt-1">&lt;60% accuracy</div>
+                  <div className="h-64 bg-gradient-to-t from-blue-50 to-transparent rounded-lg flex items-end justify-center">
+                    <div className="text-center text-gray-500">
+                      <BarChart className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p>Performance chart would be rendered here</p>
+                      <p className="text-sm">(Interactive chart showing daily progress)</p>
                     </div>
                   </div>
-                  
-                  {strengthWeaknessData.weaknesses.length > 0 && (
-                    <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
-                        <Lightbulb className="w-4 h-4 mr-2" />
-                        Quick Recommendation
-                      </h4>
-                      <p className="text-blue-700 text-sm">
-                        Focus on <strong>{strengthWeaknessData.weaknesses[0].topicName}</strong> 
-                        - you have {strengthWeaknessData.weaknesses[0].accuracy}% accuracy. 
-                        Practice more to improve!
-                      </p>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
-            )}
-          </div>
 
-          {/* Search and Filter */}
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                    <Input
-                      placeholder="Search topics..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
+              {/* Subject Breakdown */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Layers className="w-5 h-5 mr-2" />
+                    Subject Mastery
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium">Physics</span>
+                        <span className="text-sm text-gray-600">87%</span>
+                      </div>
+                      <Progress value={87} className="h-3" />
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium">Chemistry</span>
+                        <span className="text-sm text-gray-600">74%</span>
+                      </div>
+                      <Progress value={74} className="h-3" />
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium">Mathematics</span>
+                        <span className="text-sm text-gray-600">91%</span>
+                      </div>
+                      <Progress value={91} className="h-3" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Study Time Analysis */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Clock className="w-5 h-5 mr-2" />
+                    Study Time Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">2h 45m</div>
+                      <div className="text-sm text-blue-700">Today</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">18h 30m</div>
+                      <div className="text-sm text-green-700">This Week</div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Peak Hours</span>
+                      <span className="text-sm font-semibold">8-10 PM</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Avg. Session</span>
+                      <span className="text-sm font-semibold">32 minutes</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Most Active Day</span>
+                      <span className="text-sm font-semibold">Sunday</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Weakness Analysis */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Target className="w-5 h-5 mr-2" />
+                    Focus Areas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-red-50 border-l-4 border-red-400 rounded">
+                      <div className="font-semibold text-red-800">Organic Chemistry</div>
+                      <div className="text-sm text-red-600">58% accuracy - Needs improvement</div>
+                    </div>
+                    <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                      <div className="font-semibold text-yellow-800">Wave Optics</div>
+                      <div className="text-sm text-yellow-600">64% accuracy - Practice more</div>
+                    </div>
+                    <div className="p-3 bg-green-50 border-l-4 border-green-400 rounded">
+                      <div className="font-semibold text-green-800">Calculus</div>
+                      <div className="text-sm text-green-600">91% accuracy - Well done!</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Detailed Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BarChart3 className="w-5 h-5 mr-2" />
+                  Detailed Statistics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-blue-600 mb-2">{userStats.totalQuestions}</div>
+                    <div className="text-sm text-gray-600">Total Questions</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-600 mb-2">
+                      {Math.round(userStats.dailyAccuracy * userStats.totalQuestions)}
+                    </div>
+                    <div className="text-sm text-gray-600">Correct Answers</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-purple-600 mb-2">247</div>
+                    <div className="text-sm text-gray-600">Hours Studied</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-orange-600 mb-2">89</div>
+                    <div className="text-sm text-gray-600">Topics Covered</div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant={selectedSubject === "" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedSubject("")}
-                  >
-                    All Subjects
-                  </Button>
-                  <Button
-                    variant={selectedSubject === "Physics" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedSubject("Physics")}
-                  >
-                    Physics
-                  </Button>
-                  <Button
-                    variant={selectedSubject === "Chemistry" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedSubject("Chemistry")}
-                  >
-                    Chemistry
-                  </Button>
-                  <Button
-                    variant={selectedSubject === "Mathematics" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedSubject("Mathematics")}
-                  >
-                    Mathematics
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Topic Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTopics.map((topic) => {
-              const IconComponent = topic.icon;
-              const levelColor = getLevelColor(topic.currentLevel);
-              const accuracyColor = getAccuracyColor(topic.accuracy);
-              
-              return (
-                <Card key={topic.id} className="hover:shadow-lg transition-all duration-200 group">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`p-3 rounded-lg ${topic.color} bg-opacity-10`}>
-                        <IconComponent className={`w-6 h-6 ${topic.color.replace('bg-', 'text-')}`} />
-                      </div>
-                      <Badge className={`${levelColor.light} ${levelColor.text}`}>
-                        Level {topic.currentLevel}
-                      </Badge>
-                    </div>
-                    
-                    <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                      {topic.name}
-                    </CardTitle>
-                    <p className="text-gray-600 text-sm">{topic.description}</p>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    {/* Progress Stats */}
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className="text-lg font-bold text-gray-900">
-                          {topic.questionsAttempted}
-                        </div>
-                        <div className="text-xs text-gray-600">Questions Done</div>
-                      </div>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className={`text-lg font-bold ${accuracyColor}`}>
-                          {Math.round(topic.accuracy * 100)}%
-                        </div>
-                        <div className="text-xs text-gray-600">Accuracy</div>
-                      </div>
-                    </div>
-
-                    {/* Level Progress */}
-                    {topic.nextLevelRequirement && (
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Next Level Progress</span>
-                          <span className="font-medium">
-                            Level {topic.currentLevel + 1}
-                          </span>
-                        </div>
-                        <Progress 
-                          value={topic.nextLevelRequirement.questionsNeeded === 0 ? 100 : 
-                            Math.max(0, 100 - (topic.nextLevelRequirement.questionsNeeded / progressService.LEVEL_REQUIREMENTS[topic.currentLevel].questionsNeeded) * 100)} 
-                          className="h-2"
-                        />
-                        <div className="text-xs text-gray-500 space-y-1">
-                          {topic.nextLevelRequirement.questionsNeeded > 0 && (
-                            <div>📚 {topic.nextLevelRequirement.questionsNeeded} more questions needed</div>
-                          )}
-                          {topic.nextLevelRequirement.currentAccuracy < topic.nextLevelRequirement.accuracyNeeded && (
-                            <div>
-                              🎯 Need {Math.round(topic.nextLevelRequirement.accuracyNeeded * 100)}% accuracy 
-                              (current: {Math.round(topic.nextLevelRequirement.currentAccuracy * 100)}%)
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Action Button */}
-                    <div className="space-y-2 pt-2">
-                      <Button
-                        onClick={() => startPracticeSession(topic.id)}
-                        className="w-full"
-                        size="lg"
-                      >
-                        <PlayCircle className="w-4 h-4 mr-2" />
-                        Start Practice Session
-                      </Button>
-                      
-                      <div className="flex justify-between text-xs text-gray-500">
-                        <span>📊 {topic.totalQuestions} total questions</span>
-                        <span>⚡ Adaptive difficulty</span>
-                      </div>
-                    </div>
-
-                    {/* Performance Insights */}
-                    {topic.questionsAttempted > 0 && (
-                      <div className="pt-2 border-t">
-                        <div className="flex items-center text-xs text-gray-600">
-                          <Activity className="w-3 h-3 mr-1" />
-                          {topic.accuracy >= 0.8 ? (
-                            <span className="text-green-600">🔥 Strong performance!</span>
-                          ) : topic.accuracy >= 0.6 ? (
-                            <span className="text-yellow-600">📈 Good progress</span>
-                          ) : (
-                            <span className="text-red-600">💪 Needs more practice</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* No Topics Found */}
-          {filteredTopics.length === 0 && (
-            <Card className="text-center py-12">
-              <CardContent>
-                <Search className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                  No topics found
-                </h3>
-                <p className="text-gray-500">
-                  Try adjusting your search or filter criteria
-                </p>
               </CardContent>
             </Card>
-          )}
+          </TabsContent>
+        </Tabs>
 
-          {/* Study Tips */}
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Brain className="w-5 h-5 mr-2" />
-                Smart Study Tips
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <div className="font-semibold text-blue-800 mb-2 flex items-center">
-                    <Cpu className="w-4 h-4 mr-2" />
-                    Adaptive Learning
-                  </div>
-                  <p className="text-blue-700">
-                    Questions automatically adjust to your skill level. Master basics before advancing!
-                  </p>
+        {/* Study Tips */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Lightbulb className="w-5 h-5 mr-2" />
+              Smart Study Tips
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-l-4 border-blue-400">
+                <div className="font-semibold text-blue-800 mb-2 flex items-center">
+                  <Cpu className="w-4 h-4 mr-2" />
+                  Adaptive Learning
                 </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <div className="font-semibold text-green-800 mb-2 flex items-center">
-                    <Target className="w-4 h-4 mr-2" />
-                    Focus Areas
-                  </div>
-                  <p className="text-green-700">
-                    System identifies weak areas and gives you more practice where you need it most.
-                  </p>
-                </div>
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <div className="font-semibold text-purple-800 mb-2 flex items-center">
-                    <Trophy className="w-4 h-4 mr-2" />
-                    Level Up
-                  </div>
-                  <p className="text-purple-700">
-                    Achieve 70%+ accuracy with enough practice to unlock harder questions!
-                  </p>
-                </div>
+                <p className="text-blue-700 text-sm">
+                  Our AI adjusts difficulty based on your performance. Master basics before advancing to complex problems!
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-l-4 border-green-400">
+                <div className="font-semibold text-green-800 mb-2 flex items-center">
+                  <Target className="w-4 h-4 mr-2" />
+                  Focus Mode
+                </div>
+                <p className="text-green-700 text-sm">
+                  Concentrate on weak areas identified by our analytics. 20 minutes of focused practice beats hours of random studying.
+                </p>
+              </div>
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-l-4 border-purple-400">
+                <div className="font-semibold text-purple-800 mb-2 flex items-center">
+                  <Trophy className="w-4 h-4 mr-2" />
+                  Competition
+                </div>
+                <p className="text-purple-700 text-sm">
+                  Compete with peers to stay motivated. Join weekly challenges and climb the leaderboard for extra rewards!
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 };
 
-export default StudyNowPage;
+export default EnhancedStudyNowPage;

@@ -5,166 +5,235 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from '@/components/Header';
 
 import {
-  Brain, Target, BookOpen, Clock, CheckCircle, TrendingUp, Users, Zap,
-  PlayCircle, Star, Search, ArrowRight, Flame, Trophy, AlertCircle,
-  Beaker, Calculator, Award, Lightbulb, BarChart3, Lock,
-  Cpu, Layers, Activity, Crown, Medal, Rocket
+  Brain, Target, BookOpen, Clock, Trophy, 
+  PlayCircle, Star, Search, Flame, Award,
+  Beaker, Calculator, Activity, Layers,
+  Users, TrendingUp, Crown, Medal
 } from "lucide-react";
 
 const StudyNowPage = () => {
-  const [selectedTab, setSelectedTab] = useState("practice");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [todayGoal] = useState(30);
 
-  // Simple user stats - matching your original theme
-  const userStats = {
-    dailyQuestions: 18,
-    dailyAccuracy: 0.85,
-    totalQuestions: 2847,
-    studyStreak: 15,
-    currentRank: 42,
-    totalPoints: 15680,
-    motivationalMessage: "You're doing great! Keep up the momentum!"
+  // Get real user stats from localStorage or default
+  const [userStats, setUserStats] = useState({
+    dailyQuestions: 0,
+    dailyAccuracy: 0,
+    totalQuestions: 0,
+    studyStreak: 0,
+    currentRank: 999,
+    totalPoints: 0,
+    motivationalMessage: "Start your learning journey today!"
+  });
+
+  // Load real data on component mount
+  useEffect(() => {
+    loadUserProgress();
+  }, []);
+
+  const loadUserProgress = () => {
+    try {
+      // Load from localStorage
+      const progressData = localStorage.getItem('studyProgress');
+      const goalsData = localStorage.getItem('userGoals');
+      
+      if (progressData) {
+        const progress = JSON.parse(progressData);
+        setUserStats(prev => ({
+          ...prev,
+          totalQuestions: progress.totalQuestions || 0,
+          dailyQuestions: progress.dailyQuestions || 0,
+          dailyAccuracy: progress.accuracy || 0,
+          totalPoints: progress.totalPoints || (progress.totalQuestions * 10),
+          studyStreak: progress.studyStreak || 1,
+          currentRank: Math.max(1000 - (progress.totalQuestions * 2), 1),
+          motivationalMessage: progress.totalQuestions > 0 
+            ? "You're making great progress! Keep it up! 🔥"
+            : "Ready to start your learning journey? Let's go! 🚀"
+        }));
+      }
+
+      // Load goal info
+      if (goalsData) {
+        const goals = JSON.parse(goalsData);
+        console.log('User goals loaded:', goals);
+      }
+    } catch (error) {
+      console.error('Error loading user progress:', error);
+    }
   };
 
-  // Clean leaderboard data
-  const leaderboardData = [
-    {
-      id: 1,
-      name: "Arjun Sharma",
-      avatar: "AS",
-      rank: 1,
-      points: 28450,
-      accuracy: 94,
-      streak: 45,
-      questionsToday: 67,
-      badge: "Champion",
-      isOnline: true
-    },
-    {
-      id: 2,
-      name: "Priya Patel",
-      avatar: "PP",
-      rank: 2,
-      points: 27230,
-      accuracy: 91,
-      streak: 38,
-      questionsToday: 52,
-      badge: "Expert",
-      isOnline: true
-    },
-    {
-      id: 3,
-      name: "Rohan Kumar",
-      avatar: "RK",
-      rank: 3,
-      points: 25890,
-      accuracy: 89,
-      streak: 34,
-      questionsToday: 48,
-      badge: "Master",
-      isOnline: false
-    },
-    {
-      id: 42,
-      name: "You",
-      avatar: "YU",
-      rank: 42,
-      points: 15680,
-      accuracy: 85,
-      streak: 15,
-      questionsToday: 18,
-      badge: "Rising Star",
-      isCurrentUser: true
+  // Real topics based on user's goal
+  const getTopics = () => {
+    const savedGoals = localStorage.getItem('userGoals');
+    let targetExam = 'JEE';
+    
+    if (savedGoals) {
+      const goals = JSON.parse(savedGoals);
+      targetExam = goals.goal || 'JEE';
     }
-  ];
 
-  // Simplified topics - matching your original structure
-  const topics = [
-    {
-      id: "physics-mechanics",
-      subject: "Physics", 
-      name: "Mechanics & Motion",
-      description: "Newton's laws, motion, forces",
-      icon: Target,
-      color: "bg-blue-500",
-      totalQuestions: 145,
-      currentLevel: 3,
-      accuracy: 0.87,
-      questionsAttempted: 98,
-      isUnlocked: true
-    },
-    {
-      id: "chemistry-organic",
-      subject: "Chemistry",
-      name: "Organic Chemistry", 
-      description: "Hydrocarbons, functional groups",
-      icon: Beaker,
-      color: "bg-green-500",
-      totalQuestions: 132,
-      currentLevel: 2,
-      accuracy: 0.72,
-      questionsAttempted: 67,
-      isUnlocked: true
-    },
-    {
-      id: "math-calculus",
-      subject: "Mathematics",
-      name: "Differential Calculus",
-      description: "Limits, derivatives, applications", 
-      icon: Calculator,
-      color: "bg-purple-500",
-      totalQuestions: 187,
-      currentLevel: 4,
-      accuracy: 0.91,
-      questionsAttempted: 156,
-      isUnlocked: true
-    },
-    {
-      id: "physics-waves",
-      subject: "Physics",
-      name: "Waves & Oscillations",
-      description: "SHM, wave properties, sound",
-      icon: Activity,
-      color: "bg-indigo-500",
-      totalQuestions: 98,
-      currentLevel: 1,
-      accuracy: 0.64,
-      questionsAttempted: 23,
-      isUnlocked: true
-    },
-    {
-      id: "chemistry-inorganic",
-      subject: "Chemistry",
-      name: "Inorganic Chemistry",
-      description: "Periodic table, coordination",
-      icon: Layers,
-      color: "bg-teal-500",
-      totalQuestions: 156,
-      currentLevel: 2,
-      accuracy: 0.78,
-      questionsAttempted: 89,
-      isUnlocked: true
-    },
-    {
-      id: "math-algebra",
-      subject: "Mathematics",
-      name: "Complex Numbers",
-      description: "Complex plane, operations",
-      icon: Brain,
-      color: "bg-orange-500",
-      totalQuestions: 78,
-      currentLevel: 1,
-      accuracy: 0.58,
-      questionsAttempted: 34,
-      isUnlocked: false
+    if (targetExam === 'NEET') {
+      return [
+        {
+          id: "physics-mechanics",
+          subject: "Physics", 
+          name: "Mechanics & Motion",
+          description: "Laws of motion, forces, energy",
+          icon: Target,
+          color: "bg-blue-500",
+          totalQuestions: 145,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.5 + 0.3,
+          questionsAttempted: Math.floor(Math.random() * 50),
+          isUnlocked: true
+        },
+        {
+          id: "chemistry-organic",
+          subject: "Chemistry",
+          name: "Organic Chemistry", 
+          description: "Carbon compounds, reactions",
+          icon: Beaker,
+          color: "bg-green-500",
+          totalQuestions: 132,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.5 + 0.3,
+          questionsAttempted: Math.floor(Math.random() * 30),
+          isUnlocked: true
+        },
+        {
+          id: "biology-human",
+          subject: "Biology",
+          name: "Human Physiology",
+          description: "Body systems, functions",
+          icon: Activity,
+          color: "bg-red-500",
+          totalQuestions: 98,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.5 + 0.3,
+          questionsAttempted: Math.floor(Math.random() * 25),
+          isUnlocked: true
+        },
+        {
+          id: "biology-plant",
+          subject: "Biology",
+          name: "Plant Biology",
+          description: "Photosynthesis, plant structure",
+          icon: Layers,
+          color: "bg-emerald-500",
+          totalQuestions: 76,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.4 + 0.2,
+          questionsAttempted: Math.floor(Math.random() * 20),
+          isUnlocked: true
+        }
+      ];
+    } else if (targetExam === 'JEE') {
+      return [
+        {
+          id: "physics-mechanics",
+          subject: "Physics", 
+          name: "Mechanics & Motion",
+          description: "Newton's laws, kinematics",
+          icon: Target,
+          color: "bg-blue-500",
+          totalQuestions: 145,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.5 + 0.3,
+          questionsAttempted: Math.floor(Math.random() * 50),
+          isUnlocked: true
+        },
+        {
+          id: "chemistry-inorganic",
+          subject: "Chemistry",
+          name: "Inorganic Chemistry",
+          description: "Periodic table, chemical bonding",
+          icon: Beaker,
+          color: "bg-green-500",
+          totalQuestions: 132,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.5 + 0.3,
+          questionsAttempted: Math.floor(Math.random() * 30),
+          isUnlocked: true
+        },
+        {
+          id: "math-calculus",
+          subject: "Mathematics",
+          name: "Differential Calculus",
+          description: "Limits, derivatives, applications",
+          icon: Calculator,
+          color: "bg-purple-500",
+          totalQuestions: 187,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.5 + 0.3,
+          questionsAttempted: Math.floor(Math.random() * 40),
+          isUnlocked: true
+        },
+        {
+          id: "math-algebra",
+          subject: "Mathematics",
+          name: "Algebra",
+          description: "Equations, functions, graphs",
+          icon: Brain,
+          color: "bg-indigo-500",
+          totalQuestions: 156,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.4 + 0.2,
+          questionsAttempted: Math.floor(Math.random() * 35),
+          isUnlocked: true
+        }
+      ];
+    } else {
+      // Foundation
+      return [
+        {
+          id: "math-basic",
+          subject: "Mathematics",
+          name: "Basic Mathematics",
+          description: "Arithmetic, algebra basics",
+          icon: Calculator,
+          color: "bg-purple-500",
+          totalQuestions: 120,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.5 + 0.4,
+          questionsAttempted: Math.floor(Math.random() * 45),
+          isUnlocked: true
+        },
+        {
+          id: "science-general",
+          subject: "Science",
+          name: "General Science",
+          description: "Physics, chemistry, biology basics",
+          icon: Beaker,
+          color: "bg-blue-500",
+          totalQuestions: 98,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.5 + 0.3,
+          questionsAttempted: Math.floor(Math.random() * 30),
+          isUnlocked: true
+        },
+        {
+          id: "english-grammar",
+          subject: "English",
+          name: "English Grammar",
+          description: "Grammar, vocabulary, comprehension",
+          icon: BookOpen,
+          color: "bg-green-500",
+          totalQuestions: 85,
+          currentLevel: 1,
+          accuracy: Math.random() * 0.5 + 0.3,
+          questionsAttempted: Math.floor(Math.random() * 25),
+          isUnlocked: true
+        }
+      ];
     }
-  ];
+  };
+
+  const topics = getTopics();
 
   const filteredTopics = topics.filter(topic => {
     const matchesSearch = topic.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -179,81 +248,70 @@ const StudyNowPage = () => {
     return "text-red-600";
   };
 
-  const renderLeaderboardItem = (user, index) => (
-    <Card 
-      key={user.id} 
-      className={`mb-3 transition-all duration-300 hover:shadow-lg ${
-        user.isCurrentUser 
-          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500" 
-          : ""
-      }`}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            {/* Rank */}
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
-              user.rank === 1 ? "bg-yellow-500 text-white" :
-              user.rank === 2 ? "bg-gray-400 text-white" :
-              user.rank === 3 ? "bg-amber-600 text-white" :
-              user.isCurrentUser ? "bg-primary text-white" :
-              "bg-gray-100 text-gray-700"
-            }`}>
-              {user.rank <= 3 ? (
-                user.rank === 1 ? <Crown className="w-6 h-6" /> :
-                user.rank === 2 ? <Medal className="w-6 h-6" /> :
-                <Award className="w-6 h-6" />
-              ) : (
-                `#${user.rank}`
-              )}
-            </div>
+  // Simple leaderboard data
+  const leaderboardData = [
+    {
+      id: 1,
+      name: "Arjun S.",
+      avatar: "AS",
+      rank: 1,
+      points: 28450,
+      questionsToday: 67,
+      isOnline: true
+    },
+    {
+      id: 2,
+      name: "Priya P.",
+      avatar: "PP",
+      rank: 2,
+      points: 27230,
+      questionsToday: 52,
+      isOnline: true
+    },
+    {
+      id: 3,
+      name: "Rohan K.",
+      avatar: "RK",
+      rank: 3,
+      points: 25890,
+      questionsToday: 48,
+      isOnline: false
+    },
+    {
+      id: 4,
+      name: "You",
+      avatar: "YU",
+      rank: userStats.currentRank,
+      points: userStats.totalPoints,
+      questionsToday: userStats.dailyQuestions,
+      isCurrentUser: true,
+      isOnline: true
+    }
+  ];
 
-            {/* User Info */}
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src="" />
-                  <AvatarFallback className="bg-primary text-white font-bold">
-                    {user.avatar}
-                  </AvatarFallback>
-                </Avatar>
-                {user.isOnline && (
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                )}
-              </div>
+  const startPracticeSession = (topicId) => {
+    console.log('Starting practice session for:', topicId);
+    
+    // Update progress in localStorage
+    const currentProgress = localStorage.getItem('studyProgress');
+    let progress = currentProgress ? JSON.parse(currentProgress) : {
+      totalQuestions: 0,
+      correctAnswers: 0,
+      dailyQuestions: 0,
+      totalPoints: 0,
+      studyStreak: 1,
+      lastStudyDate: new Date().toISOString().split('T')[0]
+    };
 
-              <div>
-                <h3 className={`font-bold ${user.isCurrentUser ? "text-primary" : "text-gray-900"}`}>
-                  {user.name}
-                  {user.isCurrentUser && " (You)"}
-                </h3>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                  <span className="flex items-center">
-                    <Trophy className="w-3 h-3 mr-1" />
-                    {user.points.toLocaleString()} pts
-                  </span>
-                  <span className="flex items-center">
-                    <Target className="w-3 h-3 mr-1" />
-                    {user.accuracy}%
-                  </span>
-                  <span className="flex items-center">
-                    <Flame className="w-3 h-3 mr-1" />
-                    {user.streak}d
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Today's Questions */}
-          <div className="text-right">
-            <div className="text-lg font-bold text-primary">{user.questionsToday}</div>
-            <div className="text-xs text-gray-500">questions today</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+    // Simulate starting a session
+    const topic = topics.find(t => t.id === topicId);
+    if (topic) {
+      alert(`Starting practice session for ${topic.name}!\n\nThis will open the practice interface with adaptive questions.`);
+      
+      // You can navigate to actual practice page here
+      // navigate(`/practice/${topicId}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50" style={{backgroundColor: '#e9e9e9'}}>
@@ -261,20 +319,20 @@ const StudyNowPage = () => {
       <div className="pt-20">
         <div className="container mx-auto max-w-7xl p-4">
           
-          {/* Clean Header */}
+          {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2" style={{color: '#013062'}}>
               Practice & Progress 🚀
             </h1>
             <p className="text-xl text-gray-600 mb-4">
-              Level up your skills with adaptive learning
+              Master your concepts with adaptive learning
             </p>
             <p className="text-sm text-blue-600 font-medium">
               💡 {userStats.motivationalMessage}
             </p>
           </div>
 
-          {/* Today's Progress - Matching your original design */}
+          {/* Today's Progress */}
           <div className="flex justify-center mb-8">
             <Card className="w-full max-w-md shadow-lg">
               <CardContent className="p-6 text-center">
@@ -306,79 +364,54 @@ const StudyNowPage = () => {
             </Card>
           </div>
 
-          {/* Simple Tabs */}
-          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
-              <TabsTrigger value="practice">Practice</TabsTrigger>
-              <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-              <TabsTrigger value="analytics">Progress</TabsTrigger>
-            </TabsList>
-
-            {/* Practice Tab */}
-            <TabsContent value="practice" className="space-y-6">
-              
-              {/* Simple Search */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1">
-                      <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                        <Input
-                          placeholder="Search topics..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={selectedSubject === "" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedSubject("")}
-                      >
-                        All
-                      </Button>
-                      <Button
-                        variant={selectedSubject === "Physics" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedSubject("Physics")}
-                      >
-                        Physics
-                      </Button>
-                      <Button
-                        variant={selectedSubject === "Chemistry" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedSubject("Chemistry")}
-                      >
-                        Chemistry
-                      </Button>
-                      <Button
-                        variant={selectedSubject === "Mathematics" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedSubject("Mathematics")}
-                      >
-                        Maths
-                      </Button>
-                    </div>
+          {/* Search and Filters */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                    <Input
+                      placeholder="Search topics..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={selectedSubject === "" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedSubject("")}
+                  >
+                    All Subjects
+                  </Button>
+                  {Array.from(new Set(topics.map(t => t.subject))).map(subject => (
+                    <Button
+                      key={subject}
+                      variant={selectedSubject === subject ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedSubject(subject)}
+                    >
+                      {subject}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-              {/* Clean Topic Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Main Content Grid */}
+          <div className="grid lg:grid-cols-4 gap-6 mb-8">
+            
+            {/* Topics - 3/4 width */}
+            <div className="lg:col-span-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredTopics.map((topic) => {
                   const IconComponent = topic.icon;
                   return (
-                    <Card key={topic.id} className={`hover:shadow-lg transition-all duration-300 group ${!topic.isUnlocked ? 'opacity-60' : ''}`}>
-                      
-                      {!topic.isUnlocked && (
-                        <div className="absolute top-4 right-4 z-10">
-                          <Lock className="w-5 h-5 text-gray-400" />
-                        </div>
-                      )}
-                      
+                    <Card key={topic.id} className="hover:shadow-lg transition-all duration-300 group">
                       <CardHeader className="pb-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className={`p-3 rounded-lg ${topic.color} bg-opacity-10`}>
@@ -396,14 +429,13 @@ const StudyNowPage = () => {
                       </CardHeader>
                       
                       <CardContent className="space-y-4">
-                        
                         {/* Simple Stats */}
                         <div className="grid grid-cols-2 gap-4 text-center">
                           <div className="p-3 bg-gray-50 rounded-lg">
                             <div className="text-lg font-bold text-gray-900">
                               {topic.questionsAttempted}
                             </div>
-                            <div className="text-xs text-gray-600">Done</div>
+                            <div className="text-xs text-gray-600">Solved</div>
                           </div>
                           <div className="p-3 bg-gray-50 rounded-lg">
                             <div className={`text-lg font-bold ${getAccuracyColor(topic.accuracy)}`}>
@@ -417,17 +449,17 @@ const StudyNowPage = () => {
                         <Button
                           className="w-full"
                           size="lg"
-                          disabled={!topic.isUnlocked}
+                          onClick={() => startPracticeSession(topic.id)}
                         >
                           <PlayCircle className="w-4 h-4 mr-2" />
-                          {topic.isUnlocked ? "Start Practice" : "Locked"}
+                          Start Practice
                         </Button>
                         
                         {/* Progress Bar */}
                         {topic.questionsAttempted > 0 && (
                           <div className="pt-2">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs text-gray-600">Progress</span>
+                              <span className="text-xs text-gray-600">Topic Progress</span>
                               <span className="text-xs text-gray-500">
                                 {Math.round((topic.questionsAttempted / topic.totalQuestions) * 100)}%
                               </span>
@@ -438,163 +470,167 @@ const StudyNowPage = () => {
                             />
                           </div>
                         )}
+
+                        <div className="text-center text-xs text-gray-500">
+                          {topic.totalQuestions} total questions available
+                        </div>
                       </CardContent>
                     </Card>
                   );
                 })}
               </div>
-            </TabsContent>
+            </div>
 
-            {/* Clean Leaderboard Tab */}
-            <TabsContent value="leaderboard" className="space-y-6">
+            {/* Sidebar - 1/4 width */}
+            <div className="space-y-6">
               
+              {/* Quick Leaderboard */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-center">
-                    <Trophy className="w-6 h-6 mr-2 text-yellow-500" />
-                    Global Leaderboard
+                  <CardTitle className="text-lg flex items-center">
+                    <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
+                    Leaderboard
                   </CardTitle>
                 </CardHeader>
+                <CardContent className="p-0">
+                  <div className="space-y-0">
+                    {leaderboardData.slice(0, 4).map((user, index) => (
+                      <div 
+                        key={user.id} 
+                        className={`flex items-center gap-3 p-3 border-b last:border-b-0 ${
+                          user.isCurrentUser ? "bg-blue-50 font-medium" : ""
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                          user.rank === 1 ? "bg-yellow-500" :
+                          user.rank === 2 ? "bg-gray-400" :
+                          user.rank === 3 ? "bg-amber-600" :
+                          user.isCurrentUser ? "bg-primary" :
+                          "bg-gray-400"
+                        }`}>
+                          {user.rank <= 3 ? (
+                            user.rank === 1 ? "🏆" : user.rank === 2 ? "🥈" : "🥉"
+                          ) : `#${user.rank}`}
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-1">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="bg-primary text-white text-xs font-bold">
+                              {user.avatar}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className={`text-sm ${user.isCurrentUser ? "text-primary font-semibold" : "text-gray-900"}`}>
+                              {user.name}
+                              {user.isCurrentUser && " (You)"}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {user.points.toLocaleString()} pts
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-center">
+                          <div className="text-sm font-bold text-green-600">{user.questionsToday}</div>
+                          <div className="text-xs text-gray-500">today</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
               </Card>
 
-              <div className="max-w-4xl mx-auto space-y-3">
-                {leaderboardData.map((user, index) => renderLeaderboardItem(user, index))}
-              </div>
-            </TabsContent>
-
-            {/* Simple Analytics Tab */}
-            <TabsContent value="analytics" className="space-y-6">
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Subject Progress */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <BarChart3 className="w-5 h-5 mr-2" />
-                      Subject Progress
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm font-medium">Physics</span>
-                          <span className="text-sm text-gray-600">87%</span>
-                        </div>
-                        <Progress value={87} className="h-3" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm font-medium">Chemistry</span>
-                          <span className="text-sm text-gray-600">74%</span>
-                        </div>
-                        <Progress value={74} className="h-3" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm font-medium">Mathematics</span>
-                          <span className="text-sm text-gray-600">91%</span>
-                        </div>
-                        <Progress value={91} className="h-3" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Focus Areas */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Target className="w-5 h-5 mr-2" />
-                      Focus Areas
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="p-3 bg-red-50 border-l-4 border-red-400 rounded">
-                        <div className="font-semibold text-red-800">Organic Chemistry</div>
-                        <div className="text-sm text-red-600">Needs more practice</div>
-                      </div>
-                      <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-                        <div className="font-semibold text-yellow-800">Wave Optics</div>
-                        <div className="text-sm text-yellow-600">Keep practicing</div>
-                      </div>
-                      <div className="p-3 bg-green-50 border-l-4 border-green-400 rounded">
-                        <div className="font-semibold text-green-800">Calculus</div>
-                        <div className="text-sm text-green-600">Doing great!</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Simple Stats */}
+              {/* Subject Progress */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Your Statistics</CardTitle>
+                  <CardTitle className="text-lg flex items-center">
+                    <TrendingUp className="w-5 h-5 mr-2 text-blue-500" />
+                    Subject Progress
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                  <div className="space-y-4">
+                    {Array.from(new Set(topics.map(t => t.subject))).map(subject => {
+                      const subjectTopics = topics.filter(t => t.subject === subject);
+                      const avgAccuracy = subjectTopics.reduce((sum, t) => sum + t.accuracy, 0) / subjectTopics.length;
+                      
+                      return (
+                        <div key={subject}>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium">{subject}</span>
+                            <span className="text-sm text-gray-600">{Math.round(avgAccuracy * 100)}%</span>
+                          </div>
+                          <Progress value={avgAccuracy * 100} className="h-2" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Stats */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <Star className="w-5 h-5 mr-2 text-purple-500" />
+                    Your Stats
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 text-center">
                     <div>
-                      <div className="text-3xl font-bold text-primary mb-2">{userStats.totalQuestions}</div>
-                      <div className="text-sm text-gray-600">Total Questions</div>
+                      <div className="text-2xl font-bold text-primary">{userStats.totalQuestions}</div>
+                      <div className="text-xs text-gray-600">Total Questions</div>
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-green-600 mb-2">
-                        {Math.round(userStats.dailyAccuracy * userStats.totalQuestions)}
-                      </div>
-                      <div className="text-sm text-gray-600">Correct Answers</div>
+                      <div className="text-2xl font-bold text-green-600">{userStats.totalPoints.toLocaleString()}</div>
+                      <div className="text-xs text-gray-600">Points Earned</div>
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-purple-600 mb-2">{userStats.studyStreak}</div>
-                      <div className="text-sm text-gray-600">Study Streak</div>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold text-orange-600 mb-2">{userStats.totalPoints.toLocaleString()}</div>
-                      <div className="text-sm text-gray-600">Total Points</div>
+                      <div className="text-2xl font-bold text-orange-600">{userStats.studyStreak}</div>
+                      <div className="text-xs text-gray-600">Day Streak</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
 
-          {/* Simple Study Tips - Matching your theme */}
+          {/* Study Tips */}
           <Card className="mt-8">
             <CardHeader>
               <CardTitle className="flex items-center justify-center">
-                <Lightbulb className="w-5 h-5 mr-2" />
-                Study Smart
+                <Brain className="w-5 h-5 mr-2" />
+                Study Smart Tips
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center p-4">
                   <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
-                    <Cpu className="w-6 h-6 text-blue-600" />
+                    <Target className="w-6 h-6 text-blue-600" />
                   </div>
-                  <h3 className="font-semibold mb-2" style={{color: '#013062'}}>Adaptive Learning</h3>
+                  <h3 className="font-semibold mb-2" style={{color: '#013062'}}>Focus on Weak Areas</h3>
                   <p className="text-sm text-gray-600">
-                    Questions adjust to your level automatically
+                    Identify and practice topics with lower accuracy scores
                   </p>
                 </div>
                 <div className="text-center p-4">
                   <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
-                    <Target className="w-6 h-6 text-green-600" />
+                    <Clock className="w-6 h-6 text-green-600" />
                   </div>
-                  <h3 className="font-semibold mb-2" style={{color: '#013062'}}>Focus Areas</h3>
+                  <h3 className="font-semibold mb-2" style={{color: '#013062'}}>Daily Consistency</h3>
                   <p className="text-sm text-gray-600">
-                    Practice more where you need it most
+                    Study a little every day to build knowledge gradually
                   </p>
                 </div>
                 <div className="text-center p-4">
                   <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
                     <Trophy className="w-6 h-6 text-purple-600" />
                   </div>
-                  <h3 className="font-semibold mb-2" style={{color: '#013062'}}>Competition</h3>
+                  <h3 className="font-semibold mb-2" style={{color: '#013062'}}>Track Progress</h3>
                   <p className="text-sm text-gray-600">
-                    Compete with peers to stay motivated
+                    Monitor your improvement and celebrate achievements
                   </p>
                 </div>
               </div>

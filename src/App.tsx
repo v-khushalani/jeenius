@@ -20,6 +20,8 @@ import NotFound from "./pages/NotFound";
 
 // Auth pages - Only Login needed for Google auth
 import Login from "./pages/Login";
+import AuthCallback from '@/pages/AuthCallback';
+
 
 // Feature pages
 import Pricing from "./pages/Pricing";
@@ -75,6 +77,7 @@ const App = () => (
             {/* Authentication Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Navigate to="/login" replace />} /> {/* Redirect signup to login since we only use Google */}
+            <Route path="/auth/callback" element={<AuthCallback />} />
             
             
             {/* Public Doubt Solver */}

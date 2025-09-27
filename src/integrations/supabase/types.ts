@@ -22,6 +22,7 @@ export type Database = {
           daily_goal: number | null
           email: string
           full_name: string | null
+          goals_set: boolean | null
           grade: number | null
           id: string
           mobile_verified: boolean | null
@@ -39,6 +40,7 @@ export type Database = {
           daily_goal?: number | null
           email: string
           full_name?: string | null
+          goals_set?: boolean | null
           grade?: number | null
           id: string
           mobile_verified?: boolean | null
@@ -56,6 +58,7 @@ export type Database = {
           daily_goal?: number | null
           email?: string
           full_name?: string | null
+          goals_set?: boolean | null
           grade?: number | null
           id?: string
           mobile_verified?: boolean | null
@@ -67,6 +70,54 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      question_attempts: {
+        Row: {
+          attempted_at: string | null
+          created_at: string | null
+          id: string
+          is_correct: boolean
+          question_id: string
+          selected_option: string
+          time_taken: number | null
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_correct: boolean
+          question_id: string
+          selected_option: string
+          time_taken?: number | null
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean
+          question_id?: string
+          selected_option?: string
+          time_taken?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_attempts_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_attempts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       questions: {
         Row: {
@@ -118,6 +169,103 @@ export type Database = {
           year?: number | null
         }
         Relationships: []
+      }
+      test_sessions: {
+        Row: {
+          completed_at: string | null
+          correct_answers: number
+          created_at: string | null
+          id: string
+          score: number | null
+          started_at: string | null
+          subject: string
+          total_questions: number
+          total_time: number | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          correct_answers: number
+          created_at?: string | null
+          id?: string
+          score?: number | null
+          started_at?: string | null
+          subject: string
+          total_questions: number
+          total_time?: number | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          correct_answers?: number
+          created_at?: string | null
+          id?: string
+          score?: number | null
+          started_at?: string | null
+          subject?: string
+          total_questions?: number
+          total_time?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_stats: {
+        Row: {
+          correct_answers: number | null
+          created_at: string | null
+          daily_streak: number | null
+          id: string
+          last_activity_date: string | null
+          rank_position: number | null
+          total_points: number | null
+          total_questions_answered: number | null
+          total_study_time: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          correct_answers?: number | null
+          created_at?: string | null
+          daily_streak?: number | null
+          id?: string
+          last_activity_date?: string | null
+          rank_position?: number | null
+          total_points?: number | null
+          total_questions_answered?: number | null
+          total_study_time?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          correct_answers?: number | null
+          created_at?: string | null
+          daily_streak?: number | null
+          id?: string
+          last_activity_date?: string | null
+          rank_position?: number | null
+          total_points?: number | null
+          total_questions_answered?: number | null
+          total_study_time?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

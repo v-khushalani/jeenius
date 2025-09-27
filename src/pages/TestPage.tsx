@@ -377,10 +377,9 @@ useEffect(() => {
         .sort(() => Math.random() - 0.5)
         .slice(0, testData.questionCount);
 
-      // Convert question_text to question for compatibility
       const formattedQuestions = shuffledQuestions.map(q => ({
         ...q,
-        question: q.question_text
+        // question field already exists in the schema
       }));
 
       // Store test data for test session

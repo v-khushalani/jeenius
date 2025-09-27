@@ -224,9 +224,9 @@ const TestAttemptPage = () => {
             await supabase.from("question_attempts").insert({
               user_id: user.id,
               question_id: result.questionId,
-              selected_answer: result.selectedOption,
+              selected_option: result.selectedOption,
               is_correct: result.isCorrect,
-              time_taken_seconds: result.timeSpent,
+              time_taken: result.timeSpent,
               attempted_at: new Date().toISOString()
             });
           }
@@ -235,12 +235,11 @@ const TestAttemptPage = () => {
         // Save test session
         await supabase.from("test_sessions").insert({
           user_id: user.id,
-          title: testSession.title,
-          test_type: "practice", // or determine from testSession
+          subject: testSession.title.split(' - ')[0] || "General",
           total_questions: testSession.questions.length,
-          duration_minutes: testSession.duration,
-          score: correctAnswers,
-          percentage: percentage,
+          correct_answers: correctAnswers,
+          total_time: Math.round(testSession.duration * 60), // Convert to seconds
+          score: percentage,
           completed_at: new Date().toISOString()
         });
 

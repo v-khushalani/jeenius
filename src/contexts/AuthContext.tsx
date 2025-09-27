@@ -12,6 +12,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   createUserProfile: (userData: any) => Promise<{ error?: string }>;
+  updateProfile: (userData: any) => Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -182,6 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInWithGoogle,
     signOut,
     createUserProfile,
+    updateProfile: createUserProfile, // Alias for compatibility
   };
 
   return (
@@ -191,5 +193,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export { AuthProvider };
+
 

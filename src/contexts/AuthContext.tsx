@@ -1,4 +1,3 @@
-// src/contexts/AuthContext.tsx - Enhanced with profile creation
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -8,11 +7,8 @@ interface AuthContextType {
   session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  loading: boolean;
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
-  createUserProfile: (userData: any) => Promise<{ error?: string }>;
-  updateProfile: (userData: any) => Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -33,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔍 Initial session check:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -41,14 +38,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
+        console.log('🔄 Auth state change:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
 
-        // Handle new user registration
+        // Handle new user profile creation
         if (event === 'SIGNED_IN' && session?.user) {
-          await handleNewUserProfile(session.user);
+          await createUserProfileIfNeeded(session.user);
         }
       }
     );
@@ -56,11 +53,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleNewUserProfile = async (user: User) => {
+  const createUserProfileIfNeeded = async (user: User) => {
     try {
       console.log('🔍 Checking profile for user:', user.id);
       
-      // Check if profile already exists
+      // Check if profile exists
       const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('id')
@@ -69,51 +66,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (checkError && checkError.code === 'PGRST116') {
         // Profile doesn't exist, create it
-        console.log('📝 Creating new profile for user:', user.id);
+        console.log('📝 Creating new profile...');
         
-        const profileData = {
-          id: user.id,
-          full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Student',
-          email: user.email,
-          avatar_url: user.user_metadata?.avatar_url,
-          grade: null,
-          target_exam: null,
-          subjects: [],
-          daily_goal: 30,
-          goals_set: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-
         const { error: insertError } = await supabase
           .from('profiles')
-          .insert(profileData);
+          .insert({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Student',
+            email: user.email,
+            avatar_url: user.user_metadata?.avatar_url,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
 
         if (insertError) {
-          console.error('❌ Failed to create profile:', insertError);
-          throw insertError;
+          console.error('❌ Profile creation failed:', insertError);
+        } else {
+          console.log('✅ Profile created successfully');
         }
-
-        console.log('✅ Profile created successfully');
-      } else if (!checkError) {
-        console.log('✅ Profile already exists');
-      } else {
-        console.error('❌ Error checking profile:', checkError);
-        throw checkError;
       }
     } catch (error) {
-      console.error('❌ Profile creation/check failed:', error);
-      // Don't throw error here to prevent login failure
+      console.error('❌ Profile check/creation error:', error);
     }
   };
 
   const signInWithGoogle = async (): Promise<{ error?: string }> => {
     try {
       setIsLoading(true);
+      console.log('🚀 Starting Google OAuth...');
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
+          // ✅ FIXED: Correct redirect URL
           redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: {
             access_type: 'offline',
@@ -123,55 +108,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        console.error('Google sign-in error:', error);
+        console.error('❌ Google OAuth error:', error);
+        setIsLoading(false);
         return { error: error.message };
       }
 
-      // OAuth redirect will handle the rest
+      console.log('✅ OAuth initiated successfully');
+      // Don't set loading to false here - redirect will happen
       return {};
     } catch (error: any) {
-      console.error('Sign-in error:', error);
-      return { error: error.message || 'Failed to sign in' };
-    } finally {
+      console.error('❌ Sign-in error:', error);
       setIsLoading(false);
-    }
-  };
-
-  const createUserProfile = async (userData: any): Promise<{ error?: string }> => {
-    try {
-      if (!user?.id) {
-        return { error: 'No authenticated user' };
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          ...userData,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) {
-        console.error('Profile creation error:', error);
-        return { error: error.message };
-      }
-
-      return {};
-    } catch (error: any) {
-      console.error('Create profile error:', error);
-      return { error: error.message || 'Failed to create profile' };
+      return { error: error.message || 'Failed to sign in' };
     }
   };
 
   const signOut = async (): Promise<void> => {
     setIsLoading(true);
+    console.log('👋 Signing out...');
+    
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('Sign out error:', error);
+      console.error('❌ Sign out error:', error);
     }
+    
     // Clear localStorage
     localStorage.removeItem('userGoals');
+    localStorage.removeItem('studyProgress');
+    
     setIsLoading(false);
+    console.log('✅ Signed out successfully');
   };
 
   const value = {
@@ -179,11 +145,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     isAuthenticated: !!user,
     isLoading,
-    loading: isLoading,
     signInWithGoogle,
     signOut,
-    createUserProfile,
-    updateProfile: createUserProfile, // Alias for compatibility
   };
 
   return (
@@ -192,6 +155,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
-
-
-

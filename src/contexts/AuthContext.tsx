@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
+  updateProfile: (profileData: any) => Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -140,6 +141,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('✅ Signed out successfully');
   };
 
+  const updateProfile = async (profileData: any): Promise<{ error?: string }> => {
+    if (!user) return { error: 'No user found' };
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(profileData)
+        .eq('id', user.id);
+      
+      if (error) {
+        console.error('❌ Profile update error:', error);
+        return { error: error.message };
+      }
+      
+      return {};
+    } catch (error: any) {
+      console.error('❌ Profile update error:', error);
+      return { error: error.message || 'Failed to update profile' };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -147,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     signInWithGoogle,
     signOut,
+    updateProfile,
   };
 
   return (

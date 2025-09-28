@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Brain, Heart, Target, Zap, Users, Trophy, Star, ArrowRight, Sparkles, BookOpen, MessageCircle, Award } from 'lucide-react';
 
-const WhyUsPage = () => {
+const About = () => {
   const [currentFeature, setCurrentFeature] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -197,4 +197,4 @@ const WhyUsPage = () => {
   );
 };
 
-export default WhyUsPage;
+export default About;

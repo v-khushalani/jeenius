@@ -21,7 +21,6 @@ const Header = () => {
   const publicNavItems = [
     { name: 'Home', href: '/', path: '/', icon: null, highlight: false },
     { name: 'Why Us', href: '/why-us', path: '/why-us', icon: null, highlight: false },
-    { name: 'Pricing', href: '/pricing', path: '/pricing', icon: null, highlight: false },
   ];
 
   const protectedNavItems = [

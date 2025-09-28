@@ -11,24 +11,39 @@ const AuthCallback = () => {
       try {
         console.log('🔄 Processing OAuth callback...');
         
-        // Handle the OAuth callback
-        const { data, error } = await supabase.auth.getSession();
+        // First, get the session to check the auth code from URL
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error('❌ Auth callback error:', error);
-          navigate('/login?error=auth_failed');
-          return;
+        if (sessionError) {
+          console.error('❌ Session error:', sessionError);
+          // Try to handle the OAuth callback with the URL hash/params
+          const { data: authData, error: authError } = await supabase.auth.getUser();
+          
+          if (authError) {
+            console.error('❌ Auth callback error:', authError);
+            navigate('/login?error=auth_failed');
+            return;
+          }
+          
+          if (authData.user) {
+            console.log('✅ User authenticated via getUser');
+            // Small delay to ensure session is established
+            setTimeout(() => {
+              navigate('/dashboard');
+            }, 1000);
+            return;
+          }
         }
 
-        if (data.session?.user) {
+        if (sessionData.session?.user) {
           console.log('✅ User authenticated successfully');
           
           // Check if user has completed goal selection
           const { data: profile } = await supabase
             .from('profiles')
             .select('goals_set, target_exam, grade')
-            .eq('id', data.session.user.id)
-            .single();
+            .eq('id', sessionData.session.user.id)
+            .maybeSingle();
 
           // Also check localStorage for goals
           const savedGoals = localStorage.getItem('userGoals');
@@ -42,8 +57,18 @@ const AuthCallback = () => {
             navigate('/goal-selection');
           }
         } else {
-          console.log('⚠️ No session found, redirecting to login');
-          navigate('/login');
+          console.log('⚠️ No session found, trying to establish session...');
+          // Wait a bit for the session to be established by Supabase
+          setTimeout(async () => {
+            const { data: retryData } = await supabase.auth.getSession();
+            if (retryData.session?.user) {
+              console.log('✅ Session established on retry');
+              navigate('/dashboard');
+            } else {
+              console.log('❌ Still no session, redirecting to login');
+              navigate('/login');
+            }
+          }, 2000);
         }
       } catch (error) {
         console.error('❌ Callback handling error:', error);
@@ -51,7 +76,8 @@ const AuthCallback = () => {
       }
     };
 
-    handleAuthCallback();
+    // Small delay to ensure URL params are processed
+    setTimeout(handleAuthCallback, 500);
   }, [navigate]);
 
   return (

@@ -28,28 +28,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    // Listen for auth changes FIRST to avoid missing events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 Auth state change:', event, session?.user?.id);
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+
+      // Defer any Supabase calls to avoid deadlocks in callback
+      if (event === 'SIGNED_IN' && session?.user) {
+        setTimeout(() => {
+          createUserProfileIfNeeded(session.user);
+        }, 0);
+      }
+    });
+
+    // THEN get the initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('🔍 Initial session check:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 Auth state change:', event, session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
-
-        // Handle new user profile creation
-        if (event === 'SIGNED_IN' && session?.user) {
-          await createUserProfileIfNeeded(session.user);
-        }
-      }
-    );
 
     return () => subscription.unsubscribe();
   }, []);

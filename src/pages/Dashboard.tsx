@@ -40,7 +40,7 @@ const Dashboard = () => {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-3 gap-4 mb-8">
-            <Card className="bg-primary text-white">
+            <Card className="bg-primary text-primary-foreground border-primary">
               <CardContent className="p-4 text-center">
                 <Trophy className="w-6 h-6 mx-auto mb-2" />
                 <div className="text-xl font-bold">{stats?.totalPoints || 0}</div>

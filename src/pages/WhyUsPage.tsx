@@ -108,7 +108,9 @@ const About = () => {
                 <div className={`transition-all duration-300 ${isAnimating ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'}`}>
                   <div className="flex items-center space-x-4 mb-4">
                     <div className={`p-3 rounded-full ${features[currentFeature].iconBg}`}>
-                      <features[currentFeature].icon className={`w-8 h-8 ${features[currentFeature].iconColor}`} />
+                      {React.createElement(features[currentFeature].icon, { 
+                        className: `w-8 h-8 ${features[currentFeature].iconColor}` 
+                      })}
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900">{features[currentFeature].title}</h3>
                   </div>

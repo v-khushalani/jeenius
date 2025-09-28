@@ -45,11 +45,15 @@ const EnhancedDashboard = () => {
       setIsLoading(true);
       
       // Load profile
-      const { data: profileData } = await supabase
+      const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
         .single();
+      
+      if (error) {
+        console.error('Profile fetch error:', error);
+      }
       
       setProfile(profileData);
       
@@ -75,8 +79,17 @@ const EnhancedDashboard = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
+          {/* Jeenius Logo */}
+          <div className="mb-6">
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-xl">
+              <Brain className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">JEENIUS</h1>
+          </div>
+          
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-700">Loading your dashboard...</h2>
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Preparing your genius dashboard...</h2>
+          <p className="text-gray-600">🚀 Great minds are loading amazing things!</p>
         </div>
       </div>
     );
@@ -86,7 +99,8 @@ const EnhancedDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Header />
       
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-8">
+      {/* Added proper spacing to avoid navbar overlap */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-24">
         {/* Welcome Section */}
         <div className="mb-8">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-xl">
@@ -96,7 +110,7 @@ const EnhancedDashboard = () => {
                   Welcome back, {displayName}! 🎯
                 </h1>
                 <p className="text-blue-100 mb-4">
-                  Ready to dominate {profile?.target_exam || 'your exams'} today? Your streak is on fire!
+                  Ready to dominate {profile?.target_exam || 'your exams'} today? Your rank is climbing!
                 </p>
                 
                 {/* Action Buttons */}
@@ -122,21 +136,21 @@ const EnhancedDashboard = () => {
                 </div>
               </div>
               
-              {/* Streak Display */}
+              {/* Rank Display - Changed from Streak */}
               <div className="text-center">
                 <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
                   <div className="flex items-center justify-center gap-2 mb-1">
-                    <Flame className="h-6 w-6 text-orange-300" />
-                    <span className="text-2xl font-bold">{stats?.streak || 0}</span>
+                    <Trophy className="h-6 w-6 text-yellow-300" />
+                    <span className="text-2xl font-bold">#{stats?.rank || 0}</span>
                   </div>
-                  <p className="text-xs text-blue-100">Day Streak</p>
+                  <p className="text-xs text-blue-100">Your Rank</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - Swapped Streak and Rank positions */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
             <CardContent className="p-4">
@@ -180,22 +194,23 @@ const EnhancedDashboard = () => {
             </CardContent>
           </Card>
 
+          {/* Changed from Rank to Streak */}
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="bg-orange-100 p-2 rounded-lg">
-                  <Trophy className="h-5 w-5 text-orange-600" />
+                  <Flame className="h-5 w-5 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">#{stats?.rank || 0}</p>
-                  <p className="text-sm text-gray-600">Your Rank</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.streak || 0}</p>
+                  <p className="text-sm text-gray-600">Day Streak</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content Grid */}
+        {/* Main Content Grid - Removed Quick Actions */}
         <div className="grid lg:grid-cols-3 gap-8 mb-8">
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
@@ -230,51 +245,6 @@ const EnhancedDashboard = () => {
                     </div>
                     <Progress value={91} className="h-2" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-yellow-600" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <Button 
-                    onClick={() => navigate('/study-now')}
-                    className="h-auto p-4 flex flex-col gap-2 bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Play className="h-6 w-6" />
-                    <span className="text-sm">Start Study Session</span>
-                  </Button>
-                  <Button 
-                    onClick={() => navigate('/test')}
-                    variant="outline" 
-                    className="h-auto p-4 flex flex-col gap-2"
-                  >
-                    <BookOpen className="h-6 w-6" />
-                    <span className="text-sm">Take Mock Test</span>
-                  </Button>
-                  <Button 
-                    onClick={() => navigate('/doubt-solver')}
-                    variant="outline" 
-                    className="h-auto p-4 flex flex-col gap-2"
-                  >
-                    <Brain className="h-6 w-6" />
-                    <span className="text-sm">AI Doubt Solver</span>
-                  </Button>
-                  <Button 
-                    onClick={() => navigate('/battle')}
-                    variant="outline" 
-                    className="h-auto p-4 flex flex-col gap-2"
-                  >
-                    <Users className="h-6 w-6" />
-                    <span className="text-sm">Peer Battle</span>
-                  </Button>
                 </div>
               </CardContent>
             </Card>

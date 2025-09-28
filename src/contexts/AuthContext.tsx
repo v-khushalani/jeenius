@@ -28,28 +28,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    // Listen for auth changes FIRST (sync-only)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 Auth state change:', event, session?.user?.id);
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+
+      // Defer any Supabase calls to avoid deadlocks
+      if (event === 'SIGNED_IN' && session?.user) {
+        setTimeout(() => {
+          createUserProfileIfNeeded(session.user);
+        }, 0);
+      }
+    });
+
+    // Then fetch initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('🔍 Initial session check:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 Auth state change:', event, session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
-
-        // Handle new user profile creation
-        if (event === 'SIGNED_IN' && session?.user) {
-          await createUserProfileIfNeeded(session.user);
-        }
-      }
-    );
 
     return () => subscription.unsubscribe();
   }, []);
@@ -127,16 +127,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async (): Promise<void> => {
     setIsLoading(true);
     console.log('👋 Signing out...');
-    
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('❌ Sign out error:', error);
     }
-    
+
     // Clear localStorage
     localStorage.removeItem('userGoals');
     localStorage.removeItem('studyProgress');
-    
+
+    // Immediately clear auth state to update UI
+    setUser(null);
+    setSession(null);
+
     setIsLoading(false);
     console.log('✅ Signed out successfully');
   };

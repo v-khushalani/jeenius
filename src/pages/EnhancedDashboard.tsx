@@ -233,8 +233,90 @@ const EnhancedDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
+            {/* Quick Actions */}
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-600" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <Button 
+                    onClick={() => navigate('/study-now')}
+                    className="h-auto p-4 flex flex-col gap-2 bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Play className="h-6 w-6" />
+                    <span className="text-sm">Start Study Session</span>
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/test')}
+                    variant="outline" 
+                    className="h-auto p-4 flex flex-col gap-2"
+                  >
+                    <BookOpen className="h-6 w-6" />
+                    <span className="text-sm">Take Mock Test</span>
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/doubt-solver')}
+                    variant="outline" 
+                    className="h-auto p-4 flex flex-col gap-2"
+                  >
+                    <Brain className="h-6 w-6" />
+                    <span className="text-sm">AI Doubt Solver</span>
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/battle')}
+                    variant="outline" 
+                    className="h-auto p-4 flex flex-col gap-2"
+                  >
+                    <Users className="h-6 w-6" />
+                    <span className="text-sm">Peer Battle</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Right Column */}
+          <div className="space-y-6">
+            {/* Achievement Highlights */}
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-yellow-600" />
+                  Recent Achievements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-2 bg-yellow-50 rounded-lg">
+                    <Star className="h-5 w-5 text-yellow-600" />
+                    <div>
+                      <p className="text-sm font-medium">7-Day Streak!</p>
+                      <p className="text-xs text-gray-600">Keep it up!</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-2 bg-green-50 rounded-lg">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="text-sm font-medium">Chapter Master</p>
+                      <p className="text-xs text-gray-600">Completed Mechanics</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-lg">
+                    <Target className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="text-sm font-medium">Accuracy Pro</p>
+                      <p className="text-xs text-gray-600">85%+ for 3 days</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Today's Goal */}
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>

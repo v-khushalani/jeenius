@@ -124,14 +124,8 @@ export const useQuestions = (filters?: {
         filteredQuestions = filteredQuestions.slice(0, filters.limit);
       }
 
-      // For security, don't expose correct answers during fetch
-      const questionsWithoutAnswers = filteredQuestions.map(q => ({
-        ...q,
-        correct_option: '',
-        explanation: ''
-      }));
-
-      setQuestions(questionsWithoutAnswers);
+      // Correct answers are hidden by RLS - they'll be null from the database
+      setQuestions(filteredQuestions);
     } catch (err) {
       console.error('Error fetching questions:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch questions');
@@ -175,15 +169,9 @@ export const useQuestions = (filters?: {
       const shuffled = filteredQuestions.sort(() => Math.random() - 0.5);
       const selected = shuffled.slice(0, count);
 
-      // For security, don't expose correct answers during fetch
-      const questionsWithoutAnswers = selected.map(q => ({
-        ...q,
-        correct_option: '',
-        explanation: ''
-      }));
-
-      setQuestions(questionsWithoutAnswers);
-      return questionsWithoutAnswers;
+      // Correct answers are hidden by RLS - they'll be null from the database
+      setQuestions(selected);
+      return selected;
     } catch (err) {
       console.error('Error fetching random questions:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch questions');
@@ -197,38 +185,38 @@ export const useQuestions = (filters?: {
     questionId: string,
     selectedAnswer: string,
     timeSpent?: number
-  ): Promise<{ isCorrect: boolean; correctAnswer: string }> => {
+  ): Promise<{ isCorrect: boolean; correctAnswer: string; explanation?: string }> => {
     if (!isAuthenticated || !user) {
       throw new Error('User not authenticated');
     }
 
     try {
-      // Find the original question with answers
-      const originalQuestion = mockQuestions.find(q => q.id === questionId);
-      if (!originalQuestion) {
-        throw new Error('Question not found');
+      // Use secure server-side validation function
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase.rpc('validate_question_answer', {
+        p_question_id: questionId,
+        p_selected_answer: selectedAnswer,
+        p_time_taken: timeSpent || 0
+      });
+
+      if (error) {
+        console.error('Error validating answer:', error);
+        throw new Error('Failed to validate answer');
       }
 
-      const isCorrect = originalQuestion.correct_option === selectedAnswer;
-      
-      // Store attempt in localStorage
-      const attempts = JSON.parse(localStorage.getItem('questionAttempts') || '[]');
-      const attempt: QuestionAttempt = {
-        id: Date.now().toString(),
-        question_id: questionId,
-        user_id: user.id,
-        selected_answer: selectedAnswer,
-        is_correct: isCorrect,
-        time_taken_seconds: timeSpent || 0,
-        attempted_at: new Date().toISOString()
+      // Type cast the response data
+      const result = data as {
+        attempt_id: string;
+        is_correct: boolean;
+        correct_option: string;
+        explanation: string;
       };
-      
-      attempts.push(attempt);
-      localStorage.setItem('questionAttempts', JSON.stringify(attempts));
 
       return { 
-        isCorrect, 
-        correctAnswer: originalQuestion.correct_option 
+        isCorrect: result.is_correct,
+        correctAnswer: result.correct_option,
+        explanation: result.explanation
       };
     } catch (err) {
       console.error('Error submitting answer:', err);

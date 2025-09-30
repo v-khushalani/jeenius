@@ -180,28 +180,47 @@ const TestAttemptPage = () => {
     try {
       setTestSubmitted(true);
 
-      // Calculate results
+      // Calculate results using secure server-side validation
       let correctAnswers = 0;
       let totalAnswered = 0;
       let totalTimeSpent = 0;
 
       const results = [];
       
+      // Validate each answered question using the secure function
       for (const question of testSession.questions) {
         const userAnswer = userAnswers[question.id];
         
-        // Check answer against correct option from database
         let isCorrect = false;
-        let correctOption = question.correct_option;
+        let correctOption = "";
         
         if (userAnswer?.selectedOption) {
-          isCorrect = userAnswer.selectedOption === question.correct_option;
-        }
+          try {
+            // Use secure server-side validation
+            const { data, error } = await supabase.rpc('validate_question_answer', {
+              p_question_id: question.id,
+              p_selected_answer: userAnswer.selectedOption,
+              p_time_taken: userAnswer.timeSpent || 0
+            });
 
-        if (userAnswer?.selectedOption) {
-          totalAnswered++;
-          totalTimeSpent += userAnswer.timeSpent;
-          if (isCorrect) correctAnswers++;
+            if (!error && data) {
+              const validationResult = data as {
+                attempt_id: string;
+                is_correct: boolean;
+                correct_option: string;
+                explanation: string;
+              };
+              
+              isCorrect = validationResult.is_correct;
+              correctOption = validationResult.correct_option;
+              
+              totalAnswered++;
+              totalTimeSpent += userAnswer.timeSpent;
+              if (isCorrect) correctAnswers++;
+            }
+          } catch (validationError) {
+            console.error('Error validating answer:', validationError);
+          }
         }
 
         results.push({
@@ -217,22 +236,8 @@ const TestAttemptPage = () => {
       const percentage =
         totalAnswered > 0 ? (correctAnswers / totalAnswered) * 100 : 0;
 
-      // Save individual question attempts to database
+      // Save test session (attempts are already saved by validation function)
       try {
-        for (const result of results) {
-          if (result.selectedOption) { // Only save if user actually answered
-            await supabase.from("question_attempts").insert({
-              user_id: user.id,
-              question_id: result.questionId,
-              selected_option: result.selectedOption,
-              is_correct: result.isCorrect,
-              time_taken: result.timeSpent,
-              attempted_at: new Date().toISOString()
-            });
-          }
-        }
-
-        // Save test session
         await supabase.from("test_sessions").insert({
           user_id: user.id,
           subject: testSession.title.split(' - ')[0] || "General",

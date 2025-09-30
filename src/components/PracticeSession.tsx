@@ -12,6 +12,7 @@ const PracticeSession = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [validationResult, setValidationResult] = useState(null);
   const [sessionStats, setSessionStats] = useState({
     correct: 0,
     total: 0,
@@ -33,11 +34,14 @@ const PracticeSession = () => {
     if (!questions[currentQuestion]) return;
     
     setSelectedAnswer(optionKey);
-    setShowExplanation(true);
     
     try {
       const timeSpent = Math.floor((Date.now() - sessionStats.startTime) / 1000);
       const result = await submitAnswer(questions[currentQuestion].id, optionKey, timeSpent);
+      
+      // Store validation result to show correct answer and explanation
+      setValidationResult(result);
+      setShowExplanation(true);
       
       setSessionStats(prev => ({
         ...prev,
@@ -54,6 +58,7 @@ const PracticeSession = () => {
       setCurrentQuestion(prev => prev + 1);
       setSelectedAnswer(null);
       setShowExplanation(false);
+      setValidationResult(null);
       setSessionStats(prev => ({ ...prev, startTime: Date.now() }));
     }
   };
@@ -76,17 +81,19 @@ const PracticeSession = () => {
   const optionEntries = Object.entries(options);
 
   const getAnswerStyle = (optionKey) => {
-    if (!showExplanation) {
+    if (!showExplanation || !validationResult) {
       return selectedAnswer === optionKey 
         ? 'border-purple-500 bg-purple-50' 
         : 'border-gray-200 hover:border-purple-300';
     }
     
-    if (optionKey === currentQ.correct_answer) {
+    // Show correct answer in green
+    if (optionKey === validationResult.correctAnswer) {
       return 'border-green-500 bg-green-50';
     }
     
-    if (selectedAnswer === optionKey && optionKey !== currentQ.correct_answer) {
+    // Show user's wrong answer in red
+    if (selectedAnswer === optionKey && optionKey !== validationResult.correctAnswer) {
       return 'border-red-500 bg-red-50';
     }
     
@@ -220,9 +227,9 @@ const PracticeSession = () => {
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-gray-900">{String(optionValue)}</span>
-                          {showExplanation && (
+                          {showExplanation && validationResult && (
                             <div>
-                              {optionKey === currentQ.correct_answer ? (
+                              {optionKey === validationResult.correctAnswer ? (
                                 <CheckCircle className="w-5 h-5 text-green-500" />
                               ) : selectedAnswer === optionKey ? (
                                 <XCircle className="w-5 h-5 text-red-500" />
@@ -236,16 +243,16 @@ const PracticeSession = () => {
                 </div>
 
                 {/* Explanation */}
-                {showExplanation && (
+                {showExplanation && validationResult && (
                   <div className="mt-8 p-6 bg-gray-50 rounded-lg animate-fade-in">
                     <h4 className="font-semibold text-gray-900 mb-3">Explanation:</h4>
                     <p className="text-gray-700 leading-relaxed">
-                      {currentQ.explanation}
+                      {validationResult.explanation}
                     </p>
                     
                     <div className="mt-6 flex justify-between items-center">
                       <div className="flex items-center space-x-4">
-                        {selectedAnswer === currentQ.correct_answer ? (
+                        {validationResult.isCorrect ? (
                           <div className="flex items-center space-x-2 text-green-600">
                             <CheckCircle className="w-5 h-5" />
                             <span className="font-medium">Correct!</span>

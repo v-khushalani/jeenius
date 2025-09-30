@@ -272,7 +272,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      validate_question_answer: {
+        Args: {
+          p_question_id: string
+          p_selected_answer: string
+          p_time_taken?: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

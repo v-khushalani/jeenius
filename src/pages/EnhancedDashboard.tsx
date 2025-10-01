@@ -99,7 +99,6 @@ const EnhancedDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
       <Header />
       
-      {/* Added proper spacing to avoid navbar overlap */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-24">
         {/* Welcome Section */}
         <div className="mb-8">
@@ -157,6 +156,7 @@ const EnhancedDashboard = () => {
             </div>
           </div>
         </div>
+        
         {/* Quick Stats - 4 Cards Including Streak */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">

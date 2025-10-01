@@ -93,6 +93,7 @@ const App = () => (
             
             {/* Test Routes - Some public, some protected */}
             <Route path="/test-attempt/:testId" element={<TestAttemptPage />} />
+            <Route path="/test-attempt" element={<TestAttemptPage />} />
             <Route path="/test-results" element={<TestResultsPage />} />
             
             {/* Protected Routes - Main Dashboard */}

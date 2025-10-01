@@ -23,64 +23,6 @@ export interface QuestionAttempt {
   attempted_at: string;
 }
 
-// Mock questions data
-const mockQuestions: Question[] = [
-  {
-    id: '1',
-    question_text: 'What is the derivative of x²?',
-    options: { A: '2x', B: 'x²', C: '2', D: 'x' },
-    correct_option: 'A',
-    explanation: 'The derivative of x² is 2x using the power rule.',
-    subject: 'Mathematics',
-    topic: 'Calculus',
-    difficulty_level: 1,
-    chapter: 'Derivatives'
-  },
-  {
-    id: '2',
-    question_text: 'What is the formula for kinetic energy?',
-    options: { A: 'mgh', B: '½mv²', C: 'mc²', D: 'F = ma' },
-    correct_option: 'B',
-    explanation: 'Kinetic energy is given by KE = ½mv² where m is mass and v is velocity.',
-    subject: 'Physics',
-    topic: 'Mechanics',
-    difficulty_level: 1,
-    chapter: 'Energy'
-  },
-  {
-    id: '3',
-    question_text: 'What is the molecular formula of benzene?',
-    options: { A: 'C₆H₆', B: 'C₆H₁₂', C: 'C₈H₈', D: 'C₅H₅' },
-    correct_option: 'A',
-    explanation: 'Benzene has the molecular formula C₆H₆ with a ring structure.',
-    subject: 'Chemistry',
-    topic: 'Organic Chemistry',
-    difficulty_level: 2,
-    chapter: 'Aromatic Compounds'
-  },
-  {
-    id: '4',
-    question_text: 'What is the limit of sin(x)/x as x approaches 0?',
-    options: { A: '0', B: '1', C: '∞', D: 'undefined' },
-    correct_option: 'B',
-    explanation: 'This is a standard limit: lim(x→0) sin(x)/x = 1.',
-    subject: 'Mathematics',
-    topic: 'Calculus',
-    difficulty_level: 3,
-    chapter: 'Limits'
-  },
-  {
-    id: '5',
-    question_text: 'What is the SI unit of electric current?',
-    options: { A: 'Volt', B: 'Ohm', C: 'Ampere', D: 'Watt' },
-    correct_option: 'C',
-    explanation: 'The SI unit of electric current is Ampere (A).',
-    subject: 'Physics',
-    topic: 'Electricity',
-    difficulty_level: 1,
-    chapter: 'Current Electricity'
-  }
-];
 
 export const useQuestions = (filters?: {
   subject?: string;
@@ -98,34 +40,54 @@ export const useQuestions = (filters?: {
       setLoading(true);
       setError(null);
 
-      let filteredQuestions = [...mockQuestions];
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      let query = supabase
+        .from('questions')
+        .select('*');
 
       // Apply filters
       if (filters?.subject) {
-        filteredQuestions = filteredQuestions.filter(q => 
-          q.subject.toLowerCase() === filters.subject!.toLowerCase()
-        );
+        query = query.eq('subject', filters.subject);
       }
 
       if (filters?.topic) {
-        filteredQuestions = filteredQuestions.filter(q => 
-          q.topic.toLowerCase() === filters.topic!.toLowerCase()
-        );
+        query = query.eq('topic', filters.topic);
       }
 
       if (filters?.difficulty) {
-        filteredQuestions = filteredQuestions.filter(q => 
-          q.difficulty_level === filters.difficulty
-        );
+        const difficultyMap = { 1: 'easy', 2: 'medium', 3: 'hard' };
+        query = query.eq('difficulty', difficultyMap[filters.difficulty as keyof typeof difficultyMap]);
       }
 
       // Apply limit
       if (filters?.limit) {
-        filteredQuestions = filteredQuestions.slice(0, filters.limit);
+        query = query.limit(filters.limit);
       }
 
-      // Correct answers are hidden by RLS - they'll be null from the database
-      setQuestions(filteredQuestions);
+      const { data, error: queryError } = await query;
+
+      if (queryError) throw queryError;
+
+      // Map database columns to expected format
+      const mappedQuestions: Question[] = (data || []).map(q => ({
+        id: q.id,
+        question_text: q.question,
+        options: {
+          A: q.option_a,
+          B: q.option_b,
+          C: q.option_c,
+          D: q.option_d
+        },
+        correct_option: '', // Hidden by RLS
+        explanation: '', // Hidden by RLS
+        subject: q.subject,
+        topic: q.topic,
+        difficulty_level: q.difficulty === 'easy' ? 1 : q.difficulty === 'medium' ? 2 : 3,
+        chapter: q.chapter
+      }));
+
+      setQuestions(mappedQuestions);
     } catch (err) {
       console.error('Error fetching questions:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch questions');
@@ -144,32 +106,55 @@ export const useQuestions = (filters?: {
       setLoading(true);
       setError(null);
 
-      let filteredQuestions = [...mockQuestions];
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      let query = supabase
+        .from('questions')
+        .select('*');
 
       // Apply filters
       if (subject) {
-        filteredQuestions = filteredQuestions.filter(q => 
-          q.subject.toLowerCase() === subject.toLowerCase()
-        );
+        query = query.eq('subject', subject);
       }
 
       if (topic) {
-        filteredQuestions = filteredQuestions.filter(q => 
-          q.topic.toLowerCase() === topic.toLowerCase()
-        );
+        query = query.eq('topic', topic);
       }
 
       if (difficulty) {
-        filteredQuestions = filteredQuestions.filter(q => 
-          q.difficulty_level === difficulty
-        );
+        const difficultyMap = { 1: 'easy', 2: 'medium', 3: 'hard' };
+        query = query.eq('difficulty', difficultyMap[difficulty as keyof typeof difficultyMap]);
       }
 
+      // Fetch more than needed for random selection
+      query = query.limit(count * 3);
+
+      const { data, error: queryError } = await query;
+
+      if (queryError) throw queryError;
+
+      // Map and shuffle
+      const mappedQuestions: Question[] = (data || []).map(q => ({
+        id: q.id,
+        question_text: q.question,
+        options: {
+          A: q.option_a,
+          B: q.option_b,
+          C: q.option_c,
+          D: q.option_d
+        },
+        correct_option: '', // Hidden by RLS
+        explanation: '', // Hidden by RLS
+        subject: q.subject,
+        topic: q.topic,
+        difficulty_level: q.difficulty === 'easy' ? 1 : q.difficulty === 'medium' ? 2 : 3,
+        chapter: q.chapter
+      }));
+
       // Shuffle and take count
-      const shuffled = filteredQuestions.sort(() => Math.random() - 0.5);
+      const shuffled = mappedQuestions.sort(() => Math.random() - 0.5);
       const selected = shuffled.slice(0, count);
 
-      // Correct answers are hidden by RLS - they'll be null from the database
       setQuestions(selected);
       return selected;
     } catch (err) {

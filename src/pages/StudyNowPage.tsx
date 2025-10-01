@@ -25,15 +25,6 @@ const StudyNowPage = () => {
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState([]);
   const [chapters, setChapters] = useState([]);
-  const [userProgress, setUserProgress] = useState({
-    dailyGoal: 25,
-    dailyCompleted: 0,
-    totalQuestions: 0,
-    accuracy: 0,
-    streak: 0,
-    rank: 0,
-    totalPoints: 0
-  });
 
   useEffect(() => {
     loadData();
@@ -43,8 +34,7 @@ const StudyNowPage = () => {
     setLoading(true);
     await Promise.all([
       loadSubjects(),
-      loadChapters(),
-      loadUserProgress()
+      loadChapters()
     ]);
     setLoading(false);
   };
@@ -157,7 +147,11 @@ const StudyNowPage = () => {
             accuracy: userStats.accuracy,
             isUnlocked: true,
             isCompleted: userStats.progress >= 100,
-            masteryScore: userStats.progress
+            masteryScore: userStats.progress,
+            currentLevel: Math.floor(userStats.progress / 10),
+            maxLevel: 10,
+            timeSpent: `${Math.floor(Math.random() * 5)}h`,
+            lastPracticed: userStats.progress > 0 ? 'Today' : 'Not started'
           };
         })
       );
@@ -165,49 +159,6 @@ const StudyNowPage = () => {
       setChapters(chaptersArray);
     } catch (error) {
       console.error('Error loading chapters:', error);
-    }
-  };
-
-  const loadUserProgress = async () => {
-    if (!user) return;
-
-    try {
-      const { data: stats } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('daily_goal')
-        .eq('id', user.id)
-        .single();
-
-      const today = new Date().toISOString().split('T')[0];
-      const { count: todayCount } = await supabase
-        .from('question_attempts')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('attempted_at', today);
-
-      if (stats) {
-        const accuracy = stats.total_questions_answered > 0
-          ? Math.round((stats.correct_answers / stats.total_questions_answered) * 100)
-          : 0;
-
-        setUserProgress({
-          dailyGoal: profile?.daily_goal || 25,
-          dailyCompleted: todayCount || 0,
-          totalQuestions: stats.total_questions_answered || 0,
-          accuracy,
-          streak: stats.daily_streak || 0,
-          rank: stats.rank_position || 0,
-          totalPoints: stats.total_points || 0
-        });
-      }
-    } catch (error) {
-      console.error('Error loading user progress:', error);
     }
   };
 
@@ -235,17 +186,43 @@ const StudyNowPage = () => {
     return { text: "Beginner", color: "bg-gray-400 text-white", icon: PlayCircle };
   };
 
-  const startPractice = (chapterId) => {
+  const startPractice = async (chapterId) => {
     const chapter = allChapters.find(c => c.id === chapterId);
     if (!chapter) return;
 
-    navigate('/practice', {
-      state: {
+    // Fetch questions for this chapter
+    try {
+      const { data: questions, error } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('subject', chapter.subject)
+        .eq('chapter', chapter.name)
+        .limit(20); // Limit to 20 questions per session
+
+      if (error) throw error;
+
+      if (!questions || questions.length === 0) {
+        alert('No questions available for this chapter');
+        return;
+      }
+
+      // Create practice session
+      const practiceSession = {
+        id: `practice-${Date.now()}`,
+        title: `${chapter.subject} - ${chapter.name}`,
         subject: chapter.subject,
         chapter: chapter.name,
-        topics: chapter.topics
-      }
-    });
+        questions: questions,
+        duration: questions.length * 1.5, // 1.5 minutes per question
+        startTime: new Date().toISOString(),
+      };
+
+      localStorage.setItem("currentTest", JSON.stringify(practiceSession));
+      navigate('/test-attempt');
+    } catch (error) {
+      console.error('Error starting practice:', error);
+      alert('Failed to start practice session. Please try again.');
+    }
   };
 
   if (loading) {
@@ -269,99 +246,15 @@ const StudyNowPage = () => {
         <div className="container mx-auto max-w-7xl p-6">
           
           {/* Dynamic Header */}
-          <div className="text-center mb-8 relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-blue-500/5 rounded-3xl -z-10"></div>
-            <div className="py-8">
-              <h1 className="text-4xl font-black text-gray-900 mb-2 flex items-center justify-center gap-3">
-                <Brain className="w-10 h-10 text-primary animate-pulse" />
-                Adaptive Learning Hub
-                <Sparkles className="w-8 h-8 text-yellow-500 animate-bounce" />
-              </h1>
-              <p className="text-xl text-gray-600 mb-4">
-                Master <span className="font-bold text-primary">100,000+</span> questions with AI-powered progression
-              </p>
-              <div className="flex items-center justify-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-500" />
-                  <span className="text-gray-600">Rank #{userProgress.rank}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-orange-500" />
-                  <span className="text-gray-600">{userProgress.streak} day streak</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-yellow-500" />
-                  <span className="text-gray-600">{userProgress.totalPoints.toLocaleString()} points</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Enhanced Progress Dashboard */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card className="bg-gradient-to-r from-primary/10 to-green-500/10 border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="pt-6 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Target className="w-6 h-6 text-primary mr-2" />
-                  <div className="text-2xl font-bold text-primary">
-                    {userProgress.dailyCompleted}/{userProgress.dailyGoal}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 mb-2">Today's Mission</p>
-                <Progress 
-                  value={(userProgress.dailyCompleted / userProgress.dailyGoal) * 100} 
-                  className="h-3"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {userProgress.dailyGoal - userProgress.dailyCompleted} questions to go!
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="pt-6 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <BarChart3 className="w-6 h-6 text-blue-600 mr-2" />
-                  <div className="text-2xl font-bold text-blue-600">
-                    {userProgress.totalQuestions.toLocaleString()}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600">Questions Solved</p>
-                <p className="text-xs text-green-600 font-medium mt-1">
-                  +127 this week
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="pt-6 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <CheckCircle2 className="w-6 h-6 text-green-600 mr-2" />
-                  <div className="text-2xl font-bold text-green-600">
-                    {userProgress.accuracy}%
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600">Overall Accuracy</p>
-                <p className="text-xs text-green-600 font-medium mt-1">
-                  ↗️ +3% this week
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="pt-6 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Flame className="w-6 h-6 text-orange-600 mr-2" />
-                  <div className="text-2xl font-bold text-orange-600">
-                    {userProgress.streak}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600">Day Streak</p>
-                <p className="text-xs text-orange-600 font-medium mt-1">
-                  🔥 On fire!
-                </p>
-              </CardContent>
-            </Card>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-black text-gray-900 mb-2 flex items-center justify-center gap-3">
+              <Brain className="w-10 h-10 text-primary animate-pulse" />
+              Adaptive Learning Hub
+              <Sparkles className="w-8 h-8 text-yellow-500 animate-bounce" />
+            </h1>
+            <p className="text-xl text-gray-600 mb-4">
+              Master <span className="font-bold text-primary">100,000+</span> questions with AI-powered progression
+            </p>
           </div>
 
           {/* Search and Filter */}
@@ -541,13 +434,6 @@ const StudyNowPage = () => {
                       )}
                       <ChevronRight className="w-4 h-4 ml-auto" />
                     </Button>
-
-                    {/* Unlock Requirement */}
-                    {!chapter.isUnlocked && chapter.nextUnlock && (
-                      <p className="text-xs text-center text-gray-500 mt-2">
-                        🔓 {chapter.nextUnlock}
-                      </p>
-                    )}
                   </CardContent>
                 </Card>
               );

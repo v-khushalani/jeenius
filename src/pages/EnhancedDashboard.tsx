@@ -99,71 +99,67 @@ const EnhancedDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
       <Header />
       
-      {/* Optimized spacing for non-scrollable view */}
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 max-w-7xl pt-20 pb-4">
-        {/* Welcome Section - Compact */}
-        <div className="mb-4">
-          <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-2xl p-4 sm:p-6 shadow-2xl border border-blue-800/30 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <Header />
+      
+      {/* Added proper spacing to avoid navbar overlap */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-24">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-3xl p-8 shadow-2xl border border-blue-800/30 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
             <div className="relative z-10">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-                <div className="flex-1 flex items-start gap-3">
-                  {/* Logo */}
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg">
-                    <Brain className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                      <Brain className="h-6 w-6 text-white" />
+                    </div>
+                    <h1 className="text-3xl lg:text-4xl font-bold">
                       Welcome back, {displayName}! 🎯
                     </h1>
-                    <p className="text-slate-300 text-sm sm:text-base mb-3">
-                      Ready to dominate {profile?.target_exam || 'your exams'}?
-                    </p>
-                    
-                    {/* Action Buttons - Compact */}
-                    <div className="flex flex-wrap gap-2">
-                      <button 
-                        onClick={() => navigate('/study-now')} 
-                        className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg hover:scale-105"
-                      >
-                        📚 Study
-                      </button>
-                      <button 
-                        onClick={() => navigate('/battle')} 
-                        className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg hover:scale-105"
-                      >
-                        ⚔️ Battle
-                      </button>
-                      <button 
-                        onClick={() => navigate('/test')} 
-                        className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg hover:scale-105"
-                      >
-                        🧪 Test
-                      </button>
-                    </div>
+                  </div>
+                  <p className="text-slate-300 mb-6 text-lg">
+                    Ready to dominate {profile?.target_exam || 'your exams'} today? Your rank is climbing!
+                  </p>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap gap-3">
+                    <button 
+                      onClick={() => navigate('/study-now')} 
+                      className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-blue-500/50 hover:scale-105"
+                    >
+                      📚 Start Studying
+                    </button>
+                    <button 
+                      onClick={() => navigate('/battle')} 
+                      className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-purple-500/50 hover:scale-105"
+                    >
+                      ⚔️ Battle Friends
+                    </button>
+                    <button 
+                      onClick={() => navigate('/test')} 
+                      className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
+                    >
+                      🧪 Take Test
+                    </button>
                   </div>
                 </div>
                 
-                {/* Rank Display - Medal Style */}
-                <div className="text-center shrink-0">
-                  <div className="relative">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center shadow-2xl border-4 border-yellow-300">
-                      <div className="text-center">
-                        <Trophy className="h-6 w-6 sm:h-7 sm:w-7 text-white mx-auto mb-0.5" />
-                        <span className="text-xl sm:text-2xl font-black text-white">#{stats?.rank || 0}</span>
-                      </div>
+                {/* Rank Display */}
+                <div className="text-center">
+                  <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-2xl p-6 backdrop-blur-xl border border-yellow-400/30">
+                    <div className="flex items-center justify-center gap-3 mb-2">
+                      <Trophy className="h-8 w-8 text-yellow-400" />
+                      <span className="text-4xl font-bold text-yellow-300">#{stats?.rank || 0}</span>
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">↑</span>
-                    </div>
+                    <p className="text-sm text-yellow-200 font-medium">Your Rank</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
         {/* Quick Stats - 4 Cards Including Streak */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">

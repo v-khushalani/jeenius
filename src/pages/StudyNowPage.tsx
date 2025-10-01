@@ -5,6 +5,9 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Header from '@/components/Header';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 import {
   Brain, Target, BookOpen, Clock, Trophy, 
@@ -15,259 +18,206 @@ import {
 } from "lucide-react";
 
 const StudyNowPage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedSubject, setSelectedSubject] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [subjects, setSubjects] = useState([]);
+  const [chapters, setChapters] = useState([]);
   const [userProgress, setUserProgress] = useState({
     dailyGoal: 25,
-    dailyCompleted: 12,
-    totalQuestions: 1247,
-    accuracy: 78,
-    streak: 7,
-    rank: 142,
-    totalPoints: 12470
+    dailyCompleted: 0,
+    totalQuestions: 0,
+    accuracy: 0,
+    streak: 0,
+    rank: 0,
+    totalPoints: 0
   });
 
-  // Load user progress from localStorage/API
   useEffect(() => {
-    loadUserData();
-  }, []);
+    loadData();
+  }, [user]);
 
-  const loadUserData = () => {
-    const savedProgress = localStorage.getItem('userProgress');
-    if (savedProgress) {
-      const progress = JSON.parse(savedProgress);
-      setUserProgress(prev => ({ ...prev, ...progress }));
+  const loadData = async () => {
+    setLoading(true);
+    await Promise.all([
+      loadSubjects(),
+      loadChapters(),
+      loadUserProgress()
+    ]);
+    setLoading(false);
+  };
+
+  const loadSubjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .select('subject')
+        .order('subject');
+
+      if (error) throw error;
+
+      const uniqueSubjects = [...new Set(data?.map(q => q.subject) || [])];
+      const subjectIcons = {
+        'Physics': { icon: Target, color: 'blue', gradient: 'from-blue-500 to-cyan-500' },
+        'Chemistry': { icon: Beaker, color: 'green', gradient: 'from-green-500 to-emerald-500' },
+        'Mathematics': { icon: Calculator, color: 'purple', gradient: 'from-purple-500 to-pink-500' },
+        'Biology': { icon: Activity, color: 'red', gradient: 'from-red-500 to-rose-500' }
+      };
+
+      const subjectsWithData = await Promise.all(
+        uniqueSubjects.map(async (subject) => {
+          const { count } = await supabase
+            .from('questions')
+            .select('*', { count: 'exact', head: true })
+            .eq('subject', subject);
+
+          return {
+            id: subject.toLowerCase(),
+            name: subject,
+            ...subjectIcons[subject] || { icon: BookOpen, color: 'gray', gradient: 'from-gray-500 to-gray-600' },
+            totalQuestions: count || 0
+          };
+        })
+      );
+
+      setSubjects(subjectsWithData);
+    } catch (error) {
+      console.error('Error loading subjects:', error);
     }
   };
 
-  // Get subjects based on user's target exam
-  const getSubjects = () => {
-    const savedGoals = localStorage.getItem('userGoals');
-    let targetExam = 'JEE';
-    
-    if (savedGoals) {
-      const goals = JSON.parse(savedGoals);
-      targetExam = goals.goal || 'JEE';
+  const loadChapters = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .select('subject, chapter, topic, difficulty');
+
+      if (error) throw error;
+
+      interface ChapterData {
+        subject: string;
+        chapter: string;
+        topics: Set<string>;
+        questionCount: number;
+      }
+
+      const chapterMap: Record<string, ChapterData> = {};
+      data?.forEach(q => {
+        const key = `${q.subject}-${q.chapter}`;
+        if (!chapterMap[key]) {
+          chapterMap[key] = {
+            subject: q.subject,
+            chapter: q.chapter,
+            topics: new Set(),
+            questionCount: 0
+          };
+        }
+        chapterMap[key].topics.add(q.topic);
+        chapterMap[key].questionCount++;
+      });
+
+      const chaptersArray = await Promise.all(
+        Object.entries(chapterMap).map(async ([key, value], index) => {
+          let userStats = { progress: 0, accuracy: 0 };
+          
+          if (user) {
+            const { data: attempts } = await supabase
+              .from('question_attempts')
+              .select('question_id, is_correct')
+              .eq('user_id', user.id);
+
+            const { data: chapterQuestions } = await supabase
+              .from('questions')
+              .select('id')
+              .eq('subject', value.subject)
+              .eq('chapter', value.chapter);
+
+            const chapterQuestionIds = chapterQuestions?.map(q => q.id) || [];
+            const chapterAttempts = attempts?.filter(a => 
+              chapterQuestionIds.includes(a.question_id)
+            ) || [];
+
+            if (chapterAttempts.length > 0) {
+              const correct = chapterAttempts.filter(a => a.is_correct).length;
+              userStats.accuracy = Math.round((correct / chapterAttempts.length) * 100);
+              userStats.progress = Math.round((chapterAttempts.length / value.questionCount) * 100);
+            }
+          }
+
+          return {
+            id: index + 1,
+            name: value.chapter,
+            subject: value.subject,
+            subjectId: value.subject.toLowerCase(),
+            topics: Array.from(value.topics),
+            questionsCount: value.questionCount,
+            progress: userStats.progress,
+            accuracy: userStats.accuracy,
+            isUnlocked: true,
+            isCompleted: userStats.progress >= 100,
+            masteryScore: userStats.progress
+          };
+        })
+      );
+
+      setChapters(chaptersArray);
+    } catch (error) {
+      console.error('Error loading chapters:', error);
     }
-
-    const subjects = {
-      'JEE': [
-        { 
-          id: 'physics', 
-          name: 'Physics', 
-          icon: Target, 
-          color: 'blue', 
-          gradient: 'from-blue-500 to-cyan-500',
-          bgGradient: 'from-blue-50 to-cyan-50',
-          chapters: 15,
-          totalQuestions: 28500,
-          completedChapters: 8,
-          avgAccuracy: 82
-        },
-        { 
-          id: 'chemistry', 
-          name: 'Chemistry', 
-          icon: Beaker, 
-          color: 'green', 
-          gradient: 'from-green-500 to-emerald-500',
-          bgGradient: 'from-green-50 to-emerald-50',
-          chapters: 18,
-          totalQuestions: 32400,
-          completedChapters: 5,
-          avgAccuracy: 75
-        },
-        { 
-          id: 'mathematics', 
-          name: 'Mathematics', 
-          icon: Calculator, 
-          color: 'purple', 
-          gradient: 'from-purple-500 to-pink-500',
-          bgGradient: 'from-purple-50 to-pink-50',
-          chapters: 20,
-          totalQuestions: 35600,
-          completedChapters: 12,
-          avgAccuracy: 88
-        }
-      ],
-      'NEET': [
-        { 
-          id: 'physics', 
-          name: 'Physics', 
-          icon: Target, 
-          color: 'blue', 
-          gradient: 'from-blue-500 to-cyan-500',
-          bgGradient: 'from-blue-50 to-cyan-50',
-          chapters: 12,
-          totalQuestions: 22000,
-          completedChapters: 6,
-          avgAccuracy: 79
-        },
-        { 
-          id: 'chemistry', 
-          name: 'Chemistry', 
-          icon: Beaker, 
-          color: 'green', 
-          gradient: 'from-green-500 to-emerald-500',
-          bgGradient: 'from-green-50 to-emerald-50',
-          chapters: 16,
-          totalQuestions: 28800,
-          completedChapters: 4,
-          avgAccuracy: 73
-        },
-        { 
-          id: 'biology', 
-          name: 'Biology', 
-          icon: Activity, 
-          color: 'red', 
-          gradient: 'from-red-500 to-rose-500',
-          bgGradient: 'from-red-50 to-rose-50',
-          chapters: 22,
-          totalQuestions: 41200,
-          completedChapters: 8,
-          avgAccuracy: 85
-        }
-      ]
-    };
-
-    return subjects[targetExam] || subjects['JEE'];
   };
 
-  // Enhanced chapters with adaptive learning levels
-  const getChapters = (subjectId) => {
-    const chaptersData = {
-      physics: [
-        { 
-          id: 1, 
-          name: "Mechanics & Motion", 
-          topics: ["Kinematics", "Newton's Laws", "Work & Energy", "Momentum"],
-          questionsCount: 2400,
-          difficulty: "Foundation → Advanced", 
-          currentLevel: 3,
-          maxLevel: 5,
-          progress: 72, 
-          accuracy: 85,
-          isUnlocked: true,
-          isCompleted: false,
-          masteryScore: 72,
-          timeSpent: "8h 45m",
-          lastPracticed: "2 hours ago",
-          nextUnlock: null
-        },
-        { 
-          id: 2, 
-          name: "Thermodynamics", 
-          topics: ["Heat Transfer", "Laws of Thermodynamics", "Kinetic Theory"],
-          questionsCount: 1800,
-          difficulty: "Intermediate → Expert", 
-          currentLevel: 1,
-          maxLevel: 4,
-          progress: 28, 
-          accuracy: 68,
-          isUnlocked: true,
-          isCompleted: false,
-          masteryScore: 28,
-          timeSpent: "3h 20m",
-          lastPracticed: "1 day ago",
-          nextUnlock: null
-        },
-        { 
-          id: 3, 
-          name: "Waves & Optics", 
-          topics: ["Wave Motion", "Sound Waves", "Light & Optics", "Interference"],
-          questionsCount: 2100,
-          difficulty: "Foundation → Expert", 
-          currentLevel: 0,
-          maxLevel: 5,
-          progress: 0, 
-          accuracy: 0,
-          isUnlocked: false,
-          isCompleted: false,
-          masteryScore: 0,
-          timeSpent: "0h 0m",
-          lastPracticed: "Never",
-          nextUnlock: "Complete Mechanics with 80% accuracy"
-        }
-      ],
-      chemistry: [
-        { 
-          id: 4, 
-          name: "Organic Chemistry", 
-          topics: ["Hydrocarbons", "Functional Groups", "Reactions", "Mechanisms"],
-          questionsCount: 3200,
-          difficulty: "Foundation → Master", 
-          currentLevel: 2,
-          maxLevel: 6,
-          progress: 45, 
-          accuracy: 76,
-          isUnlocked: true,
-          isCompleted: false,
-          masteryScore: 45,
-          timeSpent: "12h 15m",
-          lastPracticed: "4 hours ago",
-          nextUnlock: null
-        },
-        { 
-          id: 5, 
-          name: "Inorganic Chemistry", 
-          topics: ["Periodic Table", "Chemical Bonding", "Coordination", "Metallurgy"],
-          questionsCount: 2800,
-          difficulty: "Basic → Advanced", 
-          currentLevel: 4,
-          maxLevel: 5,
-          progress: 89, 
-          accuracy: 92,
-          isUnlocked: true,
-          isCompleted: true,
-          masteryScore: 89,
-          timeSpent: "15h 30m",
-          lastPracticed: "6 hours ago",
-          nextUnlock: null
-        }
-      ],
-      mathematics: [
-        { 
-          id: 6, 
-          name: "Calculus", 
-          topics: ["Limits", "Derivatives", "Integration", "Applications"],
-          questionsCount: 4100,
-          difficulty: "Basic → Expert", 
-          currentLevel: 3,
-          maxLevel: 6,
-          progress: 67, 
-          accuracy: 84,
-          isUnlocked: true,
-          isCompleted: false,
-          masteryScore: 67,
-          timeSpent: "18h 45m",
-          lastPracticed: "1 hour ago",
-          nextUnlock: null
-        },
-        { 
-          id: 7, 
-          name: "Coordinate Geometry", 
-          topics: ["Straight Lines", "Circles", "Parabola", "Ellipse", "Hyperbola"],
-          questionsCount: 3600,
-          difficulty: "Foundation → Master", 
-          currentLevel: 5,
-          maxLevel: 5,
-          progress: 96, 
-          accuracy: 94,
-          isUnlocked: true,
-          isCompleted: true,
-          masteryScore: 96,
-          timeSpent: "22h 10m",
-          lastPracticed: "3 hours ago",
-          nextUnlock: null
-        }
-      ]
-    };
-    return chaptersData[subjectId] || [];
+  const loadUserProgress = async () => {
+    if (!user) return;
+
+    try {
+      const { data: stats } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('daily_goal')
+        .eq('id', user.id)
+        .single();
+
+      const today = new Date().toISOString().split('T')[0];
+      const { count: todayCount } = await supabase
+        .from('question_attempts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('attempted_at', today);
+
+      if (stats) {
+        const accuracy = stats.total_questions_answered > 0
+          ? Math.round((stats.correct_answers / stats.total_questions_answered) * 100)
+          : 0;
+
+        setUserProgress({
+          dailyGoal: profile?.daily_goal || 25,
+          dailyCompleted: todayCount || 0,
+          totalQuestions: stats.total_questions_answered || 0,
+          accuracy,
+          streak: stats.daily_streak || 0,
+          rank: stats.rank_position || 0,
+          totalPoints: stats.total_points || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user progress:', error);
+    }
   };
 
-  const subjects = getSubjects();
-  const allChapters = subjects.flatMap(subject => 
-    getChapters(subject.id).map(chapter => ({ ...chapter, subject: subject.name, subjectId: subject.id, subjectGradient: subject.gradient }))
-  );
+  const allChapters = chapters.map(chapter => {
+    const subject = subjects.find(s => s.id === chapter.subjectId);
+    return {
+      ...chapter,
+      subjectGradient: subject?.gradient || 'from-gray-500 to-gray-600'
+    };
+  });
 
   const filteredChapters = allChapters.filter(chapter => {
     const matchesSearch = chapter.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -287,14 +237,30 @@ const StudyNowPage = () => {
 
   const startPractice = (chapterId) => {
     const chapter = allChapters.find(c => c.id === chapterId);
-    if (!chapter.isUnlocked) {
-      alert(`🔒 Chapter locked! ${chapter.nextUnlock}`);
-      return;
-    }
-    
-    alert(`🚀 Starting adaptive practice for "${chapter.name}"!\n\n📚 ${chapter.questionsCount.toLocaleString()} questions available\n🎯 Current Level: ${chapter.currentLevel}/${chapter.maxLevel}\n⚡ Topics: ${chapter.topics.join(', ')}\n\nReady to level up your skills?`);
-    // Navigate to practice interface
+    if (!chapter) return;
+
+    navigate('/practice', {
+      state: {
+        subject: chapter.subject,
+        chapter: chapter.name,
+        topics: chapter.topics
+      }
+    });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+        <Header />
+        <div className="pt-20 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your learning data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">

@@ -3,90 +3,88 @@ import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import {
   BookOpen,
   Brain,
   Trophy,
   Play,
   AlertTriangle,
-  Wifi,
-  WifiOff,
-  RefreshCw,
   Clock,
   Target,
-  Users
+  Users,
+  FileText
 } from "lucide-react";
 
 const TestPage = () => {
-  const [connectionStatus, setConnectionStatus] = useState('checking');
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [availableTests, setAvailableTests] = useState([]);
-  
-  // Mock data for when database is not available
-  const mockTests = [
-    {
-      id: "physics_mechanics_easy",
-      subject: "Physics",
-      chapter: "Mechanics",
-      topic: "Laws of Motion",
-      difficulty: "Easy",
-      questionCount: 15,
-      estimatedTime: 20
-    },
-    {
-      id: "chemistry_organic_medium",
-      subject: "Chemistry", 
-      chapter: "Organic Chemistry",
-      topic: "Hydrocarbons",
-      difficulty: "Medium",
-      questionCount: 20,
-      estimatedTime: 25
-    },
-    {
-      id: "math_calculus_hard",
-      subject: "Mathematics",
-      chapter: "Calculus",
-      topic: "Derivatives",
-      difficulty: "Hard", 
-      questionCount: 25,
-      estimatedTime: 35
-    },
-    {
-      id: "physics_waves_medium",
-      subject: "Physics",
-      chapter: "Waves",
-      topic: "Sound Waves",
-      difficulty: "Medium",
-      questionCount: 18,
-      estimatedTime: 22
-    }
-  ];
-
-  const subjects = ["Physics", "Chemistry", "Mathematics", "Biology"];
+  const [subjects, setSubjects] = useState([]);
+  const [subjectStats, setSubjectStats] = useState({});
 
   useEffect(() => {
-    checkConnection();
+    loadTestData();
   }, []);
 
-  const checkConnection = async () => {
+  const loadTestData = async () => {
     setLoading(true);
-    setConnectionStatus('checking');
-    
     try {
-      // Simulate connection check
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // For demo purposes, we'll use mock data
-      console.log("Using mock test data for demonstration");
-      setConnectionStatus('mock'); // Using mock data
-      setAvailableTests(mockTests);
-      
+      const { data: questions, error } = await supabase
+        .from('questions')
+        .select('subject, chapter, topic, difficulty');
+
+      if (error) throw error;
+
+      const uniqueSubjects = [...new Set(questions?.map(q => q.subject) || [])];
+      setSubjects(uniqueSubjects);
+
+      const stats: Record<string, number> = {};
+      uniqueSubjects.forEach(subject => {
+        const subjectQuestions = questions?.filter(q => q.subject === subject) || [];
+        stats[subject] = subjectQuestions.length;
+      });
+      setSubjectStats(stats);
+
+      interface TestData {
+        id: string;
+        subject: string;
+        chapter: string;
+        topic: string;
+        difficulty: string;
+        questionCount: number;
+        estimatedTime: number;
+      }
+
+      const testMap: Record<string, TestData> = {};
+      questions?.forEach(q => {
+        const key = `${q.subject}-${q.chapter}-${q.difficulty}`;
+        if (!testMap[key]) {
+          testMap[key] = {
+            id: key,
+            subject: q.subject,
+            chapter: q.chapter,
+            topic: q.topic,
+            difficulty: q.difficulty,
+            questionCount: 0,
+            estimatedTime: 0
+          };
+        }
+        testMap[key].questionCount++;
+      });
+
+      const tests = Object.values(testMap).map(test => ({
+        ...test,
+        estimatedTime: Math.ceil(test.questionCount * 1.5)
+      }));
+
+      setAvailableTests(tests);
     } catch (error) {
-      console.error("Connection failed:", error);
-      setConnectionStatus('error');
-      // Still show mock data even on error
-      setAvailableTests(mockTests);
+      console.error('Error loading test data:', error);
     } finally {
       setLoading(false);
     }
@@ -101,45 +99,57 @@ const TestPage = () => {
     }
   };
 
-  const handleStartTest = (testData) => {
-    console.log('Starting test:', testData);
-    
-    // Create mock test session
-    const mockQuestions = generateMockQuestions(testData.questionCount, testData.difficulty);
-    
-    const testSession = {
-      id: testData.id,
-      title: `${testData.subject} - ${testData.chapter} (${testData.difficulty})`,
-      questions: mockQuestions,
-      duration: testData.estimatedTime,
-      startTime: new Date().toISOString(),
-    };
-
-    // Store in localStorage 
-    localStorage.setItem("currentTest", JSON.stringify(testSession));
-    
-    alert(`Test "${testSession.title}" is ready!\n\n${mockQuestions.length} questions\nDuration: ${testData.estimatedTime} minutes\n\nThis would normally navigate to the test interface.`);
-    
-    // In real app: navigate(`/test-attempt/${testData.id}`);
-  };
-
-  const generateMockQuestions = (count, difficulty) => {
-    const questions = [];
-    for (let i = 1; i <= count; i++) {
-      questions.push({
-        id: `q_${i}`,
-        question: `Sample ${difficulty} question ${i} for this topic. What is the correct answer?`,
-        option_a: `Option A for question ${i}`,
-        option_b: `Option B for question ${i}`, 
-        option_c: `Option C for question ${i}`,
-        option_d: `Option D for question ${i}`,
-        correct_option: "option_a",
-        explanation: `This is the explanation for question ${i}. The correct answer demonstrates the key concept.`,
-        difficulty: difficulty.toLowerCase(),
-        topic: "Sample Topic"
-      });
+  const handleStartTest = async (testData) => {
+    if (!user) {
+      alert('Please log in to start a test');
+      return;
     }
-    return questions;
+
+    try {
+      const { data: questions, error } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('subject', testData.subject)
+        .eq('chapter', testData.chapter)
+        .eq('difficulty', testData.difficulty)
+        .limit(testData.questionCount);
+
+      if (error) throw error;
+
+      if (!questions || questions.length === 0) {
+        alert('No questions available for this test');
+        return;
+      }
+
+      const testSession = {
+        id: testData.id,
+        title: `${testData.subject} - ${testData.chapter}`,
+        subject: testData.subject,
+        chapter: testData.chapter,
+        difficulty: testData.difficulty,
+        questions: questions.map(q => ({
+          id: q.id,
+          question_text: q.question,
+          options: {
+            A: q.option_a,
+            B: q.option_b,
+            C: q.option_c,
+            D: q.option_d
+          },
+          subject: q.subject,
+          topic: q.topic,
+          chapter: q.chapter
+        })),
+        duration: testData.estimatedTime,
+        startTime: new Date().toISOString(),
+      };
+
+      localStorage.setItem("currentTest", JSON.stringify(testSession));
+      navigate('/test-attempt');
+    } catch (error) {
+      console.error('Error starting test:', error);
+      alert('Failed to start test. Please try again.');
+    }
   };
 
   const filteredTests = selectedSubject 
@@ -175,58 +185,38 @@ const TestPage = () => {
               <div>
                 <h1 className="text-3xl font-bold mb-2" style={{color: '#013062'}}>
                   Test Center 🎯
-                  {connectionStatus === 'mock' && (
-                    <Badge className="ml-3 bg-blue-100 text-blue-800">Demo Mode</Badge>
-                  )}
                 </h1>
                 <p className="text-gray-600">
-                  Practice with mock tests to improve your performance
+                  Practice with tests from your question database
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Connection Status */}
-          {connectionStatus === 'mock' && (
-            <Card className="mb-6 bg-blue-50 border-blue-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 text-blue-800">
-                  <Wifi className="w-4 h-4" />
-                  <span className="text-sm">
-                    Running in demo mode with sample tests. In production, this would connect to your question database.
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Quick Stats */}
           <div className="grid md:grid-cols-4 gap-4 mb-8">
-            <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <CardContent className="p-4 text-center">
-                <BookOpen className="w-8 h-8 mx-auto mb-2" />
-                <div className="text-2xl font-bold">150+</div>
-                <div className="text-sm opacity-90">Physics Questions</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-              <CardContent className="p-4 text-center">
-                <BookOpen className="w-8 h-8 mx-auto mb-2" />
-                <div className="text-2xl font-bold">120+</div>
-                <div className="text-sm opacity-90">Chemistry Questions</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-              <CardContent className="p-4 text-center">
-                <BookOpen className="w-8 h-8 mx-auto mb-2" />
-                <div className="text-2xl font-bold">200+</div>
-                <div className="text-sm opacity-90">Math Questions</div>
-              </CardContent>
-            </Card>
+            {subjects.slice(0, 3).map((subject, index) => {
+              const colors = [
+                'from-blue-500 to-blue-600',
+                'from-green-500 to-green-600',
+                'from-purple-500 to-purple-600'
+              ];
+              return (
+                <Card key={subject} className={`bg-gradient-to-r ${colors[index]} text-white`}>
+                  <CardContent className="p-4 text-center">
+                    <BookOpen className="w-8 h-8 mx-auto mb-2" />
+                    <div className="text-2xl font-bold">{subjectStats[subject] || 0}</div>
+                    <div className="text-sm opacity-90">{subject} Questions</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
             <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
               <CardContent className="p-4 text-center">
                 <Trophy className="w-8 h-8 mx-auto mb-2" />
-                <div className="text-2xl font-bold">470+</div>
+                <div className="text-2xl font-bold">
+                  {(Object.values(subjectStats).reduce((a: number, b: number) => a + b, 0) as number)}
+                </div>
                 <div className="text-sm opacity-90">Total Questions</div>
               </CardContent>
             </Card>
@@ -516,8 +506,5 @@ const TestPage = () => {
     </div>
   );
 };
-
-// Add missing import for FileText icon
-import { FileText } from "lucide-react";
 
 export default TestPage;

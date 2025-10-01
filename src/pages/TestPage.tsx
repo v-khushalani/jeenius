@@ -11,10 +11,8 @@ import {
   Brain,
   Trophy,
   Play,
-  AlertTriangle,
   Clock,
   Target,
-  Users,
   FileText
 } from "lucide-react";
 
@@ -184,53 +182,82 @@ const TestPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold mb-2" style={{color: '#013062'}}>
-                  Test Center 🎯
+                  Practice Tests 🎯
                 </h1>
                 <p className="text-gray-600">
-                  Practice with tests from your question database
+                  Choose your test type and start practicing
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="grid md:grid-cols-4 gap-4 mb-8">
-            {subjects.slice(0, 3).map((subject, index) => {
-              const colors = [
-                'from-blue-500 to-blue-600',
-                'from-green-500 to-green-600',
-                'from-purple-500 to-purple-600'
-              ];
-              return (
-                <Card key={subject} className={`bg-gradient-to-r ${colors[index]} text-white`}>
-                  <CardContent className="p-4 text-center">
-                    <BookOpen className="w-8 h-8 mx-auto mb-2" />
-                    <div className="text-2xl font-bold">{subjectStats[subject] || 0}</div>
-                    <div className="text-sm opacity-90">{subject} Questions</div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-            <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-              <CardContent className="p-4 text-center">
-                <Trophy className="w-8 h-8 mx-auto mb-2" />
-                <div className="text-2xl font-bold">
-                  {(Object.values(subjectStats).reduce((a: number, b: number) => a + b, 0) as number)}
+          {/* Test Type Selection */}
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 hover:shadow-xl transition-all cursor-pointer">
+              <CardContent className="p-6">
+                <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-8 h-8 text-white" />
                 </div>
-                <div className="text-sm opacity-90">Total Questions</div>
+                <h3 className="text-xl font-bold mb-2 text-center" style={{color: '#013062'}}>Chapter-wise Test</h3>
+                <p className="text-gray-600 text-center text-sm mb-4">
+                  Practice specific chapters to strengthen your concepts
+                </p>
+                <Button 
+                  className="w-full" 
+                  style={{backgroundColor: '#013062'}}
+                  onClick={() => setSelectedSubject("")}
+                >
+                  Select Chapter
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 hover:shadow-xl transition-all cursor-pointer">
+              <CardContent className="p-6">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Target className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-center" style={{color: '#013062'}}>Subject-wise Test</h3>
+                <p className="text-gray-600 text-center text-sm mb-4">
+                  Complete subject coverage with mixed chapters
+                </p>
+                <Button 
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => {/* Add subject-wise logic */}}
+                >
+                  Select Subject
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 hover:shadow-xl transition-all cursor-pointer">
+              <CardContent className="p-6">
+                <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trophy className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-center" style={{color: '#013062'}}>Full Syllabus Mock</h3>
+                <p className="text-gray-600 text-center text-sm mb-4">
+                  Complete mock test covering entire syllabus
+                </p>
+                <Button 
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  onClick={() => {/* Add full syllabus logic */}}
+                >
+                  Start Mock Test
+                </Button>
               </CardContent>
             </Card>
           </div>
 
           {/* Main Content */}
-          <div className="grid lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid lg:grid-cols-4 gap-6">
             
             {/* Subject Selection */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Target className="w-5 h-5 mr-2" />
-                  Select Subject
+                  Filter by Subject
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -252,6 +279,9 @@ const TestPage = () => {
                     >
                       <BookOpen className="w-4 h-4 mr-2" />
                       {subject}
+                      <Badge variant="secondary" className="ml-auto">
+                        {subjectStats[subject]}
+                      </Badge>
                     </Button>
                   ))}
                 </div>
@@ -265,7 +295,7 @@ const TestPage = () => {
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Brain className="w-5 h-5 mr-2" />
-                      Available Tests
+                      Available Chapter Tests
                       {selectedSubject && (
                         <Badge variant="outline" className="ml-2">
                           {selectedSubject}
@@ -308,10 +338,6 @@ const TestPage = () => {
                                 <FileText className="w-4 h-4 mr-1" />
                                 {test.questionCount} questions
                               </div>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Users className="w-4 h-4 mr-1" />
-                                {Math.floor(Math.random() * 500) + 100} taken
-                              </div>
                             </div>
                             
                             <Button
@@ -322,10 +348,6 @@ const TestPage = () => {
                               <Play className="w-4 h-4 mr-2" />
                               Start Test
                             </Button>
-                            
-                            <div className="mt-2 text-center text-xs text-gray-500">
-                              Avg Score: {Math.floor(Math.random() * 30) + 60}%
-                            </div>
                           </CardContent>
                         </Card>
                       ))}
@@ -356,151 +378,6 @@ const TestPage = () => {
               </Card>
             </div>
           </div>
-
-          {/* Test Categories */}
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Brain className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-2" style={{color: '#013062'}}>Quick Practice</h3>
-                <p className="text-gray-600 mb-4">
-                  Short 10-15 question tests for quick revision
-                </p>
-                <div className="text-sm text-blue-600 font-medium">
-                  15-20 minutes • Easy to Medium
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-2" style={{color: '#013062'}}>Chapter Tests</h3>
-                <p className="text-gray-600 mb-4">
-                  Comprehensive chapter-wise assessments
-                </p>
-                <div className="text-sm text-green-600 font-medium">
-                  25-35 minutes • Mixed Difficulty
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Trophy className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-2" style={{color: '#013062'}}>Mock Exams</h3>
-                <p className="text-gray-600 mb-4">
-                  Full-length practice tests simulating real exams
-                </p>
-                <div className="text-sm text-purple-600 font-medium">
-                  3 hours • JEE/NEET Pattern
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-2 text-orange-500" />
-                Test Instructions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold mb-3">Before Starting:</h4>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-start">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 mt-2 flex-shrink-0"></div>
-                      Ensure stable internet connection
-                    </li>
-                    <li className="flex items-start">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 mt-2 flex-shrink-0"></div>
-                      Find a quiet study environment
-                    </li>
-                    <li className="flex items-start">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 mt-2 flex-shrink-0"></div>
-                      Keep pen and paper handy for calculations
-                    </li>
-                    <li className="flex items-start">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 mt-2 flex-shrink-0"></div>
-                      Close all distracting applications
-                    </li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-3">During the Test:</h4>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-start">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2 mt-2 flex-shrink-0"></div>
-                      Read each question carefully
-                    </li>
-                    <li className="flex items-start">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2 mt-2 flex-shrink-0"></div>
-                      Manage your time wisely
-                    </li>
-                    <li className="flex items-start">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2 mt-2 flex-shrink-0"></div>
-                      Review your answers before submitting
-                    </li>
-                    <li className="flex items-start">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2 mt-2 flex-shrink-0"></div>
-                      Don't spend too much time on difficult questions
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Performance Tips */}
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
-                Test Performance Tips
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center p-4">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
-                    <Clock className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h3 className="font-semibold mb-2" style={{color: '#013062'}}>Time Management</h3>
-                  <p className="text-sm text-gray-600">
-                    Allocate time per question and stick to it. Don't get stuck on one question.
-                  </p>
-                </div>
-                <div className="text-center p-4">
-                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
-                    <Target className="w-6 h-6 text-green-600" />
-                  </div>
-                  <h3 className="font-semibold mb-2" style={{color: '#013062'}}>Strategic Approach</h3>
-                  <p className="text-sm text-gray-600">
-                    Attempt easy questions first, then tackle medium and hard ones.
-                  </p>
-                </div>
-                <div className="text-center p-4">
-                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
-                    <Brain className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <h3 className="font-semibold mb-2" style={{color: '#013062'}}>Stay Calm</h3>
-                  <p className="text-sm text-gray-600">
-                    Keep calm and focused. Take deep breaths if you feel anxious.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

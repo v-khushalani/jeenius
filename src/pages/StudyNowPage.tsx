@@ -198,7 +198,7 @@ const StudyNowPage = () => {
     try {
       // Fetch questions for this chapter
       const { data: questions, error } = await supabase
-        .from('questions')
+        .from('questions_public')
         .select('*')
         .eq('subject', chapter.subject)
         .eq('chapter', chapter.name)

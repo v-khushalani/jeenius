@@ -111,13 +111,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "question_attempts_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "questions_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "question_attempts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -276,51 +269,7 @@ export type Database = {
       }
     }
     Views: {
-      questions_public: {
-        Row: {
-          chapter: string | null
-          created_at: string | null
-          difficulty: string | null
-          id: string | null
-          option_a: string | null
-          option_b: string | null
-          option_c: string | null
-          option_d: string | null
-          question: string | null
-          subject: string | null
-          topic: string | null
-          year: number | null
-        }
-        Insert: {
-          chapter?: string | null
-          created_at?: string | null
-          difficulty?: string | null
-          id?: string | null
-          option_a?: string | null
-          option_b?: string | null
-          option_c?: string | null
-          option_d?: string | null
-          question?: string | null
-          subject?: string | null
-          topic?: string | null
-          year?: number | null
-        }
-        Update: {
-          chapter?: string | null
-          created_at?: string | null
-          difficulty?: string | null
-          id?: string | null
-          option_a?: string | null
-          option_b?: string | null
-          option_c?: string | null
-          option_d?: string | null
-          question?: string | null
-          subject?: string | null
-          topic?: string | null
-          year?: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       validate_question_answer: {

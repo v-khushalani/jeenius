@@ -43,7 +43,7 @@ export const useQuestions = (filters?: {
       const { supabase } = await import('@/integrations/supabase/client');
       
       let query = supabase
-        .from('questions_public')
+        .from('questions')
         .select('*');
 
       // Apply filters
@@ -108,9 +108,9 @@ export const useQuestions = (filters?: {
 
       const { supabase } = await import('@/integrations/supabase/client');
       
-    let query = supabase
-      .from('questions_public')
-      .select('*');
+      let query = supabase
+        .from('questions')
+        .select('*');
 
       // Apply filters
       if (subject) {

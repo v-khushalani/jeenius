@@ -35,7 +35,7 @@ const TestPage = () => {
     setLoading(true);
     try {
       const { data: questions, error } = await supabase
-        .from('questions_public')
+        .from('questions')
         .select('subject, chapter, topic, difficulty');
 
       if (error) throw error;
@@ -107,7 +107,7 @@ const TestPage = () => {
 
     try {
       const { data: questions, error } = await supabase
-        .from('questions_public')
+        .from('questions')
         .select('*')
         .eq('subject', testData.subject)
         .eq('chapter', testData.chapter)

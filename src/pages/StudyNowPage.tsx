@@ -13,8 +13,8 @@ import {
   Brain, Target, BookOpen, Clock, Trophy, 
   PlayCircle, Search, TrendingUp, Zap, Flame,
   Beaker, Calculator, Activity, ChevronRight,
-  Star, Award, Crown, Lock, Unlock, Sparkles,
-  BarChart3, Users, Medal, CheckCircle2
+  Star, Award, Crown, Lock, CheckCircle2,
+  Lightbulb, BookMarked, GraduationCap, Rocket
 } from "lucide-react";
 
 const StudyNowPage = () => {
@@ -25,6 +25,13 @@ const StudyNowPage = () => {
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState([]);
   const [chapters, setChapters] = useState([]);
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [practiceMode, setPracticeMode] = useState(false);
+  const [practiceQuestions, setPracticeQuestions] = useState([]);
+  const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0);
+  const [practiceStats, setPracticeStats] = useState({ correct: 0, total: 0 });
 
   useEffect(() => {
     loadData();
@@ -85,14 +92,8 @@ const StudyNowPage = () => {
         .select('subject, chapter, topic, difficulty');
 
       if (error) throw error;
-      interface ChapterData {
-        subject: string;
-        chapter: string;
-        topics: Set<string>;
-        questionCount: number;
-      }
 
-      const chapterMap: Record<string, ChapterData> = {};
+      const chapterMap = {};
       data?.forEach(q => {
         const key = `${q.subject}-${q.chapter}`;
         if (!chapterMap[key]) {
@@ -100,16 +101,20 @@ const StudyNowPage = () => {
             subject: q.subject,
             chapter: q.chapter,
             topics: new Set(),
-            questionCount: 0
+            questionCount: 0,
+            difficulties: { easy: 0, medium: 0, hard: 0 }
           };
         }
         chapterMap[key].topics.add(q.topic);
         chapterMap[key].questionCount++;
+        if (q.difficulty) {
+          chapterMap[key].difficulties[q.difficulty.toLowerCase()]++;
+        }
       });
 
       const chaptersArray = await Promise.all(
         Object.entries(chapterMap).map(async ([key, value], index) => {
-          let userStats = { progress: 0, accuracy: 0 };
+          let userStats = { progress: 0, accuracy: 0, attempted: 0 };
           
           if (user) {
             const { data: attempts } = await supabase
@@ -132,6 +137,7 @@ const StudyNowPage = () => {
               const correct = chapterAttempts.filter(a => a.is_correct).length;
               userStats.accuracy = Math.round((correct / chapterAttempts.length) * 100);
               userStats.progress = Math.round((chapterAttempts.length / value.questionCount) * 100);
+              userStats.attempted = chapterAttempts.length;
             }
           }
 
@@ -142,22 +148,112 @@ const StudyNowPage = () => {
             subjectId: value.subject.toLowerCase(),
             topics: Array.from(value.topics),
             questionsCount: value.questionCount,
+            difficulties: value.difficulties,
             progress: userStats.progress,
             accuracy: userStats.accuracy,
-            isUnlocked: true,
-            isCompleted: userStats.progress >= 100,
-            masteryScore: userStats.progress,
-            currentLevel: Math.floor(userStats.progress / 10),
-            maxLevel: 10,
-            timeSpent: `${Math.floor(Math.random() * 5)}h`,
-            lastPracticed: userStats.progress > 0 ? 'Today' : 'Not started'
+            attempted: userStats.attempted,
+            sequenceNumber: index + 1
           };
         })
       );
 
-      setChapters(chaptersArray);
+      // Sort and apply sequential unlock
+      const sortedChapters = chaptersArray.sort((a, b) => 
+        a.sequenceNumber - b.sequenceNumber
+      );
+
+      sortedChapters.forEach((chapter, index) => {
+        if (index === 0) {
+          chapter.isUnlocked = true;
+        } else {
+          const prevChapter = sortedChapters[index - 1];
+          chapter.isUnlocked = prevChapter.progress >= 70;
+        }
+        chapter.isCompleted = chapter.progress >= 100;
+      });
+
+      setChapters(sortedChapters);
     } catch (error) {
       console.error('Error loading chapters:', error);
+    }
+  };
+
+  const startLearning = async (chapter) => {
+    if (!user) {
+      alert('Please log in to start learning');
+      return;
+    }
+
+    if (!chapter.isUnlocked) {
+      alert('Complete the previous chapter first!');
+      return;
+    }
+
+    try {
+      const { data: questions, error } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('subject', chapter.subject)
+        .eq('chapter', chapter.name)
+        .order('difficulty')
+        .limit(10);
+
+      if (error) throw error;
+
+      if (!questions || questions.length === 0) {
+        alert('No questions available');
+        return;
+      }
+
+      setPracticeQuestions(questions);
+      setCurrentPracticeIndex(0);
+      setPracticeStats({ correct: 0, total: 0 });
+      setPracticeMode(true);
+      setShowAnswer(false);
+      setSelectedAnswer(null);
+    } catch (error) {
+      console.error('Error starting learning:', error);
+      alert('Failed to load questions');
+    }
+  };
+
+  const handleAnswerSubmit = async (answer) => {
+    setSelectedAnswer(answer);
+    setShowAnswer(true);
+
+    const question = practiceQuestions[currentPracticeIndex];
+    const isCorrect = answer === question.correct_answer;
+
+    setPracticeStats(prev => ({
+      correct: prev.correct + (isCorrect ? 1 : 0),
+      total: prev.total + 1
+    }));
+
+    if (user) {
+      try {
+        await supabase.from('question_attempts').insert({
+          user_id: user.id,
+          question_id: question.id,
+          selected_answer: answer,
+          is_correct: isCorrect,
+          time_taken: 30
+        });
+      } catch (error) {
+        console.error('Error saving attempt:', error);
+      }
+    }
+  };
+
+  const nextQuestion = () => {
+    if (currentPracticeIndex < practiceQuestions.length - 1) {
+      setCurrentPracticeIndex(prev => prev + 1);
+      setShowAnswer(false);
+      setSelectedAnswer(null);
+    } else {
+      // Practice session complete
+      alert(`Session Complete!\nScore: ${practiceStats.correct}/${practiceStats.total}`);
+      setPracticeMode(false);
+      loadChapters(); // Reload to update progress
     }
   };
 
@@ -176,60 +272,6 @@ const StudyNowPage = () => {
     return matchesSearch && matchesSubject;
   });
 
-  const getMasteryBadge = (score) => {
-    if (score >= 90) return { text: "Master", color: "bg-yellow-500 text-white", icon: Crown };
-    if (score >= 75) return { text: "Expert", color: "bg-purple-500 text-white", icon: Award };
-    if (score >= 60) return { text: "Advanced", color: "bg-blue-500 text-white", icon: Star };
-    if (score >= 40) return { text: "Intermediate", color: "bg-green-500 text-white", icon: Target };
-    if (score >= 20) return { text: "Basic", color: "bg-gray-500 text-white", icon: BookOpen };
-    return { text: "Beginner", color: "bg-gray-400 text-white", icon: PlayCircle };
-  };
-
-  const startPractice = async (chapterId) => {
-    const chapter = allChapters.find(c => c.id === chapterId);
-    if (!chapter) return;
-
-    if (!user) {
-      alert('Please log in to start practice');
-      return;
-    }
-
-    try {
-      // Fetch questions for this chapter
-      const { data: questions, error } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('subject', chapter.subject)
-        .eq('chapter', chapter.name)
-        .limit(20);
-
-      if (error) throw error;
-
-      if (!questions || questions.length === 0) {
-        alert('No questions available for this chapter');
-        return;
-      }
-
-      // Create practice session with same format as test
-      const practiceSession = {
-        id: `practice-${Date.now()}`,
-        title: `${chapter.subject} - ${chapter.name}`,
-        questions: questions,
-        duration: questions.length * 1.5, // 1.5 minutes per question
-        startTime: new Date().toISOString(),
-      };
-
-      // Store in localStorage same way as tests
-      localStorage.setItem("currentTest", JSON.stringify(practiceSession));
-      
-      // Navigate to test-attempt page
-      navigate('/test-attempt');
-    } catch (error) {
-      console.error('Error starting practice:', error);
-      alert('Failed to start practice session. Please try again.');
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -237,50 +279,171 @@ const StudyNowPage = () => {
         <div className="pt-20 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your learning data...</p>
+            <p className="text-gray-600">Loading your learning journey...</p>
           </div>
         </div>
       </div>
     );
   }
 
+  // Practice Mode UI
+  if (practiceMode && practiceQuestions.length > 0) {
+    const question = practiceQuestions[currentPracticeIndex];
+    const progress = ((currentPracticeIndex + 1) / practiceQuestions.length) * 100;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+        <Header />
+        <div className="pt-20 pb-8">
+          <div className="container mx-auto max-w-4xl px-4">
+            {/* Progress Header */}
+            <Card className="mb-6">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm text-gray-600">Question {currentPracticeIndex + 1} of {practiceQuestions.length}</p>
+                    <p className="font-semibold">{question.subject} • {question.chapter}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-primary">{practiceStats.correct}/{practiceStats.total}</p>
+                    <p className="text-xs text-gray-600">Correct</p>
+                  </div>
+                </div>
+                <Progress value={progress} className="h-2" />
+              </CardContent>
+            </Card>
+
+            {/* Question Card */}
+            <Card className="mb-6">
+              <CardContent className="p-8">
+                <div className="flex items-start gap-3 mb-6">
+                  <Badge className={`${
+                    question.difficulty === 'easy' ? 'bg-green-500' :
+                    question.difficulty === 'medium' ? 'bg-yellow-500' : 'bg-red-500'
+                  } text-white`}>
+                    {question.difficulty}
+                  </Badge>
+                  <Badge variant="outline">{question.topic}</Badge>
+                </div>
+
+                <h3 className="text-2xl font-bold mb-8">{question.question}</h3>
+                
+                <div className="space-y-3 mb-8">
+                  {['option_a', 'option_b', 'option_c', 'option_d'].map((optKey, idx) => {
+                    const optLetter = String.fromCharCode(65 + idx);
+                    const isSelected = selectedAnswer === optLetter;
+                    const isCorrect = optLetter === question.correct_answer;
+                    
+                    let buttonClass = 'w-full text-left p-4 rounded-lg border-2 transition-all ';
+                    
+                    if (showAnswer) {
+                      if (isCorrect) {
+                        buttonClass += 'border-green-500 bg-green-50';
+                      } else if (isSelected && !isCorrect) {
+                        buttonClass += 'border-red-500 bg-red-50';
+                      } else {
+                        buttonClass += 'border-gray-200 opacity-50';
+                      }
+                    } else {
+                      buttonClass += isSelected 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-gray-200 hover:border-primary/50';
+                    }
+
+                    return (
+                      <button
+                        key={optKey}
+                        onClick={() => !showAnswer && handleAnswerSubmit(optLetter)}
+                        disabled={showAnswer}
+                        className={buttonClass}
+                      >
+                        <span className="font-semibold mr-3">{optLetter}.</span>
+                        {question[optKey]}
+                        {showAnswer && isCorrect && (
+                          <CheckCircle2 className="inline-block ml-2 w-5 h-5 text-green-600" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Explanation */}
+                {showAnswer && question.explanation && (
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mb-4">
+                    <div className="flex items-start gap-2">
+                      <Lightbulb className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-blue-900 mb-1">Explanation:</p>
+                        <p className="text-blue-800">{question.explanation}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Navigation */}
+                {showAnswer && (
+                  <Button 
+                    onClick={nextQuestion}
+                    className="w-full h-12 text-lg font-semibold"
+                    size="lg"
+                  >
+                    {currentPracticeIndex < practiceQuestions.length - 1 ? 'Next Question' : 'Finish Session'}
+                    <ChevronRight className="w-5 h-5 ml-2" />
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Exit Practice */}
+            <Button 
+              variant="outline" 
+              onClick={() => setPracticeMode(false)}
+              className="w-full"
+            >
+              Exit Practice Mode
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Chapter Selection UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <Header />
-      <div className="pt-20">
-        <div className="container mx-auto max-w-7xl p-6">
+      <div className="pt-20 pb-8">
+        <div className="container mx-auto max-w-7xl px-6">
           
-          {/* Dynamic Header */}
+          {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-black text-gray-900 mb-2 flex items-center justify-center gap-3">
-              <Brain className="w-10 h-10 text-primary animate-pulse" />
-              Adaptive Learning Hub
-              <Sparkles className="w-8 h-8 text-yellow-500 animate-bounce" />
+              <GraduationCap className="w-10 h-10 text-primary" />
+              Smart Learning Path
+              <Rocket className="w-8 h-8 text-orange-500" />
             </h1>
-            <p className="text-xl text-gray-600 mb-4">
-              Master <span className="font-bold text-primary">100,000+</span> questions with AI-powered progression
+            <p className="text-xl text-gray-600">
+              Learn step-by-step with instant feedback & explanations
             </p>
           </div>
 
           {/* Search and Filter */}
-          <Card className="mb-8 border-0 shadow-lg bg-white/70 backdrop-blur-sm">
+          <Card className="mb-8 border-0 shadow-lg">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative">
                   <Search className="w-5 h-5 absolute left-3 top-3 text-gray-400" />
                   <Input
-                    placeholder="Search chapters or topics..."
+                    placeholder="Search chapters..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-12 h-12 border-2 border-gray-200 focus:border-primary"
+                    className="pl-12 h-12"
                   />
                 </div>
                 <div className="flex gap-3 flex-wrap">
                   <Button
                     variant={selectedSubject === "all" ? "default" : "outline"}
-                    size="lg"
                     onClick={() => setSelectedSubject("all")}
-                    className="font-medium"
                   >
                     All Subjects
                   </Button>
@@ -290,9 +453,7 @@ const StudyNowPage = () => {
                       <Button
                         key={subject.id}
                         variant={selectedSubject === subject.id ? "default" : "outline"}
-                        size="lg"
                         onClick={() => setSelectedSubject(subject.id)}
-                        className="font-medium"
                       >
                         <Icon className="w-4 h-4 mr-2" />
                         {subject.name}
@@ -304,199 +465,96 @@ const StudyNowPage = () => {
             </CardContent>
           </Card>
 
-          {/* Enhanced Chapters Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-            {filteredChapters.map((chapter) => {
-              const masteryBadge = getMasteryBadge(chapter.masteryScore);
-              const BadgeIcon = masteryBadge.icon;
-              
-              return (
-                <Card 
-                  key={chapter.id} 
-                  className={`group hover:shadow-2xl transition-all duration-500 border-0 overflow-hidden ${
-                    !chapter.isUnlocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:scale-105'
-                  } ${chapter.isCompleted ? 'ring-2 ring-green-200' : ''}`}
-                >
-                  {/* Header with gradient background */}
-                  <div className={`bg-gradient-to-r ${chapter.subjectGradient} p-6 text-white relative overflow-hidden`}>
-                    {!chapter.isUnlocked && (
-                      <div className="absolute top-4 right-4">
-                        <Lock className="w-6 h-6 text-white/80" />
-                      </div>
-                    )}
-                    {chapter.isCompleted && (
-                      <div className="absolute top-4 right-4">
-                        <CheckCircle2 className="w-6 h-6 text-white" />
-                      </div>
-                    )}
-                    
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <p className="text-white/80 text-sm font-medium mb-1">{chapter.subject}</p>
-                        <h3 className="text-xl font-bold leading-tight">{chapter.name}</h3>
-                      </div>
+          {/* Chapters */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredChapters.map((chapter, index) => (
+              <Card 
+                key={chapter.id}
+                className={`hover:shadow-xl transition-all ${
+                  !chapter.isUnlocked ? 'opacity-60' : 'hover:scale-105'
+                }`}
+              >
+                <div className={`bg-gradient-to-r ${chapter.subjectGradient} p-5 text-white`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <Badge className="bg-white/20 text-white mb-2">
+                        Chapter {chapter.sequenceNumber}
+                      </Badge>
+                      <h3 className="text-lg font-bold">{chapter.name}</h3>
+                      <p className="text-sm opacity-90">{chapter.subject}</p>
                     </div>
-
-                    {/* Level Progress */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <Zap className="w-4 h-4" />
-                      <span className="text-sm font-medium">
-                        Level {chapter.currentLevel}/{chapter.maxLevel}
-                      </span>
-                      <div className="flex-1 bg-white/20 rounded-full h-2 ml-2">
-                        <div 
-                          className="bg-white rounded-full h-2 transition-all duration-300"
-                          style={{ width: `${(chapter.currentLevel / chapter.maxLevel) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Mastery Badge */}
-                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${masteryBadge.color}`}>
-                      <BadgeIcon className="w-3 h-3" />
-                      {masteryBadge.text}
-                    </div>
+                    {!chapter.isUnlocked && <Lock className="w-5 h-5" />}
+                    {chapter.isCompleted && <CheckCircle2 className="w-6 h-6" />}
                   </div>
                   
-                  <CardContent className="p-6 space-y-4">
-                    {/* Topics */}
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2 font-medium">Topics Covered:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {chapter.topics.slice(0, 3).map((topic, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {topic}
-                          </Badge>
-                        ))}
-                        {chapter.topics.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{chapter.topics.length - 3} more
-                          </Badge>
-                        )}
+                  {chapter.progress > 0 && (
+                    <div className="mt-3">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Progress</span>
+                        <span>{chapter.progress}%</span>
                       </div>
+                      <Progress value={chapter.progress} className="h-1.5 bg-white/30" />
                     </div>
+                  )}
+                </div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <div className="text-lg font-bold text-gray-900">
-                          {chapter.questionsCount.toLocaleString()}
-                        </div>
-                        <div className="text-xs text-gray-600">Questions</div>
-                      </div>
-                      <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <div className={`text-lg font-bold ${chapter.accuracy >= 80 ? 'text-green-600' : chapter.accuracy >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {chapter.accuracy || 0}%
-                        </div>
-                        <div className="text-xs text-gray-600">Accuracy</div>
-                      </div>
+                <CardContent className="p-5 space-y-4">
+                  <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                    <div className="bg-green-50 p-2 rounded">
+                      <div className="font-bold text-green-700">{chapter.difficulties.easy}</div>
+                      <div className="text-xs text-green-600">Easy</div>
                     </div>
+                    <div className="bg-yellow-50 p-2 rounded">
+                      <div className="font-bold text-yellow-700">{chapter.difficulties.medium}</div>
+                      <div className="text-xs text-yellow-600">Medium</div>
+                    </div>
+                    <div className="bg-red-50 p-2 rounded">
+                      <div className="font-bold text-red-700">{chapter.difficulties.hard}</div>
+                      <div className="text-xs text-red-600">Hard</div>
+                    </div>
+                  </div>
 
-                    {/* Progress Bar */}
-                    {chapter.progress > 0 && (
-                      <div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium text-gray-700">Chapter Progress</span>
-                          <span className="text-sm font-bold text-primary">{chapter.progress}%</span>
-                        </div>
-                        <Progress value={chapter.progress} className="h-3" />
-                      </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">{chapter.attempted}/{chapter.questionsCount} attempted</span>
+                    {chapter.accuracy > 0 && (
+                      <span className="font-semibold text-primary">{chapter.accuracy}% accuracy</span>
                     )}
+                  </div>
 
-                    {/* Last Practiced */}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>Time spent: {chapter.timeSpent}</span>
-                      <span>Last: {chapter.lastPracticed}</span>
-                    </div>
-
-                    {/* Action Button */}
-                    <Button
-                      className={`w-full h-12 text-base font-semibold transition-all duration-300 ${
-                        !chapter.isUnlocked 
-                          ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' 
-                          : chapter.progress > 0
-                          ? 'bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl'
-                          : 'bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-lg hover:shadow-xl'
-                      }`}
-                      onClick={() => startPractice(chapter.id)}
-                      disabled={!chapter.isUnlocked}
-                    >
-                      {!chapter.isUnlocked ? (
-                        <>
-                          <Lock className="w-4 h-4 mr-2" />
-                          Locked
-                        </>
-                      ) : chapter.progress > 0 ? (
-                        <>
-                          <PlayCircle className="w-5 h-5 mr-2" />
-                          Continue Journey
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-5 h-5 mr-2" />
-                          Begin Adventure
-                        </>
-                      )}
-                      <ChevronRight className="w-4 h-4 ml-auto" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  <Button
+                    onClick={() => startLearning(chapter)}
+                    disabled={!chapter.isUnlocked}
+                    className="w-full"
+                  >
+                    {!chapter.isUnlocked ? (
+                      <>
+                        <Lock className="w-4 h-4 mr-2" />
+                        Locked
+                      </>
+                    ) : chapter.progress > 0 ? (
+                      <>
+                        <PlayCircle className="w-4 h-4 mr-2" />
+                        Continue Learning
+                      </>
+                    ) : (
+                      <>
+                        <BookMarked className="w-4 h-4 mr-2" />
+                        Start Learning
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {filteredChapters.length === 0 && (
             <div className="text-center py-20">
-              <Search className="w-20 h-20 text-gray-300 mx-auto mb-6" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">No chapters found</h3>
-              <p className="text-gray-600 text-lg">Try adjusting your search or filter criteria</p>
+              <BookOpen className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">No chapters found</h3>
+              <p className="text-gray-600">Try different search or filter</p>
             </div>
           )}
-
-          {/* Adaptive Learning Info */}
-          <Card className="mt-16 border-0 shadow-xl bg-gradient-to-r from-primary/5 to-blue-50">
-            <CardContent className="p-8">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-3 flex items-center justify-center gap-3">
-                  <Brain className="w-8 h-8 text-primary" />
-                  How Adaptive Learning Works
-                </h2>
-                <p className="text-lg text-gray-600">
-                  Our AI analyzes your performance and adapts the difficulty in real-time
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center mx-auto mb-4">
-                    <Target className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-xl mb-3 text-gray-900">Smart Assessment</h3>
-                  <p className="text-gray-600">
-                    Start with diagnostic questions to identify your current level and knowledge gaps
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-400 to-pink-500 flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-xl mb-3 text-gray-900">Progressive Difficulty</h3>
-                  <p className="text-gray-600">
-                    Questions adapt based on your accuracy. Master basics before advancing to complex problems
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-r from-orange-400 to-red-500 flex items-center justify-center mx-auto mb-4">
-                    <Award className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-xl mb-3 text-gray-900">Mastery Tracking</h3>
-                  <p className="text-gray-600">
-                    Earn mastery badges and unlock new chapters as you demonstrate consistent understanding
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

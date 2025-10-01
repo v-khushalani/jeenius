@@ -85,7 +85,7 @@ const StudyNowPage = () => {
         .select('subject, chapter, topic, difficulty');
 
       if (error) throw error;
-
+      console.log("First question structure:", data?.[0]);
       interface ChapterData {
         subject: string;
         chapter: string;

@@ -190,14 +190,19 @@ const StudyNowPage = () => {
     const chapter = allChapters.find(c => c.id === chapterId);
     if (!chapter) return;
 
-    // Fetch questions for this chapter
+    if (!user) {
+      alert('Please log in to start practice');
+      return;
+    }
+
     try {
+      // Fetch questions for this chapter
       const { data: questions, error } = await supabase
         .from('questions')
         .select('*')
         .eq('subject', chapter.subject)
         .eq('chapter', chapter.name)
-        .limit(20); // Limit to 20 questions per session
+        .limit(20);
 
       if (error) throw error;
 
@@ -206,18 +211,19 @@ const StudyNowPage = () => {
         return;
       }
 
-      // Create practice session
+      // Create practice session with same format as test
       const practiceSession = {
         id: `practice-${Date.now()}`,
         title: `${chapter.subject} - ${chapter.name}`,
-        subject: chapter.subject,
-        chapter: chapter.name,
         questions: questions,
         duration: questions.length * 1.5, // 1.5 minutes per question
         startTime: new Date().toISOString(),
       };
 
+      // Store in localStorage same way as tests
       localStorage.setItem("currentTest", JSON.stringify(practiceSession));
+      
+      // Navigate to test-attempt page
       navigate('/test-attempt');
     } catch (error) {
       console.error('Error starting practice:', error);

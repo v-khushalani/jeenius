@@ -28,7 +28,7 @@ const StudyNowPage = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   const loadData = async () => {
     setLoading(true);
@@ -46,16 +46,9 @@ const StudyNowPage = () => {
         .select('subject')
         .order('subject');
 
-      if (error) {
-        console.error('❌ Error loading subjects:', error);
-        throw error;
-      }
-
-      console.log('✅ Loaded subjects data:', data?.length, 'rows');
+      if (error) throw error;
 
       const uniqueSubjects = [...new Set(data?.map(q => q.subject) || [])];
-      console.log('📚 Unique subjects found:', uniqueSubjects);
-
       const subjectIcons = {
         'Physics': { icon: Target, color: 'blue', gradient: 'from-blue-500 to-cyan-500' },
         'Chemistry': { icon: Beaker, color: 'green', gradient: 'from-green-500 to-emerald-500' },
@@ -79,10 +72,9 @@ const StudyNowPage = () => {
         })
       );
 
-      console.log('📊 Subjects with counts:', subjectsWithData);
       setSubjects(subjectsWithData);
     } catch (error) {
-      console.error('❌ Error loading subjects:', error);
+      console.error('Error loading subjects:', error);
     }
   };
 

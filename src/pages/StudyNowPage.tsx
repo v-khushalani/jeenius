@@ -267,16 +267,6 @@ const StudyNowPage = () => {
       total: prev.total + 1,
       streak: isCorrect ? prev.streak + 1 : 0
     }));
-
-    if (user) {
-      await supabase.from('question_attempts').insert({
-        user_id: user.id,
-        question_id: question.id,
-        selected_answer: answer,
-        is_correct: isCorrect,
-        time_taken: 30
-      });
-    }
   };
 
   const nextQuestion = async () => {

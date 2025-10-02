@@ -4,6 +4,7 @@ import { Brain, Target, Clock, CheckCircle, XCircle, Lightbulb, ArrowRight } fro
 import { Button } from '@/components/ui/button';
 import { useQuestions } from '@/hooks/useQuestions';
 import { useAuth } from '@/contexts/AuthContext';
+import LoadingScreen from '@/components/ui/LoadingScreen';
 
 const PracticeSession = () => {
   const { isAuthenticated } = useAuth();
@@ -64,14 +65,7 @@ const PracticeSession = () => {
   };
 
   if (loading || questions.length === 0) {
-    return (
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading practice questions...</p>
-        </div>
-      </section>
-    );
+    return <LoadingScreen message="Loading practice questions..." />;
   }
 
   const currentQ = questions[currentQuestion];

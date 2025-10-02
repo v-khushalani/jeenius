@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import LoadingScreen from '@/components/ui/LoadingScreen';
 import { ChevronRight, Calendar, BookOpen, Stethoscope, Calculator, Clock, Rocket, Trophy, Target, Sparkles } from 'lucide-react';
 
 const GoalSelectionPage = () => {
@@ -201,14 +202,7 @@ const GoalSelectionPage = () => {
 
   // Show loading while checking user profile
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center" style={{backgroundColor: '#e9e9e9'}}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{borderColor: '#013062'}}></div>
-          <p className="text-gray-600">Setting up your learning journey...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Setting up your learning journey..." />;
   }
 
   return (

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserData } from '@/hooks/useUserData';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
+import LoadingScreen from '@/components/ui/LoadingScreen';
 import { Trophy, Zap, BookOpen, Target, Brain } from 'lucide-react';
 
 const Dashboard = () => {
@@ -13,17 +14,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="pt-24 pb-8 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-            <p className="mt-4 text-gray-600">Loading your dashboard...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Loading your dashboard..." />;
   }
 
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Student';

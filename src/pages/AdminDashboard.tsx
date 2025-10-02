@@ -6,6 +6,7 @@ import { AdminAnalytics } from '@/components/admin/AdminAnalytics';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useAuth } from '@/contexts/AuthContext';
+import LoadingScreen from '@/components/ui/LoadingScreen';
 import { 
   BarChart3, 
   Users, 
@@ -23,11 +24,7 @@ const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('analytics');
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <LoadingScreen message="Loading admin dashboard..." />;
   }
 
   if (!isAdmin) {

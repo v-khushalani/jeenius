@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 
 const EnhancedDashboard = () => {
   const { user } = useAuth();
@@ -76,23 +77,7 @@ const EnhancedDashboard = () => {
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Student';
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          {/* Jeenius Logo */}
-          <div className="mb-6">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-xl">
-              <Brain className="h-10 w-10 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">JEENIUS</h1>
-          </div>
-          
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Preparing your genius dashboard...</h2>
-          <p className="text-gray-600">🚀 Great minds are loading amazing things!</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Preparing your genius dashboard..." />;
   }
 
   return (

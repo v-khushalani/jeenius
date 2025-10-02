@@ -3,14 +3,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import Header from '@/components/Header';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Brain, Target, Beaker, Calculator, Activity, ChevronRight,
-  Star, Lock, CheckCircle2, Trophy, Flame,
-  ArrowLeft, Lightbulb, XCircle, Award
+  Trophy, Flame, ArrowLeft, Lightbulb, XCircle, CheckCircle2,
+  Sparkles, Zap, Award
 } from "lucide-react";
 
 const StudyNowPage = () => {
@@ -23,7 +22,6 @@ const StudyNowPage = () => {
   const [selectedChapter, setSelectedChapter] = useState(null);
   const [topics, setTopics] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
-  const [currentLevel, setCurrentLevel] = useState(1);
   const [practiceQuestions, setPracticeQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -73,10 +71,10 @@ const StudyNowPage = () => {
 
       const uniqueSubjects = [...new Set(data?.map(q => q.subject) || [])];
       const subjectConfig = {
-        'Physics': { icon: Target, gradient: 'from-blue-600 to-indigo-600', emoji: '⚡' },
-        'Chemistry': { icon: Beaker, gradient: 'from-green-600 to-emerald-600', emoji: '🧪' },
-        'Mathematics': { icon: Calculator, gradient: 'from-purple-600 to-pink-600', emoji: '🔢' },
-        'Biology': { icon: Activity, gradient: 'from-red-600 to-rose-600', emoji: '🧬' }
+        'Physics': { icon: Target, emoji: '⚡' },
+        'Chemistry': { icon: Beaker, emoji: '🧪' },
+        'Mathematics': { icon: Calculator, emoji: '🔢' },
+        'Biology': { icon: Activity, emoji: '🧬' }
       };
 
       const subjectsData = await Promise.all(
@@ -142,8 +140,7 @@ const StudyNowPage = () => {
             name: chapter,
             sequence: index + 1,
             totalQuestions: count || 0,
-            progress: userProgress,
-            isUnlocked: index === 0 || userProgress > 0
+            progress: userProgress
           };
         })
       );
@@ -160,7 +157,7 @@ const StudyNowPage = () => {
     try {
       const { data, error } = await supabase
         .from('questions')
-        .select('topic, difficulty')
+        .select('topic')
         .eq('subject', selectedSubject)
         .eq('chapter', chapter);
 
@@ -170,53 +167,39 @@ const StudyNowPage = () => {
       
       const topicsData = await Promise.all(
         uniqueTopics.map(async (topic, index) => {
-          const topicQuestions = data?.filter(q => q.topic === topic) || [];
-          const difficulties = {
-            easy: topicQuestions.filter(q => q.difficulty?.toLowerCase() === 'easy').length,
-            medium: topicQuestions.filter(q => q.difficulty?.toLowerCase() === 'medium').length,
-            hard: topicQuestions.filter(q => q.difficulty?.toLowerCase() === 'hard').length
-          };
+          const { count } = await supabase
+            .from('questions')
+            .select('*', { count: 'exact', head: true })
+            .eq('subject', selectedSubject)
+            .eq('chapter', chapter)
+            .eq('topic', topic);
 
-          let levelStatus = { 1: 0, 2: 0, 3: 0 };
-          
+          let userProgress = 0;
           if (user) {
-            for (let level = 1; level <= 3; level++) {
-              const difficulty = level === 1 ? 'easy' : level === 2 ? 'medium' : 'hard';
-              
-              const { data: levelQs } = await supabase
-                .from('questions')
-                .select('id')
-                .eq('subject', selectedSubject)
-                .eq('chapter', chapter)
-                .eq('topic', topic)
-                .ilike('difficulty', difficulty);
+            const { data: topicQs } = await supabase
+              .from('questions')
+              .select('id')
+              .eq('subject', selectedSubject)
+              .eq('chapter', chapter)
+              .eq('topic', topic);
 
-              const levelQIds = levelQs?.map(q => q.id) || [];
-              
-              const { data: attempts } = await supabase
-                .from('question_attempts')
-                .select('is_correct')
-                .eq('user_id', user.id)
-                .in('question_id', levelQIds);
+            const topicQIds = topicQs?.map(q => q.id) || [];
 
-              if (attempts && attempts.length >= 10) {
-                const accuracy = (attempts.filter(a => a.is_correct).length / attempts.length) * 100;
-                levelStatus[level] = accuracy >= 75 ? 2 : 1;
-              } else if (level === 1 || levelStatus[level - 1] === 2) {
-                levelStatus[level] = 1;
-              }
-            }
-          } else {
-            levelStatus[1] = 1;
+            const { data: attempts } = await supabase
+              .from('question_attempts')
+              .select('question_id')
+              .eq('user_id', user.id)
+              .in('question_id', topicQIds);
+
+            const attempted = attempts?.length || 0;
+            userProgress = Math.round((attempted / (count || 1)) * 100);
           }
 
           return {
             name: topic,
             sequence: index + 1,
-            difficulties,
-            levelStatus,
-            totalLevels: 3,
-            isUnlocked: index === 0 || Object.values(levelStatus).some(s => s > 0)
+            totalQuestions: count || 0,
+            progress: userProgress
           };
         })
       );
@@ -235,8 +218,7 @@ const StudyNowPage = () => {
     return 20;
   };
 
-  const startPractice = async (topic, level) => {
-    const difficulty = level === 1 ? 'easy' : level === 2 ? 'medium' : 'hard';
+  const startPractice = async (topic) => {
     const questionCount = getAdaptiveQuestionCount();
     
     try {
@@ -246,24 +228,20 @@ const StudyNowPage = () => {
         .eq('subject', selectedSubject)
         .eq('chapter', selectedChapter)
         .eq('topic', topic.name)
-        .ilike('difficulty', difficulty)
-        .limit(questionCount);
+        .limit(50);
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (!data || data.length === 0) {
-        alert('No questions available for this level. Try another topic!');
+        alert('No questions available for this topic!');
         return;
       }
 
-      console.log(`Loaded ${data.length} questions for ${topic.name} - Level ${level}`);
+      const shuffled = data.sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, Math.min(questionCount, shuffled.length));
 
-      setPracticeQuestions(data);
+      setPracticeQuestions(selected);
       setSelectedTopic(topic);
-      setCurrentLevel(level);
       setCurrentQuestionIndex(0);
       setSessionStats({ correct: 0, total: 0, streak: 0 });
       setSelectedAnswer(null);
@@ -308,13 +286,8 @@ const StudyNowPage = () => {
       setShowResult(false);
     } else {
       const accuracy = (sessionStats.correct / sessionStats.total) * 100;
-      const passed = accuracy >= 75;
-
-      if (passed) {
-        alert(`🎉 Level ${currentLevel} Completed!\n\nScore: ${sessionStats.correct}/${sessionStats.total} (${accuracy.toFixed(0)}%)\n\n${currentLevel < 3 ? '✨ Next level unlocked!' : '🏆 Topic Mastered!'}`);
-      } else {
-        alert(`📚 Keep Practicing!\n\nScore: ${sessionStats.correct}/${sessionStats.total} (${accuracy.toFixed(0)}%)\n\n75%+ needed to unlock next level`);
-      }
+      
+      alert(`🎉 Practice Session Completed!\n\nScore: ${sessionStats.correct}/${sessionStats.total} (${accuracy.toFixed(0)}%)\n\n${accuracy >= 75 ? '✨ Great job! Keep it up!' : '📚 Keep practicing to improve!'}`);
 
       await loadUserPerformance();
       await loadTopics(selectedChapter);
@@ -324,13 +297,13 @@ const StudyNowPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{backgroundColor: '#e9e9e9'}}>
         <div className="text-center">
-          <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl flex items-center justify-center mb-6 shadow-2xl animate-pulse mx-auto">
+          <div className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-2xl animate-pulse mx-auto" style={{backgroundColor: '#013062'}}>
             <Brain className="h-12 w-12 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-3">JEENIUS</h1>
-          <p className="text-gray-600 text-lg">Loading your learning journey...</p>
+          <h1 className="text-3xl font-bold mb-3" style={{color: '#013062'}}>JEENIUS</h1>
+          <p className="text-gray-600 text-lg">Loading your AI-powered learning journey...</p>
         </div>
       </div>
     );
@@ -343,50 +316,44 @@ const StudyNowPage = () => {
     const accuracy = sessionStats.total > 0 ? (sessionStats.correct / sessionStats.total) * 100 : 0;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="min-h-screen" style={{backgroundColor: '#e9e9e9'}}>
         <Header />
-        <div className="pt-24 pb-8 px-4">
-          <div className="max-w-5xl mx-auto">
-            <Card className="mb-4 border-0 shadow-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge className="bg-white/30 text-white text-sm">Level {currentLevel}</Badge>
+        <div className="pt-32 pb-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
+            <Card className="mb-6 border-0 shadow-2xl text-white" style={{background: 'linear-gradient(135deg, #013062 0%, #024a8f 100%)'}}>
+              <CardContent className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Badge className="bg-white/20 text-white text-sm flex items-center gap-1.5 px-3 py-1">
+                        <Sparkles className="w-4 h-4" />
+                        AI Adaptive Learning
+                      </Badge>
                       <span className="text-sm opacity-90">{selectedTopic?.name}</span>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-4xl font-black">{sessionStats.correct}/{sessionStats.total}</span>
+                    <div className="flex items-center gap-6">
+                      <span className="text-5xl font-black">{sessionStats.correct}/{sessionStats.total}</span>
                       {sessionStats.streak > 2 && (
-                        <Badge className="bg-orange-500 text-white flex items-center gap-1 animate-pulse">
-                          <Flame className="w-4 h-4" />
+                        <Badge className="bg-orange-500 text-white flex items-center gap-1.5 animate-pulse px-3 py-1.5">
+                          <Flame className="w-5 h-5" />
                           {sessionStats.streak} Streak!
                         </Badge>
                       )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-5xl font-black">{accuracy.toFixed(0)}%</div>
-                    <div className="text-sm opacity-90">Accuracy</div>
+                    <div className="text-6xl font-black">{accuracy.toFixed(0)}%</div>
+                    <div className="text-sm opacity-90 mt-1">Accuracy</div>
                   </div>
                 </div>
-                <Progress value={progress} className="h-3 bg-white/30" />
-                <p className="text-sm mt-2 opacity-90">Question {currentQuestionIndex + 1} of {practiceQuestions.length}</p>
+                <Progress value={progress} className="h-3 bg-white/20" />
+                <p className="text-sm mt-3 opacity-90">Question {currentQuestionIndex + 1} of {practiceQuestions.length}</p>
               </CardContent>
             </Card>
 
             <Card className="shadow-2xl border-0">
-              <CardContent className="p-8">
-                <div className="mb-6">
-                  <Badge className={`${
-                    currentLevel === 1 ? 'bg-green-600' :
-                    currentLevel === 2 ? 'bg-yellow-600' : 'bg-red-600'
-                  } text-white text-sm px-4 py-2`}>
-                    {currentLevel === 1 ? '🟢 Easy' : currentLevel === 2 ? '🟡 Medium' : '🔴 Hard'}
-                  </Badge>
-                </div>
-
-                <h2 className="text-3xl font-bold mb-8 text-gray-900 leading-relaxed">
+              <CardContent className="p-10">
+                <h2 className="text-3xl font-bold mb-10 leading-relaxed" style={{color: '#013062'}}>
                   {question.question}
                 </h2>
 
@@ -396,7 +363,7 @@ const StudyNowPage = () => {
                     const isSelected = selectedAnswer === letter;
                     const isCorrect = letter === question.correct_answer;
                     
-                    let btnClass = 'w-full text-left p-6 rounded-2xl border-3 transition-all transform hover:scale-[1.02] ';
+                    let btnClass = 'w-full text-left p-6 rounded-xl border-2 transition-all transform hover:scale-[1.02] ';
                     
                     if (showResult) {
                       if (isCorrect) {
@@ -408,8 +375,8 @@ const StudyNowPage = () => {
                       }
                     } else {
                       btnClass += isSelected 
-                        ? 'border-blue-600 bg-blue-50 shadow-xl scale-[1.02]' 
-                        : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50';
+                        ? 'shadow-xl scale-[1.02]' 
+                        : 'border-gray-300 hover:bg-blue-50/50';
                     }
 
                     return (
@@ -418,23 +385,24 @@ const StudyNowPage = () => {
                         onClick={() => handleAnswer(letter)}
                         disabled={showResult}
                         className={btnClass}
+                        style={!showResult && isSelected ? {borderColor: '#013062', backgroundColor: '#f0f7ff'} : {}}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center font-bold text-xl ${
                               showResult && isCorrect ? 'bg-green-600 text-white' :
                               showResult && isSelected && !isCorrect ? 'bg-red-600 text-white' :
-                              isSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
-                            }`}>
+                              isSelected ? 'text-white' : 'bg-gray-200 text-gray-700'
+                            }`} style={isSelected && !showResult ? {backgroundColor: '#013062'} : {}}>
                               {letter}
                             </div>
                             <span className="text-lg font-medium">{question[key]}</span>
                           </div>
                           {showResult && isCorrect && (
-                            <CheckCircle2 className="w-7 h-7 text-green-600" />
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
                           )}
                           {showResult && isSelected && !isCorrect && (
-                            <XCircle className="w-7 h-7 text-red-600" />
+                            <XCircle className="w-8 h-8 text-red-600" />
                           )}
                         </div>
                       </button>
@@ -443,12 +411,12 @@ const StudyNowPage = () => {
                 </div>
 
                 {showResult && question.explanation && (
-                  <div className="mt-6 p-6 bg-blue-50 border-l-4 border-blue-600 rounded-r-2xl">
-                    <div className="flex items-start gap-3">
-                      <Lightbulb className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
+                  <div className="mt-8 p-6 rounded-xl" style={{backgroundColor: '#f0f7ff', borderLeft: '5px solid #013062'}}>
+                    <div className="flex items-start gap-4">
+                      <Lightbulb className="w-7 h-7 mt-1 flex-shrink-0" style={{color: '#013062'}} />
                       <div>
-                        <p className="font-bold text-blue-900 mb-2 text-lg">💡 Explanation</p>
-                        <p className="text-blue-800 leading-relaxed">{question.explanation}</p>
+                        <p className="font-bold mb-2 text-xl" style={{color: '#013062'}}>💡 Explanation</p>
+                        <p className="leading-relaxed text-gray-700">{question.explanation}</p>
                       </div>
                     </div>
                   </div>
@@ -458,12 +426,13 @@ const StudyNowPage = () => {
                   <Button 
                     onClick={nextQuestion}
                     size="lg"
-                    className="w-full mt-6 h-16 text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+                    className="w-full mt-8 h-16 text-xl font-bold shadow-lg text-white hover:opacity-90"
+                    style={{backgroundColor: '#013062'}}
                   >
                     {currentQuestionIndex < practiceQuestions.length - 1 ? (
                       <>Next Question <ChevronRight className="w-6 h-6 ml-2" /></>
                     ) : (
-                      <>Finish Level <Trophy className="w-6 h-6 ml-2" /></>
+                      <>Finish Practice <Trophy className="w-6 h-6 ml-2" /></>
                     )}
                   </Button>
                 )}
@@ -471,10 +440,11 @@ const StudyNowPage = () => {
             </Card>
 
             <Button 
-              variant="ghost" 
+              variant="outline" 
               onClick={() => setView('topics')}
-              className="mt-4 w-full"
+              className="mt-6 w-full"
               size="lg"
+              style={{borderColor: '#013062', color: '#013062'}}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Topics
@@ -488,32 +458,39 @@ const StudyNowPage = () => {
   // SUBJECTS VIEW
   if (view === 'subjects') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="min-h-screen" style={{backgroundColor: '#e9e9e9'}}>
         <Header />
-        <div className="pt-24 pb-8 px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="pt-32 pb-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {subjects.map((subject) => {
                 const Icon = subject.icon;
                 return (
                   <Card 
                     key={subject.name}
                     onClick={() => loadChapters(subject.name)}
-                    className="cursor-pointer hover:scale-105 transition-all shadow-xl border-0 overflow-hidden group"
+                    className="cursor-pointer hover:scale-105 transition-all duration-300 shadow-xl border-0 overflow-hidden group"
                   >
-                    <div className={`bg-gradient-to-br ${subject.gradient} p-8 text-white text-center`}>
-                      <div className="text-7xl mb-4 group-hover:scale-110 transition-transform">
-                        {subject.emoji}
+                    <div className="p-8 text-white text-center relative overflow-hidden" style={{background: 'linear-gradient(135deg, #013062 0%, #024a8f 100%)'}}>
+                      <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                      <div className="relative z-10">
+                        <div className="text-7xl mb-4 transform group-hover:scale-110 transition-transform duration-300">
+                          {subject.emoji}
+                        </div>
+                        <Icon className="w-14 h-14 mx-auto mb-4 opacity-90" />
+                        <h3 className="text-2xl font-bold mb-2">{subject.name}</h3>
+                        <Badge className="bg-white/20 text-white flex items-center gap-1 w-fit mx-auto">
+                          <Sparkles className="w-3 h-3" />
+                          AI Powered
+                        </Badge>
                       </div>
-                      <Icon className="w-12 h-12 mx-auto mb-3 opacity-90" />
-                      <h3 className="text-2xl font-bold">{subject.name}</h3>
                     </div>
-                    <CardContent className="p-6 text-center">
-                      <div className="text-4xl font-black text-gray-900 mb-2">
+                    <CardContent className="p-6 text-center bg-white">
+                      <div className="text-5xl font-black mb-2" style={{color: '#013062'}}>
                         {subject.totalQuestions}
                       </div>
-                      <div className="text-sm text-gray-600 mb-4">Questions</div>
-                      <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-12 text-base font-semibold">
+                      <div className="text-sm text-gray-600 mb-5">Questions Available</div>
+                      <Button className="w-full h-12 text-base font-semibold text-white hover:opacity-90 transition-opacity" style={{backgroundColor: '#013062'}}>
                         Start Learning
                       </Button>
                     </CardContent>
@@ -521,6 +498,40 @@ const StudyNowPage = () => {
                 );
               })}
             </div>
+
+            {/* AI Info Card */}
+            {userPerformance.totalAttempts > 0 && (
+              <Card className="mt-8 border-0 shadow-xl" style={{background: 'linear-gradient(135deg, #f0f7ff 0%, #e0f0ff 100%)'}}>
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{backgroundColor: '#013062'}}>
+                      <Zap className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-2xl mb-1" style={{color: '#013062'}}>AI-Powered Adaptive Learning</h3>
+                      <p className="text-gray-600">
+                        {userPerformance.recentAccuracy >= 85 
+                          ? '🔥 Outstanding! Your personalized learning path is optimized'
+                          : userPerformance.recentAccuracy >= 70
+                          ? '✨ Excellent progress! AI is adjusting to your pace'
+                          : '📚 Building strong foundations with AI guidance'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-6 text-center">
+                    <div className="p-6 bg-white rounded-xl shadow-md">
+                      <div className="text-4xl font-black mb-2" style={{color: '#013062'}}>{userPerformance.recentAccuracy.toFixed(0)}%</div>
+                      <div className="text-sm text-gray-600 font-medium">Your Accuracy</div>
+                    </div>
+                    <div className="p-6 bg-white rounded-xl shadow-md">
+                      <div className="text-4xl font-black mb-2" style={{color: '#013062'}}>{userPerformance.totalAttempts}</div>
+                      <div className="text-sm text-gray-600 font-medium">Questions Solved</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
@@ -530,101 +541,65 @@ const StudyNowPage = () => {
   // CHAPTERS VIEW
   if (view === 'chapters') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="min-h-screen" style={{backgroundColor: '#e9e9e9'}}>
         <Header />
-        <div className="pt-24 pb-8 px-4">
-          <div className="max-w-6xl mx-auto">
+        <div className="pt-32 pb-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <Button 
-              variant="ghost" 
+              variant="outline" 
               onClick={() => setView('subjects')}
               className="mb-6"
               size="lg"
+              style={{borderColor: '#013062', color: '#013062'}}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
+              Back to Subjects
             </Button>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {chapters.map((chapter) => (
                 <Card 
                   key={chapter.name}
-                  onClick={() => chapter.isUnlocked && loadTopics(chapter.name)}
-                  className={`${
-                    chapter.isUnlocked 
-                      ? 'cursor-pointer hover:scale-105 hover:shadow-2xl' 
-                      : 'opacity-50 cursor-not-allowed'
-                  } transition-all border-0 shadow-xl`}
+                  onClick={() => loadTopics(chapter.name)}
+                  className="cursor-pointer hover:scale-105 hover:shadow-2xl transition-all duration-300 border-0 shadow-xl overflow-hidden group"
                 >
-                  <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-6 text-white">
-                    <div className="flex items-start justify-between mb-4">
-                      <Badge className="bg-white/30 text-white">
-                        Chapter {chapter.sequence}
-                      </Badge>
-                      {!chapter.isUnlocked && <Lock className="w-6 h-6" />}
-                      {chapter.progress >= 100 && <Trophy className="w-7 h-7 text-yellow-300" />}
-                    </div>
-                    <h3 className="text-xl font-bold mb-4">{chapter.name}</h3>
-                    {chapter.progress > 0 && (
-                      <div>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span>Progress</span>
-                          <span className="font-bold">{chapter.progress}%</span>
-                        </div>
-                        <Progress value={chapter.progress} className="h-2 bg-white/30" />
+                  <div className="p-6 text-white relative overflow-hidden" style={{background: 'linear-gradient(135deg, #013062 0%, #024a8f 100%)'}}>
+                    <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between mb-4">
+                        <Badge className="bg-white/20 text-white">
+                          Chapter {chapter.sequence}
+                        </Badge>
+                        {chapter.progress >= 80 && <Trophy className="w-7 h-7 text-yellow-300" />}
                       </div>
-                    )}
+                      <h3 className="text-xl font-bold mb-4">{chapter.name}</h3>
+                      {chapter.progress > 0 && (
+                        <div>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span>AI Progress</span>
+                            <span className="font-bold">{chapter.progress}%</span>
+                          </div>
+                          <Progress value={chapter.progress} className="h-2 bg-white/20" />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-gray-900 mb-2">
+                  <CardContent className="p-6 text-center bg-white">
+                    <div className="text-4xl font-bold mb-2" style={{color: '#013062'}}>
                       {chapter.totalQuestions}
                     </div>
-                    <div className="text-sm text-gray-600 mb-4">Questions</div>
+                    <div className="text-sm text-gray-600 mb-5">Questions</div>
                     <Button 
-                      disabled={!chapter.isUnlocked}
-                      className="w-full h-12 text-base font-semibold"
+                      className="w-full h-12 text-base font-semibold text-white hover:opacity-90"
+                      style={{backgroundColor: '#013062'}}
                     >
-                      {chapter.isUnlocked ? 'Explore Topics' : 'Locked'}
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Explore Topics
                     </Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
-
-            {/* Adaptive Learning Info */}
-            <Card className="mt-8 border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                    <Brain className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900">Adaptive Learning Active</h3>
-                    <p className="text-sm text-gray-600">
-                      {userPerformance.recentAccuracy >= 85 
-                        ? '🔥 Excellent! Optimized to 10 questions per level'
-                        : userPerformance.recentAccuracy >= 70
-                        ? '✨ Good pace! 15 questions per level'
-                        : '📚 Building foundation with 20 questions per level'
-                      }
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-center text-sm">
-                  <div>
-                    <div className="text-2xl font-bold text-blue-600">75%+</div>
-                    <div className="text-gray-600">Required to unlock</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">{userPerformance.recentAccuracy.toFixed(0)}%</div>
-                    <div className="text-gray-600">Your accuracy</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-purple-600">{userPerformance.totalAttempts}</div>
-                    <div className="text-gray-600">Total attempts</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
@@ -634,105 +609,62 @@ const StudyNowPage = () => {
   // TOPICS VIEW
   if (view === 'topics') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="min-h-screen" style={{backgroundColor: '#e9e9e9'}}>
         <Header />
-        <div className="pt-24 pb-8 px-4">
-          <div className="max-w-6xl mx-auto">
+        <div className="pt-32 pb-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <Button 
-              variant="ghost" 
+              variant="outline" 
               onClick={() => setView('chapters')}
               className="mb-6"
               size="lg"
+              style={{borderColor: '#013062', color: '#013062'}}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
+              Back to Chapters
             </Button>
 
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {topics.map((topic) => (
-                <Card key={topic.name} className="border-0 shadow-xl">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                          {topic.name}
-                        </h3>
-                        <div className="flex gap-3">
-                          <Badge variant="outline" className="text-green-700 border-green-400 text-sm">
-                            {topic.difficulties.easy} Easy
-                          </Badge>
-                          <Badge variant="outline" className="text-yellow-700 border-yellow-400 text-sm">
-                            {topic.difficulties.medium} Medium
-                          </Badge>
-                          <Badge variant="outline" className="text-red-700 border-red-400 text-sm">
-                            {topic.difficulties.hard} Hard
-                          </Badge>
-                        </div>
+                <Card 
+                  key={topic.name} 
+                  className="border-0 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-105 overflow-hidden group"
+                  onClick={() => startPractice(topic)}
+                >
+                  <div className="p-6 text-white relative overflow-hidden" style={{background: 'linear-gradient(135deg, #013062 0%, #024a8f 100%)'}}>
+                    <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <Badge className="bg-white/20 text-white flex items-center gap-1.5">
+                          <Sparkles className="w-3 h-3" />
+                          AI Powered
+                        </Badge>
+                        {topic.progress >= 80 && <Award className="w-6 h-6 text-yellow-300" />}
                       </div>
-                      {topic.levelStatus[3] === 2 && (
-                        <Award className="w-12 h-12 text-yellow-500" />
+                      <h3 className="text-xl font-bold mb-4">{topic.name}</h3>
+                      {topic.progress > 0 && (
+                        <div>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span>AI Progress</span>
+                            <span className="font-bold">{topic.progress}%</span>
+                          </div>
+                          <Progress value={topic.progress} className="h-2 bg-white/20" />
+                        </div>
                       )}
                     </div>
-
-                    <div className="grid grid-cols-3 gap-6">
-                      {[1, 2, 3].map((level) => {
-                        const status = topic.levelStatus[level];
-                        const isLocked = status === 0;
-                        const isCompleted = status === 2;
-
-                        return (
-                          <Card 
-                            key={level}
-                            className={`${
-                              isLocked ? 'opacity-50 cursor-not-allowed' :
-                              'cursor-pointer hover:scale-105 hover:shadow-xl'
-                            } transition-all border-2 ${
-                              isCompleted ? 'border-green-600 bg-green-50' :
-                              'border-blue-300'
-                            }`}
-                            onClick={() => !isLocked && startPractice(topic, level)}
-                          >
-                            <CardContent className="p-6 text-center">
-                              <div className={`w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
-                                isCompleted ? 'bg-green-600' :
-                                isLocked ? 'bg-gray-300' : 'bg-blue-600'
-                              }`}>
-                                {isLocked ? (
-                                  <Lock className="w-10 h-10 text-white" />
-                                ) : isCompleted ? (
-                                  <CheckCircle2 className="w-10 h-10 text-white" />
-                                ) : (
-                                  <Star className="w-10 h-10 text-white" />
-                                )}
-                              </div>
-                              <div className="font-bold text-xl mb-2">Level {level}</div>
-                              <div className={`text-base font-semibold ${
-                                level === 1 ? 'text-green-700' :
-                                level === 2 ? 'text-yellow-700' : 'text-red-700'
-                              }`}>
-                                {level === 1 ? '🟢 Easy' : level === 2 ? '🟡 Medium' : '🔴 Hard'}
-                              </div>
-                              <div className="text-sm text-gray-600 mt-3 font-medium">
-                                {isCompleted ? '✅ Completed' : isLocked ? '🔒 Locked' : '▶️ Start'}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
+                  </div>
+                  <CardContent className="p-6 text-center bg-white">
+                    <div className="text-4xl font-bold mb-2" style={{color: '#013062'}}>
+                      {topic.totalQuestions}
                     </div>
-
-                    <div className="mt-6">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-gray-600 font-medium">Progress</span>
-                        <span className="font-bold text-blue-600">
-                          {Object.values(topic.levelStatus).filter(s => s === 2).length}/3 Complete
-                        </span>
-                      </div>
-                      <Progress 
-                        value={(Object.values(topic.levelStatus).filter(s => s === 2).length / 3) * 100} 
-                        className="h-3"
-                      />
-                    </div>
+                    <div className="text-sm text-gray-600 mb-5">Questions Available</div>
+                    <Button 
+                      className="w-full h-12 text-base font-semibold text-white hover:opacity-90"
+                      style={{backgroundColor: '#013062'}}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Start AI Practice
+                    </Button>
                   </CardContent>
                 </Card>
               ))}

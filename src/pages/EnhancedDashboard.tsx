@@ -87,7 +87,7 @@ const EnhancedDashboard = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-24">
         {/* Welcome Section */}
         <div className="mb-8">
-          <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-3xl p-8 shadow-2xl border border-blue-800/30 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-3xl p-8 shadow-2xl border border-blue-800/30 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
             <div className="relative z-10">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">

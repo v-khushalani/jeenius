@@ -265,7 +265,7 @@ Total Marks: ${testResult.totalQuestions * 4}`;
   const performance = getPerformanceLevel(parseFloat(stats?.scorePercentage || "0"));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <Header />
       <div className="pt-32 pb-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -274,14 +274,14 @@ Total Marks: ${testResult.totalQuestions * 4}`;
             <Button
               variant="outline"
               onClick={() => navigate("/tests")}
-              className="mb-4"
+              className="mb-4 hover:bg-primary hover:text-white transition-all"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Tests
             </Button>
 
             <div className="text-center">
-              <h1 className="text-3xl font-bold text-foreground mb-2">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-blue-600 to-indigo-700 bg-clip-text text-transparent mb-2">
                 Test Results 📊
               </h1>
               <p className="text-muted-foreground">{testResult.testTitle}</p>
@@ -291,7 +291,7 @@ Total Marks: ${testResult.totalQuestions * 4}`;
           {/* Results Overview */}
           <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             {/* Score Card - Main Focus */}
-            <Card className="bg-gradient-to-br from-primary to-blue-600 text-white lg:col-span-2">
+            <Card className="bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-white lg:col-span-2 border-0 shadow-2xl">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <Trophy className="w-12 h-12 opacity-90" />
@@ -319,42 +319,42 @@ Total Marks: ${testResult.totalQuestions * 4}`;
             </Card>
 
             {/* Correct Answers */}
-            <Card>
+            <Card className="border-2 border-green-200 bg-green-50/50 hover:shadow-lg transition-all">
               <CardContent className="p-6 text-center">
-                <CheckCircle className="w-10 h-10 mx-auto mb-3 text-green-500" />
-                <div className="text-2xl font-bold mb-1 text-green-600">
+                <CheckCircle className="w-10 h-10 mx-auto mb-3 text-green-600" />
+                <div className="text-2xl font-bold mb-1 text-green-700">
                   {stats?.correctAnswers}
                 </div>
                 <div className="text-sm text-muted-foreground mb-1">
                   Correct
                 </div>
-                <div className="text-xs text-green-600 font-medium">
+                <div className="text-xs text-green-700 font-medium">
                   +{(stats?.correctAnswers || 0) * 4} marks
                 </div>
               </CardContent>
             </Card>
 
             {/* Incorrect Answers */}
-            <Card>
+            <Card className="border-2 border-red-200 bg-red-50/50 hover:shadow-lg transition-all">
               <CardContent className="p-6 text-center">
-                <XCircle className="w-10 h-10 mx-auto mb-3 text-red-500" />
-                <div className="text-2xl font-bold mb-1 text-red-600">
+                <XCircle className="w-10 h-10 mx-auto mb-3 text-red-600" />
+                <div className="text-2xl font-bold mb-1 text-red-700">
                   {stats?.incorrectAnswers}
                 </div>
                 <div className="text-sm text-muted-foreground mb-1">
                   Incorrect
                 </div>
-                <div className="text-xs text-red-600 font-medium">
+                <div className="text-xs text-red-700 font-medium">
                   {(stats?.incorrectAnswers || 0) * -1} marks
                 </div>
               </CardContent>
             </Card>
 
             {/* Time Taken */}
-            <Card>
+            <Card className="border-2 border-blue-200 bg-blue-50/50 hover:shadow-lg transition-all">
               <CardContent className="p-6 text-center">
-                <Clock className="w-10 h-10 mx-auto mb-3 text-blue-500" />
-                <div className="text-2xl font-bold mb-1 text-blue-600">
+                <Clock className="w-10 h-10 mx-auto mb-3 text-blue-600" />
+                <div className="text-2xl font-bold mb-1 text-blue-700">
                   {formatTime(testResult.timeSpent)}
                 </div>
                 <div className="text-sm text-muted-foreground mb-1">

@@ -163,7 +163,7 @@ const StudyNowPage = () => {
     try {
       const { data, error } = await supabase
         .from('questions')
-        .select('chapter, difficulty');
+        .select('subject, chapter, difficulty');
 
       if (error) throw error;
 
@@ -375,15 +375,17 @@ const StudyNowPage = () => {
     setShowResult(true);
 
     const question = practiceQuestions[currentQuestionIndex];
-    const isCorrect = answer === question.correct_answer;
+    const isCorrect = answer === question.correct_option;
 
     // Save attempt to database
-    if (user) {
+    if (user && sessionStats.startTime) {
+      const timeElapsed = Math.floor((new Date().getTime() - new Date(sessionStats.startTime).getTime()) / 1000);
       await supabase.from('question_attempts').insert({
         user_id: user.id,
         question_id: question.id,
+        selected_option: answer,
         is_correct: isCorrect,
-        time_taken: Math.floor((new Date() - sessionStats.startTime) / 1000)
+        time_taken: timeElapsed
       });
     }
 
@@ -403,7 +405,7 @@ const StudyNowPage = () => {
       setSessionStats(prev => ({ ...prev, startTime: new Date() }));
     } else {
       const accuracy = (sessionStats.correct / sessionStats.total) * 100;
-      const totalTime = Math.floor((new Date() - sessionStats.startTime) / 1000 / 60);
+      const totalTime = sessionStats.startTime ? Math.floor((new Date().getTime() - new Date(sessionStats.startTime).getTime()) / 1000 / 60) : 0;
       
       alert(`🎉 Practice Session Completed!\n\n✅ Score: ${sessionStats.correct}/${sessionStats.total} (${accuracy.toFixed(0)}%)\n⏱️ Time: ${totalTime} minutes\n🔥 Best Streak: ${sessionStats.streak}\n\n${
         accuracy >= 90 ? '🌟 Outstanding! You\'re a genius!' :
@@ -440,7 +442,7 @@ const StudyNowPage = () => {
     const question = practiceQuestions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / practiceQuestions.length) * 100;
     const accuracy = sessionStats.total > 0 ? (sessionStats.correct / sessionStats.total) * 100 : 0;
-    const timeElapsed = sessionStats.startTime ? Math.floor((new Date() - sessionStats.startTime) / 1000) : 0;
+    const timeElapsed = sessionStats.startTime ? Math.floor((new Date().getTime() - new Date(sessionStats.startTime).getTime()) / 1000) : 0;
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">

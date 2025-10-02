@@ -7,15 +7,15 @@ import Header from '@/components/Header';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Target, Beaker, Calculator, Activity, ChevronRight,
-  Star, Lock, CheckCircle2, Zap, Trophy, Flame,
-  ArrowLeft, Lightbulb, XCircle, Clock, Award
+  Brain, Target, Beaker, Calculator, Activity, ChevronRight,
+  Star, Lock, CheckCircle2, Trophy, Flame,
+  ArrowLeft, Lightbulb, XCircle, Award
 } from "lucide-react";
 
 const StudyNowPage = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('subjects'); // subjects, chapters, topics, practice
+  const [view, setView] = useState('subjects');
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -28,11 +28,38 @@ const StudyNowPage = () => {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showResult, setShowResult] = useState(false);
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0, streak: 0 });
-  const [levelProgress, setLevelProgress] = useState({});
+  const [userPerformance, setUserPerformance] = useState({ recentAccuracy: 0, totalAttempts: 0 });
 
   useEffect(() => {
-    if (user) loadSubjects();
+    if (user) {
+      loadUserPerformance();
+      loadSubjects();
+    }
   }, [user]);
+
+  const loadUserPerformance = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: attempts } = await supabase
+        .from('question_attempts')
+        .select('is_correct')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (attempts && attempts.length > 0) {
+        const correct = attempts.filter(a => a.is_correct).length;
+        const accuracy = (correct / attempts.length) * 100;
+        setUserPerformance({
+          recentAccuracy: accuracy,
+          totalAttempts: attempts.length
+        });
+      }
+    } catch (error) {
+      console.error('Error loading performance:', error);
+    }
+  };
 
   const loadSubjects = async () => {
     setLoading(true);
@@ -45,10 +72,10 @@ const StudyNowPage = () => {
 
       const uniqueSubjects = [...new Set(data?.map(q => q.subject) || [])];
       const subjectConfig = {
-        'Physics': { icon: Target, gradient: 'from-blue-500 to-cyan-500', emoji: '⚡' },
-        'Chemistry': { icon: Beaker, gradient: 'from-green-500 to-emerald-500', emoji: '🧪' },
-        'Mathematics': { icon: Calculator, gradient: 'from-purple-500 to-pink-500', emoji: '🔢' },
-        'Biology': { icon: Activity, gradient: 'from-red-500 to-rose-500', emoji: '🧬' }
+        'Physics': { icon: Target, gradient: 'from-blue-600 to-indigo-600', emoji: '⚡' },
+        'Chemistry': { icon: Beaker, gradient: 'from-green-600 to-emerald-600', emoji: '🧪' },
+        'Mathematics': { icon: Calculator, gradient: 'from-purple-600 to-pink-600', emoji: '🔢' },
+        'Biology': { icon: Activity, gradient: 'from-red-600 to-rose-600', emoji: '🧬' }
       };
 
       const subjectsData = await Promise.all(
@@ -149,8 +176,7 @@ const StudyNowPage = () => {
             hard: topicQuestions.filter(q => q.difficulty?.toLowerCase() === 'hard').length
           };
 
-          // Load user progress for each level
-          let levelStatus = { 1: 0, 2: 0, 3: 0 }; // 0=locked, 1=unlocked, 2=completed
+          let levelStatus = { 1: 0, 2: 0, 3: 0 };
           
           if (user) {
             for (let level = 1; level <= 3; level++) {
@@ -162,23 +188,25 @@ const StudyNowPage = () => {
                 .eq('subject', selectedSubject)
                 .eq('chapter', chapter)
                 .eq('topic', topic)
-                .eq('difficulty', difficulty);
+                .ilike('difficulty', difficulty);
 
+              const levelQIds = levelQs?.map(q => q.id) || [];
+              
               const { data: attempts } = await supabase
                 .from('question_attempts')
                 .select('is_correct')
                 .eq('user_id', user.id)
-                .in('question_id', levelQs?.map(q => q.id) || []);
+                .in('question_id', levelQIds);
 
               if (attempts && attempts.length >= 10) {
                 const accuracy = (attempts.filter(a => a.is_correct).length / attempts.length) * 100;
                 levelStatus[level] = accuracy >= 75 ? 2 : 1;
               } else if (level === 1 || levelStatus[level - 1] === 2) {
-                levelStatus[level] = 1; // Unlocked
+                levelStatus[level] = 1;
               }
             }
           } else {
-            levelStatus[1] = 1; // First level always unlocked
+            levelStatus[1] = 1;
           }
 
           return {
@@ -200,8 +228,15 @@ const StudyNowPage = () => {
     }
   };
 
+  const getAdaptiveQuestionCount = () => {
+    if (userPerformance.recentAccuracy >= 85) return 10;
+    if (userPerformance.recentAccuracy >= 70) return 15;
+    return 20;
+  };
+
   const startPractice = async (topic, level) => {
     const difficulty = level === 1 ? 'easy' : level === 2 ? 'medium' : 'hard';
+    const questionCount = getAdaptiveQuestionCount();
     
     try {
       const { data, error } = await supabase
@@ -210,15 +245,20 @@ const StudyNowPage = () => {
         .eq('subject', selectedSubject)
         .eq('chapter', selectedChapter)
         .eq('topic', topic.name)
-        .eq('difficulty', difficulty)
-        .limit(15);
+        .ilike('difficulty', difficulty)
+        .limit(questionCount);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       if (!data || data.length === 0) {
-        alert('No questions available for this level');
+        alert('No questions available for this level. Try another topic!');
         return;
       }
+
+      console.log(`Loaded ${data.length} questions for ${topic.name} - Level ${level}`);
 
       setPracticeQuestions(data);
       setSelectedTopic(topic);
@@ -229,8 +269,8 @@ const StudyNowPage = () => {
       setShowResult(false);
       setView('practice');
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to load questions');
+      console.error('Error loading questions:', error);
+      alert('Failed to load questions. Please try again.');
     }
   };
 
@@ -266,17 +306,16 @@ const StudyNowPage = () => {
       setSelectedAnswer(null);
       setShowResult(false);
     } else {
-      // Session complete
       const accuracy = (sessionStats.correct / sessionStats.total) * 100;
       const passed = accuracy >= 75;
 
       if (passed) {
-        alert(`🎉 Level ${currentLevel} Completed!\n\nScore: ${sessionStats.correct}/${sessionStats.total} (${accuracy.toFixed(0)}%)\n\n${currentLevel < 3 ? 'Next level unlocked!' : 'Topic Mastered! 🏆'}`);
+        alert(`🎉 Level ${currentLevel} Completed!\n\nScore: ${sessionStats.correct}/${sessionStats.total} (${accuracy.toFixed(0)}%)\n\n${currentLevel < 3 ? '✨ Next level unlocked!' : '🏆 Topic Mastered!'}`);
       } else {
-        alert(`📚 Keep Practicing!\n\nScore: ${sessionStats.correct}/${sessionStats.total} (${accuracy.toFixed(0)}%)\n\nNeed 75%+ to unlock next level`);
+        alert(`📚 Keep Practicing!\n\nScore: ${sessionStats.correct}/${sessionStats.total} (${accuracy.toFixed(0)}%)\n\n75%+ needed to unlock next level`);
       }
 
-      // Reload topics to update progress
+      await loadUserPerformance();
       await loadTopics(selectedChapter);
       setView('topics');
     }
@@ -284,12 +323,13 @@ const StudyNowPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-bounce mb-4">
-            <Zap className="w-16 h-16 text-purple-600 mx-auto" />
+          <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl flex items-center justify-center mb-6 shadow-2xl animate-pulse mx-auto">
+            <Brain className="h-12 w-12 text-white" />
           </div>
-          <p className="text-xl font-semibold text-gray-700">Loading your learning adventure...</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-3">JEENIUS</h1>
+          <p className="text-gray-600 text-lg">Loading your learning journey...</p>
         </div>
       </div>
     );
@@ -302,75 +342,73 @@ const StudyNowPage = () => {
     const accuracy = sessionStats.total > 0 ? (sessionStats.correct / sessionStats.total) * 100 : 0;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
         <Header />
         <div className="pt-24 pb-8 px-4">
-          <div className="max-w-4xl mx-auto">
-            {/* Fun Header */}
-            <Card className="mb-4 border-0 shadow-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
+          <div className="max-w-5xl mx-auto">
+            <Card className="mb-4 border-0 shadow-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className="bg-white/20 text-white">Level {currentLevel}</Badge>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge className="bg-white/30 text-white text-sm">Level {currentLevel}</Badge>
                       <span className="text-sm opacity-90">{selectedTopic?.name}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-3xl font-black">{sessionStats.correct}/{sessionStats.total}</span>
+                      <span className="text-4xl font-black">{sessionStats.correct}/{sessionStats.total}</span>
                       {sessionStats.streak > 2 && (
                         <Badge className="bg-orange-500 text-white flex items-center gap-1 animate-pulse">
-                          <Flame className="w-3 h-3" />
+                          <Flame className="w-4 h-4" />
                           {sessionStats.streak} Streak!
                         </Badge>
                       )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-4xl font-black">{accuracy.toFixed(0)}%</div>
-                    <div className="text-xs opacity-90">Accuracy</div>
+                    <div className="text-5xl font-black">{accuracy.toFixed(0)}%</div>
+                    <div className="text-sm opacity-90">Accuracy</div>
                   </div>
                 </div>
-                <Progress value={progress} className="mt-3 h-2 bg-white/30" />
-                <p className="text-xs mt-1 opacity-75">Question {currentQuestionIndex + 1} of {practiceQuestions.length}</p>
+                <Progress value={progress} className="h-3 bg-white/30" />
+                <p className="text-sm mt-2 opacity-90">Question {currentQuestionIndex + 1} of {practiceQuestions.length}</p>
               </CardContent>
             </Card>
 
-            {/* Question Card */}
             <Card className="shadow-2xl border-0">
               <CardContent className="p-8">
                 <div className="mb-6">
                   <Badge className={`${
-                    currentLevel === 1 ? 'bg-green-500' :
-                    currentLevel === 2 ? 'bg-yellow-500' : 'bg-red-500'
-                  } text-white text-sm px-3 py-1`}>
+                    currentLevel === 1 ? 'bg-green-600' :
+                    currentLevel === 2 ? 'bg-yellow-600' : 'bg-red-600'
+                  } text-white text-sm px-4 py-2`}>
                     {currentLevel === 1 ? '🟢 Easy' : currentLevel === 2 ? '🟡 Medium' : '🔴 Hard'}
                   </Badge>
                 </div>
 
-                <h2 className="text-2xl font-bold mb-8 text-gray-900 leading-relaxed">
+                <h2 className="text-3xl font-bold mb-8 text-gray-900 leading-relaxed">
                   {question.question}
                 </h2>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {['option_a', 'option_b', 'option_c', 'option_d'].map((key, idx) => {
                     const letter = String.fromCharCode(65 + idx);
                     const isSelected = selectedAnswer === letter;
                     const isCorrect = letter === question.correct_answer;
                     
-                    let btnClass = 'w-full text-left p-5 rounded-2xl border-2 transition-all transform ';
+                    let btnClass = 'w-full text-left p-6 rounded-2xl border-3 transition-all transform hover:scale-[1.02] ';
                     
                     if (showResult) {
                       if (isCorrect) {
-                        btnClass += 'border-green-500 bg-green-50 scale-105';
+                        btnClass += 'border-green-600 bg-green-50 scale-[1.02] shadow-lg';
                       } else if (isSelected) {
-                        btnClass += 'border-red-500 bg-red-50';
+                        btnClass += 'border-red-600 bg-red-50';
                       } else {
                         btnClass += 'border-gray-200 opacity-40';
                       }
                     } else {
                       btnClass += isSelected 
-                        ? 'border-purple-500 bg-purple-50 shadow-lg scale-105' 
-                        : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/30 hover:scale-102';
+                        ? 'border-blue-600 bg-blue-50 shadow-xl scale-[1.02]' 
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50';
                     }
 
                     return (
@@ -381,21 +419,21 @@ const StudyNowPage = () => {
                         className={btnClass}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                              showResult && isCorrect ? 'bg-green-500 text-white' :
-                              showResult && isSelected && !isCorrect ? 'bg-red-500 text-white' :
-                              isSelected ? 'bg-purple-500 text-white' : 'bg-gray-100'
+                          <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
+                              showResult && isCorrect ? 'bg-green-600 text-white' :
+                              showResult && isSelected && !isCorrect ? 'bg-red-600 text-white' :
+                              isSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
                             }`}>
                               {letter}
                             </div>
-                            <span className="text-lg">{question[key]}</span>
+                            <span className="text-lg font-medium">{question[key]}</span>
                           </div>
                           {showResult && isCorrect && (
-                            <CheckCircle2 className="w-6 h-6 text-green-600" />
+                            <CheckCircle2 className="w-7 h-7 text-green-600" />
                           )}
                           {showResult && isSelected && !isCorrect && (
-                            <XCircle className="w-6 h-6 text-red-600" />
+                            <XCircle className="w-7 h-7 text-red-600" />
                           )}
                         </div>
                       </button>
@@ -403,30 +441,28 @@ const StudyNowPage = () => {
                   })}
                 </div>
 
-                {/* Explanation */}
                 {showResult && question.explanation && (
-                  <div className="mt-6 p-5 bg-blue-50 border-l-4 border-blue-500 rounded-r-xl">
+                  <div className="mt-6 p-6 bg-blue-50 border-l-4 border-blue-600 rounded-r-2xl">
                     <div className="flex items-start gap-3">
                       <Lightbulb className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
                       <div>
-                        <p className="font-bold text-blue-900 mb-2">💡 Explanation</p>
+                        <p className="font-bold text-blue-900 mb-2 text-lg">💡 Explanation</p>
                         <p className="text-blue-800 leading-relaxed">{question.explanation}</p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Next Button */}
                 {showResult && (
                   <Button 
                     onClick={nextQuestion}
                     size="lg"
-                    className="w-full mt-6 h-14 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                    className="w-full mt-6 h-16 text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
                   >
                     {currentQuestionIndex < practiceQuestions.length - 1 ? (
-                      <>Next Question <ChevronRight className="w-5 h-5 ml-2" /></>
+                      <>Next Question <ChevronRight className="w-6 h-6 ml-2" /></>
                     ) : (
-                      <>Finish Level <Trophy className="w-5 h-5 ml-2" /></>
+                      <>Finish Level <Trophy className="w-6 h-6 ml-2" /></>
                     )}
                   </Button>
                 )}
@@ -437,8 +473,9 @@ const StudyNowPage = () => {
               variant="ghost" 
               onClick={() => setView('topics')}
               className="mt-4 w-full"
+              size="lg"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Topics
             </Button>
           </div>
@@ -450,19 +487,10 @@ const StudyNowPage = () => {
   // SUBJECTS VIEW
   if (view === 'subjects') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
         <Header />
         <div className="pt-24 pb-8 px-4">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <h1 className="text-5xl font-black text-gray-900 mb-3">
-                Choose Your Subject 🚀
-              </h1>
-              <p className="text-xl text-gray-600">
-                Master topics level by level with instant feedback
-              </p>
-            </div>
-
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {subjects.map((subject) => {
                 const Icon = subject.icon;
@@ -473,18 +501,18 @@ const StudyNowPage = () => {
                     className="cursor-pointer hover:scale-105 transition-all shadow-xl border-0 overflow-hidden group"
                   >
                     <div className={`bg-gradient-to-br ${subject.gradient} p-8 text-white text-center`}>
-                      <div className="text-6xl mb-4 group-hover:scale-110 transition-transform">
+                      <div className="text-7xl mb-4 group-hover:scale-110 transition-transform">
                         {subject.emoji}
                       </div>
-                      <Icon className="w-12 h-12 mx-auto mb-3 opacity-80" />
+                      <Icon className="w-12 h-12 mx-auto mb-3 opacity-90" />
                       <h3 className="text-2xl font-bold">{subject.name}</h3>
                     </div>
                     <CardContent className="p-6 text-center">
-                      <div className="text-3xl font-black text-gray-900 mb-1">
+                      <div className="text-4xl font-black text-gray-900 mb-2">
                         {subject.totalQuestions}
                       </div>
-                      <div className="text-sm text-gray-600">Questions Ready</div>
-                      <Button className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                      <div className="text-sm text-gray-600 mb-4">Questions</div>
+                      <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-12 text-base font-semibold">
                         Start Learning
                       </Button>
                     </CardContent>
@@ -501,7 +529,7 @@ const StudyNowPage = () => {
   // CHAPTERS VIEW
   if (view === 'chapters') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
         <Header />
         <div className="pt-24 pb-8 px-4">
           <div className="max-w-6xl mx-auto">
@@ -509,17 +537,11 @@ const StudyNowPage = () => {
               variant="ghost" 
               onClick={() => setView('subjects')}
               className="mb-6"
+              size="lg"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Subjects
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back
             </Button>
-
-            <div className="text-center mb-10">
-              <h1 className="text-4xl font-black text-gray-900 mb-2">
-                {selectedSubject} Chapters 📚
-              </h1>
-              <p className="text-gray-600">Select a chapter to explore topics</p>
-            </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {chapters.map((chapter) => (
@@ -532,18 +554,18 @@ const StudyNowPage = () => {
                       : 'opacity-50 cursor-not-allowed'
                   } transition-all border-0 shadow-xl`}
                 >
-                  <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-6 text-white">
-                    <div className="flex items-start justify-between mb-3">
-                      <Badge className="bg-white/20 text-white">
+                  <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-6 text-white">
+                    <div className="flex items-start justify-between mb-4">
+                      <Badge className="bg-white/30 text-white">
                         Chapter {chapter.sequence}
                       </Badge>
-                      {!chapter.isUnlocked && <Lock className="w-5 h-5" />}
-                      {chapter.progress >= 100 && <Trophy className="w-6 h-6 text-yellow-300" />}
+                      {!chapter.isUnlocked && <Lock className="w-6 h-6" />}
+                      {chapter.progress >= 100 && <Trophy className="w-7 h-7 text-yellow-300" />}
                     </div>
                     <h3 className="text-xl font-bold mb-4">{chapter.name}</h3>
                     {chapter.progress > 0 && (
                       <div>
-                        <div className="flex justify-between text-sm mb-1">
+                        <div className="flex justify-between text-sm mb-2">
                           <span>Progress</span>
                           <span className="font-bold">{chapter.progress}%</span>
                         </div>
@@ -552,13 +574,13 @@ const StudyNowPage = () => {
                     )}
                   </div>
                   <CardContent className="p-6 text-center">
-                    <div className="text-2xl font-bold text-gray-900 mb-1">
+                    <div className="text-3xl font-bold text-gray-900 mb-2">
                       {chapter.totalQuestions}
                     </div>
-                    <div className="text-sm text-gray-600 mb-4">Total Questions</div>
+                    <div className="text-sm text-gray-600 mb-4">Questions</div>
                     <Button 
                       disabled={!chapter.isUnlocked}
-                      className="w-full"
+                      className="w-full h-12 text-base font-semibold"
                     >
                       {chapter.isUnlocked ? 'Explore Topics' : 'Locked'}
                     </Button>
@@ -566,147 +588,38 @@ const StudyNowPage = () => {
                 </Card>
               ))}
             </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  // TOPICS VIEW
-  if (view === 'topics') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-        <Header />
-        <div className="pt-24 pb-8 px-4">
-          <div className="max-w-6xl mx-auto">
-            <Button 
-              variant="ghost" 
-              onClick={() => setView('chapters')}
-              className="mb-6"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Chapters
-            </Button>
-
-            <div className="text-center mb-10">
-              <h1 className="text-4xl font-black text-gray-900 mb-2">
-                {selectedChapter} 🎯
-              </h1>
-              <p className="text-gray-600">Complete each level to unlock the next</p>
-            </div>
-
-            <div className="space-y-6">
-              {topics.map((topic) => (
-                <Card key={topic.name} className="border-0 shadow-xl overflow-hidden">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                          {topic.name}
-                        </h3>
-                        <div className="flex gap-2">
-                          <Badge variant="outline" className="text-green-600 border-green-300">
-                            {topic.difficulties.easy} Easy
-                          </Badge>
-                          <Badge variant="outline" className="text-yellow-600 border-yellow-300">
-                            {topic.difficulties.medium} Medium
-                          </Badge>
-                          <Badge variant="outline" className="text-red-600 border-red-300">
-                            {topic.difficulties.hard} Hard
-                          </Badge>
-                        </div>
-                      </div>
-                      {topic.levelStatus[3] === 2 && (
-                        <Award className="w-10 h-10 text-yellow-500" />
-                      )}
-                    </div>
-
-                    {/* Level Progression */}
-                    <div className="grid grid-cols-3 gap-4">
-                      {[1, 2, 3].map((level) => {
-                        const status = topic.levelStatus[level];
-                        const isLocked = status === 0;
-                        const isCompleted = status === 2;
-                        const isUnlocked = status === 1;
-
-                        return (
-                          <Card 
-                            key={level}
-                            className={`${
-                              isLocked ? 'opacity-50 cursor-not-allowed' :
-                              'cursor-pointer hover:scale-105 hover:shadow-lg'
-                            } transition-all border-2 ${
-                              isCompleted ? 'border-green-500 bg-green-50' :
-                              isUnlocked ? 'border-purple-300' : 'border-gray-200'
-                            }`}
-                            onClick={() => !isLocked && startPractice(topic, level)}
-                          >
-                            <CardContent className="p-4 text-center">
-                              <div className={`w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center ${
-                                isCompleted ? 'bg-green-500' :
-                                isUnlocked ? 'bg-purple-500' : 'bg-gray-300'
-                              }`}>
-                                {isLocked ? (
-                                  <Lock className="w-8 h-8 text-white" />
-                                ) : isCompleted ? (
-                                  <CheckCircle2 className="w-8 h-8 text-white" />
-                                ) : (
-                                  <Star className="w-8 h-8 text-white" />
-                                )}
-                              </div>
-                              <div className="font-bold text-lg mb-1">Level {level}</div>
-                              <div className={`text-sm ${
-                                level === 1 ? 'text-green-600' :
-                                level === 2 ? 'text-yellow-600' : 'text-red-600'
-                              }`}>
-                                {level === 1 ? '🟢 Easy' : level === 2 ? '🟡 Medium' : '🔴 Hard'}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-2">
-                                {isCompleted ? '✅ Mastered' : isUnlocked ? '▶️ Start' : '🔒 Locked'}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-
-                    {/* Progress Indicator */}
-                    <div className="mt-4">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-gray-600">Topic Progress</span>
-                        <span className="font-semibold text-purple-600">
-                          {Object.values(topic.levelStatus).filter(s => s === 2).length}/3 Levels
-                        </span>
-                      </div>
-                      <Progress 
-                        value={(Object.values(topic.levelStatus).filter(s => s === 2).length / 3) * 100} 
-                        className="h-2"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Instructions Card */}
-            <Card className="mt-8 border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
+            {/* Adaptive Learning Info */}
+            <Card className="mt-8 border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
               <CardContent className="p-6">
-                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-purple-600" />
-                  How It Works
-                </h3>
-                <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-700">
-                  <div className="flex items-start gap-2">
-                    <span className="text-2xl">1️⃣</span>
-                    <p><strong>Start with Level 1 (Easy)</strong> - Complete 15 questions with 75%+ accuracy</p>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                    <Brain className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-2xl">2️⃣</span>
-                    <p><strong>Unlock Level 2 (Medium)</strong> - Progress to harder questions automatically</p>
+                  <div>
+                    <h3 className="font-bold text-lg text-gray-900">Adaptive Learning Active</h3>
+                    <p className="text-sm text-gray-600">
+                      {userPerformance.recentAccuracy >= 85 
+                        ? '🔥 Excellent! Optimized to 10 questions per level'
+                        : userPerformance.recentAccuracy >= 70
+                        ? '✨ Good pace! 15 questions per level'
+                        : '📚 Building foundation with 20 questions per level'
+                      }
+                    </p>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-2xl">3️⃣</span>
-                    <p><strong>Master Level 3 (Hard)</strong> - Prove your expertise and earn mastery badge!</p>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-center text-sm">
+                  <div>
+                    <div className="text-2xl font-bold text-blue-600">75%+</div>
+                    <div className="text-gray-600">Required to unlock</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">{userPerformance.recentAccuracy.toFixed(0)}%</div>
+                    <div className="text-gray-600">Your accuracy</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-purple-600">{userPerformance.totalAttempts}</div>
+                    <div className="text-gray-600">Total attempts</div>
                   </div>
                 </div>
               </CardContent>
@@ -720,4 +633,116 @@ const StudyNowPage = () => {
   return null;
 };
 
-export default StudyNowPage;
+export default StudyNowPage;)}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // TOPICS VIEW
+  if (view === 'topics') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+        <Header />
+        <div className="pt-24 pb-8 px-4">
+          <div className="max-w-6xl mx-auto">
+            <Button 
+              variant="ghost" 
+              onClick={() => setView('chapters')}
+              className="mb-6"
+              size="lg"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back
+            </Button>
+
+            <div className="space-y-6">
+              {topics.map((topic) => (
+                <Card key={topic.name} className="border-0 shadow-xl">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                          {topic.name}
+                        </h3>
+                        <div className="flex gap-3">
+                          <Badge variant="outline" className="text-green-700 border-green-400 text-sm">
+                            {topic.difficulties.easy} Easy
+                          </Badge>
+                          <Badge variant="outline" className="text-yellow-700 border-yellow-400 text-sm">
+                            {topic.difficulties.medium} Medium
+                          </Badge>
+                          <Badge variant="outline" className="text-red-700 border-red-400 text-sm">
+                            {topic.difficulties.hard} Hard
+                          </Badge>
+                        </div>
+                      </div>
+                      {topic.levelStatus[3] === 2 && (
+                        <Award className="w-12 h-12 text-yellow-500" />
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-6">
+                      {[1, 2, 3].map((level) => {
+                        const status = topic.levelStatus[level];
+                        const isLocked = status === 0;
+                        const isCompleted = status === 2;
+
+                        return (
+                          <Card 
+                            key={level}
+                            className={`${
+                              isLocked ? 'opacity-50 cursor-not-allowed' :
+                              'cursor-pointer hover:scale-105 hover:shadow-xl'
+                            } transition-all border-2 ${
+                              isCompleted ? 'border-green-600 bg-green-50' :
+                              'border-blue-300'
+                            }`}
+                            onClick={() => !isLocked && startPractice(topic, level)}
+                          >
+                            <CardContent className="p-6 text-center">
+                              <div className={`w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
+                                isCompleted ? 'bg-green-600' :
+                                isLocked ? 'bg-gray-300' : 'bg-blue-600'
+                              }`}>
+                                {isLocked ? (
+                                  <Lock className="w-10 h-10 text-white" />
+                                ) : isCompleted ? (
+                                  <CheckCircle2 className="w-10 h-10 text-white" />
+                                ) : (
+                                  <Star className="w-10 h-10 text-white" />
+                                )}
+                              </div>
+                              <div className="font-bold text-xl mb-2">Level {level}</div>
+                              <div className={`text-base font-semibold ${
+                                level === 1 ? 'text-green-700' :
+                                level === 2 ? 'text-yellow-700' : 'text-red-700'
+                              }`}>
+                                {level === 1 ? '🟢 Easy' : level === 2 ? '🟡 Medium' : '🔴 Hard'}
+                              </div>
+                              <div className="text-sm text-gray-600 mt-3 font-medium">
+                                {isCompleted ? '✅ Completed' : isLocked ? '🔒 Locked' : '▶️ Start'}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-6">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-gray-600 font-medium">Progress</span>
+                        <span className="font-bold text-blue-600">
+                          {Object.values(topic.levelStatus).filter(s => s === 2).length}/3 Complete
+                        </span>
+                      </div>
+                      <Progress 
+                        value={(Object.values(topic.levelStatus).filter(s => s === 2).length / 3) * 100} 
+                        className="h-3"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )

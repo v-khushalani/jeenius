@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import Header from '@/components/Header';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -630,17 +631,6 @@ const StudyNowPage = () => {
     );
   }
 
-  return null;
-};
-
-export default StudyNowPage;)}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // TOPICS VIEW
   if (view === 'topics') {
     return (
@@ -745,4 +735,15 @@ export default StudyNowPage;)}
                     </div>
                   </CardContent>
                 </Card>
-              )
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+export default StudyNowPage;

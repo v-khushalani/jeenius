@@ -281,7 +281,7 @@ const StudyNowPage = () => {
     setSelectedAnswer(answer);
     setShowResult(true);
     const question = practiceQuestions[currentQuestionIndex];
-    const isCorrect = answer === question.correct_answer;
+    const isCorrect = answer === question.correct_option;
     if (user && sessionStats.startTime) {
       const timeElapsed = Math.floor((new Date().getTime() - new Date(sessionStats.startTime).getTime()) / 1000);
       await supabase.from('question_attempts').insert({
@@ -402,7 +402,7 @@ const StudyNowPage = () => {
                   {['option_a', 'option_b', 'option_c', 'option_d'].map((key, idx) => {
                     const letter = String.fromCharCode(65 + idx);
                     const isSelected = selectedAnswer === letter;
-                    const isCorrect = letter === question.correct_answer;
+                    const isCorrect = letter === question.correct_option;
                     let btnClass = 'w-full text-left p-3 sm:p-4 rounded-lg border-2 transition-all transform hover:scale-[1.01] ';
                     if (showResult) {
                       if (isCorrect) btnClass += 'border-green-600 bg-gradient-to-r from-green-50 to-emerald-50 scale-[1.01] shadow-md';

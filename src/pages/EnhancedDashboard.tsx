@@ -453,43 +453,7 @@ const EnhancedDashboard = () => {
         </div>
 
         {/* AI Smart Recommendations - NEW */}
-        <Card className="mb-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200/50 shadow-xl">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-2 rounded-xl shrink-0">
-                <Lightbulb className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-bold text-purple-900 mb-2 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  AI Recommendations
-                </h3>
-                <div className="space-y-2">
-                  <div className="bg-white/50 rounded-lg p-3 border border-purple-200">
-                    <p className="text-sm text-slate-700 mb-2">
-                      📉 Your <strong>{stats?.weakestTopic}</strong> needs attention. Practice recommended!
-                    </p>
-                    <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white text-xs" onClick={() => navigate('/study-now')}>
-                      Start 10 Questions
-                      <ChevronRight className="h-3 w-3 ml-1" />
-                    </Button>
-                  </div>
-                  <div className="bg-white/50 rounded-lg p-3 border border-green-200">
-                    <p className="text-sm text-slate-700">
-                      ✅ You're crushing <strong>{stats?.strongestTopic}</strong>! Try advanced problems to challenge yourself.
-                    </p>
-                  </div>
-                  <div className="bg-white/50 rounded-lg p-3 border border-blue-200">
-                    <p className="text-sm text-slate-700">
-                      💡 Solve {stats?.topRankersAvg - stats?.avgQuestionsPerDay} more questions daily to match top rankers!
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+    
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Enhanced Progress Section */}
@@ -594,152 +558,43 @@ const EnhancedDashboard = () => {
 
           {/* Sidebar */}
           <div className="space-y-3 sm:space-y-4">
-            {/* Quick Actions */}
-            <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 shadow-xl">
-              <CardHeader className="p-3 sm:p-4 border-b border-indigo-100">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-indigo-600" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 space-y-2">
-                <Button
-                  onClick={() => navigate('/study-now')}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white justify-between group"
-                >
-                  <span className="flex items-center gap-2">
-                    <Play className="h-4 w-4" />
-                    Practice Now
-                  </span>
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                
-                <Button
-                  onClick={() => navigate('/test')}
-                  variant="outline"
-                  className="w-full justify-between group border-indigo-200 hover:bg-indigo-50"
-                >
-                  <span className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Take Mock Test
-                  </span>
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-
-                <Button
-                  onClick={() => navigate('/battle')}
-                  variant="outline"
-                  className="w-full justify-between group border-purple-200 hover:bg-purple-50"
-                >
-                  <span className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Peer Battle
-                  </span>
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-
-                <Button
-                  onClick={() => navigate('/doubt-solver')}
-                  variant="outline"
-                  className="w-full justify-between group border-green-200 hover:bg-green-50"
-                >
-                  <span className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    AI Doubt Solver
-                  </span>
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Study Insights */}
-            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 shadow-xl">
-              <CardHeader className="p-3 sm:p-4 border-b border-purple-100">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Star className="h-5 w-5 text-purple-600" />
-                  Study Insights
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 space-y-3">
-                <div className="bg-white/70 rounded-lg p-2.5 border border-green-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-xs font-semibold text-slate-700">Strongest Topic</span>
+            <Card className="mb-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200/50 shadow-xl">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-2 rounded-xl shrink-0">
+                <Lightbulb className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-purple-900 mb-2 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  AI Recommendations
+                </h3>
+                <div className="space-y-2">
+                  <div className="bg-white/50 rounded-lg p-3 border border-purple-200">
+                    <p className="text-sm text-slate-700 mb-2">
+                      📉 Your <strong>{stats?.weakestTopic}</strong> needs attention. Practice recommended!
+                    </p>
+                    <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white text-xs" onClick={() => navigate('/study-now')}>
+                      Start 10 Questions
+                      <ChevronRight className="h-3 w-3 ml-1" />
+                    </Button>
                   </div>
-                  <p className="text-sm font-bold text-green-700">{stats?.strongestTopic}</p>
+                  <div className="bg-white/50 rounded-lg p-3 border border-green-200">
+                    <p className="text-sm text-slate-700">
+                      ✅ You're crushing <strong>{stats?.strongestTopic}</strong>! Try advanced problems to challenge yourself.
+                    </p>
+                  </div>
+                  <div className="bg-white/50 rounded-lg p-3 border border-blue-200">
+                    <p className="text-sm text-slate-700">
+                      💡 Solve {stats?.topRankersAvg - stats?.avgQuestionsPerDay} more questions daily to match top rankers!
+                    </p>
+                  </div>
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-                <div className="bg-white/70 rounded-lg p-2.5 border border-orange-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertCircle className="h-4 w-4 text-orange-600" />
-                    <span className="text-xs font-semibold text-slate-700">Needs Focus</span>
-                  </div>
-                  <p className="text-sm font-bold text-orange-700">{stats?.weakestTopic}</p>
-                  <Button 
-                    size="sm" 
-                    className="mt-2 w-full bg-orange-500 hover:bg-orange-600 text-white text-xs"
-                    onClick={() => navigate('/study-now')}
-                  >
-                    Practice Now
-                  </Button>
-                </div>
-
-                <div className="bg-white/70 rounded-lg p-2.5 border border-blue-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <span className="text-xs font-semibold text-slate-700">Weekly Study Time</span>
-                  </div>
-                  <p className="text-sm font-bold text-blue-700">{stats?.weeklyMinutes || 0} minutes</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Achievements Preview */}
-            <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 shadow-xl">
-              <CardHeader className="p-3 sm:p-4 border-b border-yellow-100">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Award className="h-5 w-5 text-yellow-600" />
-                  Recent Achievements
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 space-y-2">
-                {stats?.streak >= 7 && (
-                  <div className="bg-white/70 rounded-lg p-2 border border-orange-200 flex items-center gap-2">
-                    <div className="bg-gradient-to-br from-orange-400 to-red-500 p-1.5 rounded-lg">
-                      <Flame className="h-4 w-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-700">Week Warrior</p>
-                      <p className="text-xs text-slate-600">{stats.streak} day streak! 🔥</p>
-                    </div>
-                  </div>
-                )}
-
-                {stats?.accuracy >= 85 && (
-                  <div className="bg-white/70 rounded-lg p-2 border border-green-200 flex items-center gap-2">
-                    <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-1.5 rounded-lg">
-                      <Target className="h-4 w-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-700">Sharp Shooter</p>
-                      <p className="text-xs text-slate-600">{stats.accuracy}% accuracy! 🎯</p>
-                    </div>
-                  </div>
-                )}
-
-                {stats?.totalQuestions >= 100 && (
-                  <div className="bg-white/70 rounded-lg p-2 border border-blue-200 flex items-center gap-2">
-                    <div className="bg-gradient-to-br from-blue-400 to-indigo-500 p-1.5 rounded-lg">
-                      <Brain className="h-4 w-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-700">Century Master</p>
-                      <p className="text-xs text-slate-600">{stats.totalQuestions} questions solved! 💯</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

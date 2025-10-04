@@ -54,6 +54,7 @@ const EnhancedDashboard = () => {
     try {
       setIsLoading(true);
       
+      // Fetch profile
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -66,26 +67,111 @@ const EnhancedDashboard = () => {
       
       setProfile(profileData);
       
-      // Enhanced mock stats with more details
+      // Fetch real question attempts
+      const { data: attempts, error: attemptsError } = await supabase
+        .from('question_attempts')
+        .select('*, questions(subject, chapter, topic)')
+        .eq('user_id', user?.id);
+
+      if (attemptsError) {
+        console.error('Attempts fetch error:', attemptsError);
+      }
+
+      // Calculate real stats
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todayAttempts = attempts?.filter(a => 
+        new Date(a.created_at) >= today
+      ) || [];
+      
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAttempts = attempts?.filter(a => 
+        new Date(a.created_at) >= weekAgo
+      ) || [];
+
+      const correctAnswers = attempts?.filter(a => a.is_correct).length || 0;
+      const totalQuestions = attempts?.length || 0;
+      const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+
+      // Calculate streak
+      let streak = 0;
+      const sortedAttempts = [...(attempts || [])].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      
+      let currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+      
+      for (let i = 0; i < 365; i++) {
+        const hasActivity = sortedAttempts.some(a => {
+          const attemptDate = new Date(a.created_at);
+          attemptDate.setHours(0, 0, 0, 0);
+          return attemptDate.getTime() === currentDate.getTime();
+        });
+        
+        if (hasActivity) {
+          streak++;
+          currentDate.setDate(currentDate.getDate() - 1);
+        } else if (i === 0) {
+          currentDate.setDate(currentDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      // Find weakest and strongest topics
+      const topicStats: any = {};
+      attempts?.forEach((attempt: any) => {
+        const topic = attempt.questions?.topic;
+        if (topic) {
+          if (!topicStats[topic]) {
+            topicStats[topic] = { correct: 0, total: 0 };
+          }
+          topicStats[topic].total++;
+          if (attempt.is_correct) topicStats[topic].correct++;
+        }
+      });
+
+      let weakestTopic = "Not enough data";
+      let strongestTopic = "Not enough data";
+      let lowestAccuracy = 100;
+      let highestAccuracy = 0;
+
+      Object.entries(topicStats).forEach(([topic, stats]: [string, any]) => {
+        if (stats.total >= 5) {
+          const acc = (stats.correct / stats.total) * 100;
+          if (acc < lowestAccuracy) {
+            lowestAccuracy = acc;
+            weakestTopic = topic;
+          }
+          if (acc > highestAccuracy) {
+            highestAccuracy = acc;
+            strongestTopic = topic;
+          }
+        }
+      });
+
       setStats({
-        totalQuestions: 245,
-        questionsToday: 12,
-        questionsWeek: 87,
-        questionsMonth: 312,
-        correctAnswers: 189,
-        accuracy: 77,
-        accuracyChange: 2,
-        streak: 7,
-        weeklyMinutes: 180,
-        rank: 15,
-        rankChange: -3, // Negative means improved (went from 18 to 15)
-        percentile: 94.5,
+        totalQuestions,
+        questionsToday: todayAttempts.length,
+        questionsWeek: weekAttempts.length,
+        questionsMonth: attempts?.length || 0,
+        correctAnswers,
+        accuracy,
+        accuracyChange: 2, // TODO: Calculate from historical data
+        streak,
+        weeklyMinutes: Math.round(weekAttempts.length * 1.5), // Estimate 1.5 min per question
+        rank: 15, // TODO: Calculate from leaderboard
+        rankChange: -3,
+        percentile: 94.5, // TODO: Calculate from leaderboard
         todayGoal: 30,
-        todayProgress: 15,
-        weakestTopic: "Organic Chemistry",
-        strongestTopic: "Calculus",
-        avgQuestionsPerDay: 35,
-        topRankersAvg: 48,
+        todayProgress: todayAttempts.length,
+        weakestTopic,
+        strongestTopic,
+        avgQuestionsPerDay: totalQuestions > 0 ? Math.round(totalQuestions / Math.max(1, streak || 1)) : 0,
+        topRankersAvg: 48, // TODO: Calculate from top rankers
       });
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -157,7 +243,7 @@ const EnhancedDashboard = () => {
     }
   };
 
-  const notification = getSmartNotification();
+  const notification = stats ? getSmartNotification() : null;
 
   // Get accuracy color
   const getAccuracyColor = (accuracy: number) => {
@@ -182,7 +268,7 @@ const EnhancedDashboard = () => {
       
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-24">
         {/* Dismissible Smart Banner */}
-        {showBanner && (
+        {showBanner && notification && (
           <div className={`mb-4 bg-gradient-to-r ${
             notification.color === 'green' ? 'from-green-500 to-emerald-600' :
             notification.color === 'orange' ? 'from-orange-500 to-red-600' :
@@ -293,12 +379,12 @@ const EnhancedDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className={`bg-gradient-to-br ${getAccuracyBgColor(stats?.accuracy)} shadow-xl hover:shadow-2xl transition-all hover:scale-105`}>
+          <Card className={`bg-gradient-to-br ${getAccuracyBgColor(stats?.accuracy || 0)} shadow-xl hover:shadow-2xl transition-all hover:scale-105`}>
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-slate-700 mb-0.5">Accuracy</p>
-                  <p className={`text-2xl sm:text-3xl font-bold ${getAccuracyColor(stats?.accuracy)}`}>
+                  <p className={`text-2xl sm:text-3xl font-bold ${getAccuracyColor(stats?.accuracy || 0)}`}>
                     {stats?.accuracy || 0}%
                   </p>
                   <div className="flex items-center gap-2">
@@ -331,8 +417,8 @@ const EnhancedDashboard = () => {
                     <span className="text-lg text-orange-600 font-semibold">/{stats?.todayGoal || 0}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <Progress value={(stats?.todayProgress / stats?.todayGoal) * 100} className="h-1.5 flex-1" />
-                    <span className="text-xs text-orange-600 font-semibold">{Math.round((stats?.todayProgress / stats?.todayGoal) * 100)}%</span>
+                    <Progress value={(stats?.todayProgress / stats?.todayGoal) * 100 || 0} className="h-1.5 flex-1" />
+                    <span className="text-xs text-orange-600 font-semibold">{Math.round((stats?.todayProgress / stats?.todayGoal) * 100 || 0)}%</span>
                   </div>
                   {stats?.todayProgress < stats?.todayGoal && (
                     <p className="text-xs text-orange-600 mt-1 font-medium">Just {stats?.todayGoal - stats?.todayProgress} more! 💪</p>
@@ -381,9 +467,9 @@ const EnhancedDashboard = () => {
                 <div className="space-y-2">
                   <div className="bg-white/50 rounded-lg p-3 border border-purple-200">
                     <p className="text-sm text-slate-700 mb-2">
-                      📉 Your <strong>{stats?.weakestTopic}</strong> accuracy is 58%. Practice recommended!
+                      📉 Your <strong>{stats?.weakestTopic}</strong> needs attention. Practice recommended!
                     </p>
-                    <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
+                    <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white text-xs" onClick={() => navigate('/study-now')}>
                       Start 10 Questions
                       <ChevronRight className="h-3 w-3 ml-1" />
                     </Button>
@@ -395,7 +481,7 @@ const EnhancedDashboard = () => {
                   </div>
                   <div className="bg-white/50 rounded-lg p-3 border border-blue-200">
                     <p className="text-sm text-slate-700">
-                      💡 You make calculation errors 60% of the time. Try slowing down and double-checking work!
+                      💡 Solve {stats?.topRankersAvg - stats?.avgQuestionsPerDay} more questions daily to match top rankers!
                     </p>
                   </div>
                 </div>
@@ -430,14 +516,14 @@ const EnhancedDashboard = () => {
                           <span className="text-sm font-semibold text-slate-800">Physics</span>
                           <Badge className="bg-green-500 text-white text-xs">Strong 💪</Badge>
                         </div>
-                        <p className="text-xs text-slate-600">12 chapters • 340 questions solved</p>
+                        <p className="text-xs text-slate-600">12 chapters • Real progress tracked</p>
                       </div>
                       <span className="text-sm font-bold text-green-600">85%</span>
                     </div>
                     <Progress value={85} className="h-2 bg-green-100" />
                     <div className="mt-2 flex items-center justify-between text-xs">
-                      <span className="text-slate-600">Weak topic: <strong>Optics (65%)</strong></span>
-                      <button className="text-blue-600 hover:text-blue-700 font-semibold">Practice →</button>
+                      <span className="text-slate-600">Keep practicing daily!</span>
+                      <button onClick={() => navigate('/study-now')} className="text-blue-600 hover:text-blue-700 font-semibold">Practice →</button>
                     </div>
                   </div>
 
@@ -452,14 +538,14 @@ const EnhancedDashboard = () => {
                             Focus
                           </Badge>
                         </div>
-                        <p className="text-xs text-slate-600">9 chapters • 287 questions solved</p>
+                        <p className="text-xs text-slate-600">9 chapters • Improve weak topics</p>
                       </div>
                       <span className="text-sm font-bold text-yellow-700">72%</span>
                     </div>
                     <Progress value={72} className="h-2 bg-yellow-100" />
                     <div className="mt-2 flex items-center justify-between text-xs">
-                      <span className="text-slate-600">Weak topic: <strong>Organic Chem (58%)</strong></span>
-                      <button className="text-orange-600 hover:text-orange-700 font-semibold">Improve →</button>
+                      <span className="text-slate-600">Work on weak areas</span>
+                      <button onClick={() => navigate('/study-now')} className="text-orange-600 hover:text-orange-700 font-semibold">Improve →</button>
                     </div>
                   </div>
 
@@ -471,14 +557,14 @@ const EnhancedDashboard = () => {
                           <span className="text-sm font-semibold text-slate-800">Mathematics</span>
                           <Badge className="bg-gradient-to-r from-purple-500 to-pink-600 text-white text-xs">Excellent! 🌟</Badge>
                         </div>
-                        <p className="text-xs text-slate-600">15 chapters • 456 questions solved</p>
+                        <p className="text-xs text-slate-600">15 chapters • Outstanding performance</p>
                       </div>
                       <span className="text-sm font-bold text-purple-600">91%</span>
                     </div>
                     <Progress value={91} className="h-2 bg-purple-100" />
                     <div className="mt-2 flex items-center justify-between text-xs">
-                      <span className="text-slate-600">Strong: <strong>All topics above 85%</strong> ✨</span>
-                      <button className="text-purple-600 hover:text-purple-700 font-semibold">Challenge →</button>
+                      <span className="text-slate-600">All topics mastered! ✨</span>
+                      <button onClick={() => navigate('/study-now')} className="text-purple-600 hover:text-purple-700 font-semibold">Challenge →</button>
                     </div>
                   </div>
                 </div>
@@ -489,140 +575,4 @@ const EnhancedDashboard = () => {
                     <BarChart3 className="h-4 w-4" />
                     Compare with Top Rankers
                   </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white rounded-lg p-2 border border-slate-200">
-                      <p className="text-xs text-slate-600 mb-1">Your avg/day</p>
-                      <p className="text-lg font-bold text-blue-600">{stats?.avgQuestionsPerDay || 0}</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-2 border border-slate-200">
-                      <p className="text-xs text-slate-600 mb-1">Top 10 avg/day</p>
-                      <p className="text-lg font-bold text-purple-600">{stats?.topRankersAvg || 0}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-600 mt-2">
-                    💡 Solve {stats?.topRankersAvg - stats?.avgQuestionsPerDay} more questions daily to match top rankers!
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Enhanced Leaderboard */}
-          <div>
-            <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl h-full">
-              <CardHeader className="border-b border-slate-100 p-3 sm:p-4">
-                <CardTitle className="flex items-center justify-between text-base sm:text-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-1.5 rounded-lg">
-                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                    </div>
-                    <span>Leaderboard</span>
-                  </div>
-                  <Badge className="bg-purple-100 text-purple-700">Global</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2.5 sm:p-3 bg-gradient-to-r from-yellow-100 to-amber-100 rounded-lg shadow-md border border-yellow-200">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
-                        1
-                      </div>
-                      <div>
-                        <p className="text-xs sm:text-sm font-semibold">Rahul S.</p>
-                        <p className="text-xs text-slate-500">48 qs/day avg</p>
-                      </div>
-                    </div>
-                    <span className="text-xs sm:text-sm font-bold text-yellow-700">2,450</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 sm:p-3 bg-gradient-to-r from-gray-100 to-slate-100 rounded-lg shadow-md border border-gray-200">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-gray-500 to-slate-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
-                        2
-                      </div>
-                      <div>
-                        <p className="text-xs sm:text-sm font-semibold">Priya M.</p>
-                        <p className="text-xs text-slate-500">45 qs/day avg</p>
-                      </div>
-                    </div>
-                    <span className="text-xs sm:text-sm font-bold text-slate-700">2,380</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 sm:p-3 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg shadow-lg border-2 border-blue-400">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
-                        15
-                      </div>
-                      <div>
-                        <p className="text-xs sm:text-sm font-bold text-blue-900">You</p>
-                        <p className="text-xs text-blue-600">{stats?.avgQuestionsPerDay || 0} qs/day avg</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs sm:text-sm font-bold text-blue-700">1,850</p>
-                      {stats?.rankChange < 0 && (
-                        <p className="text-xs text-green-600 font-semibold">↑{Math.abs(stats?.rankChange)}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Leaderboard Insights - NEW */}
-                <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                  <p className="text-xs font-semibold text-purple-900 mb-1">📊 What top rankers do differently:</p>
-                  <ul className="text-xs text-slate-700 space-y-1">
-                    <li>• Study 3.5+ hours daily</li>
-                    <li>• Focus on weak topics first</li>
-                    <li>• Take full mocks weekly</li>
-                  </ul>
-                </div>
-
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full mt-3 text-purple-600 hover:text-purple-700 hover:bg-purple-50 font-semibold text-xs sm:text-sm py-1.5"
-                  onClick={() => navigate('/leaderboard')}
-                >
-                  View Full Leaderboard
-                  <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Floating Quick Actions Button - NEW */}
-        <div className="fixed bottom-6 right-6 z-50">
-          <div className="relative group">
-            <button className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform">
-              <Zap className="h-6 w-6" />
-            </button>
-            
-            {/* Quick action menu - shows on hover */}
-            <div className="absolute bottom-16 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 space-y-1 min-w-[180px]">
-                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Play className="h-4 w-4 text-blue-600" />
-                  Continue Last
-                </button>
-                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <MessageSquare className="h-4 w-4 text-purple-600" />
-                  Ask AI Doubt
-                </button>
-                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-green-50 transition-colors flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Users className="h-4 w-4 text-green-600" />
-                  Join Live Session
-                </button>
-                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Star className="h-4 w-4 text-orange-600" />
-                  Daily Challenge
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default EnhancedDashboard;
+                  <div

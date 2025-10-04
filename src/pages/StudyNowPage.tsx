@@ -553,26 +553,6 @@ const StudyNowPage = () => {
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700">
                         <Zap className="w-6 h-6 text-white" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg text-blue-900">AI Adaptive Learning</h3>
-                        <p className="text-xs text-slate-700">
-                          {userPerformance.recentAccuracy >= 85 ? '🔥 Outstanding performance!' : userPerformance.recentAccuracy >= 70 ? '✨ Great progress!' : '📚 Building foundations'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="p-3 bg-white rounded-lg shadow-sm border border-blue-100">
-                        <div className="flex items-center gap-2 mb-1"><Target className="w-4 h-4 text-blue-600" /><p className="text-xs text-gray-600 font-medium">Accuracy</p></div>
-                        <p className="text-2xl font-black text-blue-900">{userPerformance.recentAccuracy.toFixed(0)}%</p>
-                      </div>
-                      <div className="p-3 bg-white rounded-lg shadow-sm border border-indigo-100">
-                        <div className="flex items-center gap-2 mb-1"><BookOpen className="w-4 h-4 text-indigo-600" /><p className="text-xs text-gray-600 font-medium">Questions</p></div>
-                        <p className="text-2xl font-black text-indigo-900">{userPerformance.totalAttempts}</p>
-                      </div>
-                      <div className="p-3 bg-white rounded-lg shadow-sm border border-purple-100">
-                        <div className="flex items-center gap-2 mb-1"><TrendingUp className="w-4 h-4 text-purple-600" /><p className="text-xs text-gray-600 font-medium">Status</p></div>
-                        <p className="text-sm font-bold text-purple-900">{userPerformance.recentAccuracy >= 85 ? 'Excellent! 🌟' : userPerformance.recentAccuracy >= 70 ? 'Good 📈' : 'Practice 💪'}</p>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>

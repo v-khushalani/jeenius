@@ -308,6 +308,34 @@ const EnhancedDashboard = () => {
                   <p className="text-slate-300 mb-2 text-lg">
                     {timeMessage.message}
                   </p>
+                  <p className="text-blue-300 mb-6 text-sm font-medium">
+                    Rank #{stats?.rank || 0} • Top {stats?.percentile || 0}% • 
+                    {stats?.rankChange < 0 && (
+                      <span className="text-green-400"> ↑ {Math.abs(stats.rankChange)} positions this week! 🎉</span>
+                    )}
+                  </p>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap gap-3">
+                    <button 
+                      onClick={() => navigate('/study-now')} 
+                      className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-blue-500/50 hover:scale-105"
+                    >
+                      📚 {timeMessage.action}
+                    </button>
+                    <button 
+                      onClick={() => navigate('/battle')} 
+                      className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-purple-500/50 hover:scale-105"
+                    >
+                      ⚔️ Battle Friends
+                    </button>
+                    <button 
+                      onClick={() => navigate('/test')} 
+                      className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
+                    >
+                      🧪 Take Test
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Enhanced Rank Display */}

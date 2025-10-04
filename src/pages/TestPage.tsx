@@ -70,46 +70,7 @@ const TestPage = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             
             <div className="mb-12 text-center">
-              <div className="flex flex-wrap justify-center gap-4 mb-8">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-green-200 shadow-sm">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <Users className="w-4 h-4 text-green-600" />
-                  <span className="text-green-700 font-bold">{liveUsers}</span>
-                  <span className="text-gray-600 text-sm">students testing now</span>
-                </div>
-                
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-orange-200 shadow-sm">
-                  <Zap className="w-4 h-4 text-orange-600" />
-                  <span className="text-orange-700 font-bold">{userStats.streak}</span>
-                  <span className="text-gray-600 text-sm">day streak 🔥</span>
-                </div>
-                
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-blue-200 shadow-sm">
-                  <TrendingUp className="w-4 h-4 text-blue-600" />
-                  <span className="text-blue-700 font-bold">#{userStats.rank}</span>
-                  <span className="text-gray-600 text-sm">in leaderboard</span>
-                </div>
-              </div>
-
               <div className="max-w-3xl mx-auto p-8 rounded-2xl bg-white border border-gray-200 shadow-lg">
-                <div className="grid grid-cols-3 gap-8 mb-6">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-primary mb-2">
-                      {userStats.testsCompleted}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Tests Completed</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-green-600 mb-2">
-                      {userStats.averageScore}%
-                    </div>
-                    <div className="text-sm text-muted-foreground">Average Score</div>
-                  </div>
-                  <div className="text-center">
-                    <Brain className="w-10 h-10 mx-auto mb-2 text-primary" />
-                    <div className="text-sm text-muted-foreground">AI Insights Ready</div>
-                  </div>
-                </div>
                 <div className="flex justify-center gap-3">
                   <Badge className="bg-green-50 text-green-700 border-green-200 px-4 py-1.5">
                     <Star className="w-4 h-4 mr-1" />

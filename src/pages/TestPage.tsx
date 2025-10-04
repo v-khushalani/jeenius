@@ -1,3 +1,6 @@
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +15,7 @@ import {
 
 const TestPage = () => {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const [testMode, setTestMode] = useState("");
   const [subjects] = useState(["Physics", "Chemistry", "Mathematics"]);
   const [chapters] = useState({
@@ -57,7 +61,64 @@ const TestPage = () => {
         : [...prev, { subject, chapter }];
     });
   };
+  const startTest = async () => {
+  if (selectedChapters.length === 0 && selectedSubjects.length === 0) {
+    toast.error("Please select at least one chapter or subject");
+    return;
+  }
 
+  setLoading(true);
+  toast.loading("Preparing your test...");
+
+  try {
+    let query = supabase.from('questions').select('*');
+    
+    if (testMode === "chapter" && selectedChapters.length > 0) {
+      // Chapter-wise test
+      const chapterNames = selectedChapters.map(ch => ch.chapter);
+      query = query.in('chapter', chapterNames);
+    } else if (testMode === "subject" && selectedSubjects.length > 0) {
+      // Subject-wise test
+      query = query.in('subject', selectedSubjects);
+    }
+
+    const { data: questions, error } = await query.limit(100);
+    
+    if (error) throw error;
+    if (!questions || questions.length === 0) {
+      toast.error("No questions available for selected topics");
+      setLoading(false);
+      return;
+    }
+
+    // Shuffle and select 25 questions
+    const shuffled = questions.sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 25);
+
+    // Create test session
+    const testSession = {
+      id: Date.now().toString(),
+      title: testMode === "chapter" 
+        ? `${selectedChapters.map(ch => ch.chapter).join(', ')} - Chapter Test`
+        : `${selectedSubjects.join(', ')} - Subject Test`,
+      questions: selected,
+      duration: 60, // 60 minutes
+      startTime: new Date().toISOString()
+    };
+
+    // Save to localStorage
+    localStorage.setItem('currentTest', JSON.stringify(testSession));
+    
+    toast.dismiss();
+    toast.success("Test started!");
+    navigate('/test-attempt');
+  } catch (error) {
+    console.error('Error starting test:', error);
+    toast.dismiss();
+    toast.error("Failed to start test");
+    setLoading(false);
+  }
+};
   if (loading) {
     return <LoadingScreen message="Loading your tests..." />;
   }
@@ -183,7 +244,7 @@ const TestPage = () => {
 
               <div 
                 className="group relative overflow-hidden rounded-2xl bg-white border-2 border-orange-200 hover:border-orange-400 hover:scale-105 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl"
-                onClick={() => alert('Starting Full Mock Test...')}
+                onClick={startTest}
               >
                 <div className="absolute top-4 right-4 z-10">
                   <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 shadow-md">
@@ -396,7 +457,7 @@ const TestPage = () => {
                       </div>
                     </div>
                     <Button 
-                      onClick={() => alert('Starting Test...')}
+                      onClick={startTest}
                       className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold px-6 py-3 rounded-xl shadow-md"
                     >
                       <Play className="w-5 h-5 mr-2" />
@@ -497,7 +558,7 @@ const TestPage = () => {
                       </div>
                     </div>
                     <Button 
-                      onClick={() => alert('Starting Test...')}
+                      onClick={startTest}
                       className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-600/90 hover:to-pink-600/90 text-white font-semibold px-6 py-3 rounded-xl shadow-md"
                     >
                       <Play className="w-5 h-5 mr-2" />

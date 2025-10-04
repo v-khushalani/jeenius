@@ -45,7 +45,9 @@ const StudyNowPage = () => {
       .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
     `;
     document.head.appendChild(style);
-    return () => document.head.removeChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
   }, []);
 
   useEffect(() => {

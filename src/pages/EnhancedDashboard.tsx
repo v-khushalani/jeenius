@@ -575,4 +575,176 @@ const EnhancedDashboard = () => {
                     <BarChart3 className="h-4 w-4" />
                     Compare with Top Rankers
                   </h4>
-                  <div
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="text-center p-2 bg-white rounded-lg">
+                      <p className="text-xs text-slate-500 mb-1">You</p>
+                      <p className="text-lg font-bold text-blue-600">{stats?.avgQuestionsPerDay || 0}</p>
+                      <p className="text-xs text-slate-600">Q/day</p>
+                    </div>
+                    <div className="text-center p-2 bg-white rounded-lg">
+                      <p className="text-xs text-slate-500 mb-1">Top Rankers</p>
+                      <p className="text-lg font-bold text-purple-600">{stats?.topRankersAvg || 0}</p>
+                      <p className="text-xs text-slate-600">Q/day</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-3 sm:space-y-4">
+            {/* Quick Actions */}
+            <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 shadow-xl">
+              <CardHeader className="p-3 sm:p-4 border-b border-indigo-100">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-indigo-600" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-4 space-y-2">
+                <Button
+                  onClick={() => navigate('/study-now')}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white justify-between group"
+                >
+                  <span className="flex items-center gap-2">
+                    <Play className="h-4 w-4" />
+                    Practice Now
+                  </span>
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+                
+                <Button
+                  onClick={() => navigate('/test')}
+                  variant="outline"
+                  className="w-full justify-between group border-indigo-200 hover:bg-indigo-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Take Mock Test
+                  </span>
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+
+                <Button
+                  onClick={() => navigate('/battle')}
+                  variant="outline"
+                  className="w-full justify-between group border-purple-200 hover:bg-purple-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Peer Battle
+                  </span>
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+
+                <Button
+                  onClick={() => navigate('/doubt-solver')}
+                  variant="outline"
+                  className="w-full justify-between group border-green-200 hover:bg-green-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    AI Doubt Solver
+                  </span>
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Study Insights */}
+            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 shadow-xl">
+              <CardHeader className="p-3 sm:p-4 border-b border-purple-100">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Star className="h-5 w-5 text-purple-600" />
+                  Study Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-4 space-y-3">
+                <div className="bg-white/70 rounded-lg p-2.5 border border-green-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <span className="text-xs font-semibold text-slate-700">Strongest Topic</span>
+                  </div>
+                  <p className="text-sm font-bold text-green-700">{stats?.strongestTopic}</p>
+                </div>
+
+                <div className="bg-white/70 rounded-lg p-2.5 border border-orange-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <span className="text-xs font-semibold text-slate-700">Needs Focus</span>
+                  </div>
+                  <p className="text-sm font-bold text-orange-700">{stats?.weakestTopic}</p>
+                  <Button 
+                    size="sm" 
+                    className="mt-2 w-full bg-orange-500 hover:bg-orange-600 text-white text-xs"
+                    onClick={() => navigate('/study-now')}
+                  >
+                    Practice Now
+                  </Button>
+                </div>
+
+                <div className="bg-white/70 rounded-lg p-2.5 border border-blue-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-semibold text-slate-700">Weekly Study Time</span>
+                  </div>
+                  <p className="text-sm font-bold text-blue-700">{stats?.weeklyMinutes || 0} minutes</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Achievements Preview */}
+            <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 shadow-xl">
+              <CardHeader className="p-3 sm:p-4 border-b border-yellow-100">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Award className="h-5 w-5 text-yellow-600" />
+                  Recent Achievements
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-4 space-y-2">
+                {stats?.streak >= 7 && (
+                  <div className="bg-white/70 rounded-lg p-2 border border-orange-200 flex items-center gap-2">
+                    <div className="bg-gradient-to-br from-orange-400 to-red-500 p-1.5 rounded-lg">
+                      <Flame className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">Week Warrior</p>
+                      <p className="text-xs text-slate-600">{stats.streak} day streak! 🔥</p>
+                    </div>
+                  </div>
+                )}
+
+                {stats?.accuracy >= 85 && (
+                  <div className="bg-white/70 rounded-lg p-2 border border-green-200 flex items-center gap-2">
+                    <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-1.5 rounded-lg">
+                      <Target className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">Sharp Shooter</p>
+                      <p className="text-xs text-slate-600">{stats.accuracy}% accuracy! 🎯</p>
+                    </div>
+                  </div>
+                )}
+
+                {stats?.totalQuestions >= 100 && (
+                  <div className="bg-white/70 rounded-lg p-2 border border-blue-200 flex items-center gap-2">
+                    <div className="bg-gradient-to-br from-blue-400 to-indigo-500 p-1.5 rounded-lg">
+                      <Brain className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">Century Master</p>
+                      <p className="text-xs text-slate-600">{stats.totalQuestions} questions solved! 💯</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EnhancedDashboard;

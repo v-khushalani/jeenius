@@ -545,18 +545,6 @@ const StudyNowPage = () => {
                   );
                 })}
               </div>
-
-              {userPerformance.totalAttempts > 0 && (
-                <Card className="mt-4 border-0 shadow-lg bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700">
-                        <Zap className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           </div>
         </div>

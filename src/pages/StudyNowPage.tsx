@@ -340,7 +340,7 @@ const StudyNowPage = () => {
     return (
       <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col overflow-hidden">
         <Header />
-        <div className="flex-1 pt-20 pb-6">
+        <div className="flex-1 pt-24 pb-6">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl h-full flex flex-col">
             <Card className="mb-3 border-0 shadow-xl text-white bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 relative overflow-hidden shrink-0">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20"></div>
@@ -476,7 +476,7 @@ const StudyNowPage = () => {
     return (
       <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col overflow-hidden">
         <Header />
-        <div className="flex-1 pt-20 pb-4 overflow-hidden">
+        <div className="flex-1 pt-24 pb-4 overflow-hidden">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl h-full flex flex-col">
             {subjects.some(s => s.needsFocus) && (
               <Card className="mb-3 bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 shadow-lg shrink-0">
@@ -589,7 +589,7 @@ const StudyNowPage = () => {
     return (
       <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col overflow-hidden">
         <Header />
-        <div className="flex-1 pt-20 pb-4 overflow-hidden">
+        <div className="flex-1 pt-24 pb-4 overflow-hidden">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl h-full flex flex-col">
             <div className="flex items-center justify-between mb-3 shrink-0">
               <Button variant="outline" onClick={() => setView('subjects')} size="sm" className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50">
@@ -678,7 +678,7 @@ const StudyNowPage = () => {
     return (
       <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col overflow-hidden">
         <Header />
-        <div className="flex-1 pt-20 pb-4 overflow-hidden">
+        <div className="flex-1 pt-24 pb-4 overflow-hidden">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl h-full flex flex-col">
             <div className="flex items-center justify-between mb-3 flex-wrap gap-3 shrink-0">
               <Button variant="outline" onClick={() => setView('chapters')} size="sm" className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50">

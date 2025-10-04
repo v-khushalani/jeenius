@@ -70,11 +70,6 @@ const TestPage = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             
             <div className="mb-12 text-center">
-              <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-blue-600 to-indigo-700 bg-clip-text text-transparent">
-                Master Your JEE Journey
-              </h1>
-              <p className="text-xl text-muted-foreground mb-8">AI-powered personalized testing for top rankers</p>
-                
               <div className="flex flex-wrap justify-center gap-4 mb-8">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-green-200 shadow-sm">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>

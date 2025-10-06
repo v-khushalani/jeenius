@@ -379,7 +379,7 @@ const EnhancedDashboard = () => {
                 <div className="flex flex-wrap gap-2">
                   <button 
                     onClick={() => navigate('/study-now')} 
-                    className="flex-1 min-w-[120px] px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                    className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
                   >
                     📚 {timeMessage.action}
                   </button>

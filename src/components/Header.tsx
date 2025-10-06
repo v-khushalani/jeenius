@@ -229,25 +229,6 @@ const Header = () => {
                 </button>
               ))}
               
-              {/* Mobile Feature Links */}
-              <div className="border-t pt-4 space-y-2">
-                <div className="text-sm font-medium text-gray-500 px-2">Features</div>
-                {featureDropdownItems.map((item) => (
-                  <button
-                    key={item.path}
-                    onClick={() => handleNavigation(item.path)}
-                    className="text-left flex items-center space-x-3 p-2 rounded hover:bg-gray-100 w-full"
-                  >
-                    <item.icon className="w-4 h-4 text-primary" />
-                    <div>
-                      <div className="font-medium text-sm">{item.name}</div>
-                      <div className="text-xs text-gray-500">{item.description}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              
               <div className="pt-4 space-y-3 border-t">
                 {isAuthenticated ? (
                   <>

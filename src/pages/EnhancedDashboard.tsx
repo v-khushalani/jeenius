@@ -78,7 +78,9 @@ const EnhancedDashboard = () => {
       if (attemptsError) {
         console.error('Attempts fetch error:', attemptsError);
       }
-
+      
+      setAttempts(attempts || []);
+      
       // Calculate real stats
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -97,8 +99,10 @@ const EnhancedDashboard = () => {
       const totalQuestions = attempts?.length || 0;
       const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
-      // Calculate streak
+      // Calculate streak - Only count if daily goal (30 questions) completed
       let streak = 0;
+      const DAILY_TARGET = 30;
+      
       const sortedAttempts = [...(attempts || [])].sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
@@ -107,16 +111,19 @@ const EnhancedDashboard = () => {
       currentDate.setHours(0, 0, 0, 0);
       
       for (let i = 0; i < 365; i++) {
-        const hasActivity = sortedAttempts.some(a => {
+        // Count questions for this specific day
+        const questionsOnThisDay = sortedAttempts.filter(a => {
           const attemptDate = new Date(a.created_at);
           attemptDate.setHours(0, 0, 0, 0);
           return attemptDate.getTime() === currentDate.getTime();
-        });
+        }).length;
         
-        if (hasActivity) {
+        // Only count as streak if target completed
+        if (questionsOnThisDay >= DAILY_TARGET) {
           streak++;
           currentDate.setDate(currentDate.getDate() - 1);
-        } else if (i === 0) {
+        } else if (i === 0 && questionsOnThisDay > 0) {
+          // Today has some activity but target not met - don't break streak yet
           currentDate.setDate(currentDate.getDate() - 1);
         } else {
           break;
@@ -396,7 +403,7 @@ const EnhancedDashboard = () => {
         )}
 
         {/* Enhanced Quick Stats - 4 Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 mt-6">
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
@@ -487,8 +494,6 @@ const EnhancedDashboard = () => {
             </CardContent>
           </Card>
         </div>
-
-        {/* AI Smart Recommendations - NEW */}
     
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
@@ -662,45 +667,131 @@ const EnhancedDashboard = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-3 sm:space-y-4">
-            <Card className="mb-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200/50 shadow-xl">
-          <CardContent className="p-4">
+          <Card className="bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 border-2 border-purple-400/50 shadow-2xl relative overflow-hidden">
+          {/* Animated background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent animate-pulse"></div>
+          
+          <CardContent className="p-4 relative z-10">
             <div className="flex items-start gap-3">
-              <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-2 rounded-xl shrink-0">
-                <Lightbulb className="h-5 w-5 text-white" />
+              <div className="bg-white/20 backdrop-blur-xl p-2.5 rounded-xl shrink-0 shadow-lg">
+                <Sparkles className="h-6 w-6 text-white animate-pulse" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-bold text-purple-900 mb-2 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  AI Recommendations
+                <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-yellow-300" />
+                  AI Smart Insights
                 </h3>
-                <div className="space-y-2">
-                  <div className="bg-white/50 rounded-lg p-3 border border-purple-200">
-                    <p className="text-sm text-slate-700 mb-2">
-                      📉 Your <strong>{stats?.weakestTopic}</strong> needs attention. Practice recommended!
-                    </p>
-                    <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white text-xs" onClick={() => navigate('/study-now')}>
-                      Start 10 Questions
-                      <ChevronRight className="h-3 w-3 ml-1" />
-                    </Button>
-                  </div>
-                  <div className="bg-white/50 rounded-lg p-3 border border-green-200">
-                    <p className="text-sm text-slate-700">
-                      ✅ You're crushing <strong>{stats?.strongestTopic}</strong>! Try advanced problems to challenge yourself.
-                    </p>
-                  </div>
-                  <div className="bg-white/50 rounded-lg p-3 border border-blue-200">
-                    <p className="text-sm text-slate-700">
-                      💡 Solve {stats?.topRankersAvg - stats?.avgQuestionsPerDay} more questions daily to match top rankers!
-                    </p>
-                  </div>
+                
+                <div className="space-y-3">
+                  {/* Priority Alert */}
+                  {stats?.weakestTopic !== "Not enough data" && stats?.accuracy < 75 && (
+                    <div className="bg-red-500/20 backdrop-blur-xl rounded-xl p-3 border-2 border-red-300/30 shadow-lg">
+                      <div className="flex items-start gap-2 mb-2">
+                        <AlertCircle className="h-5 w-5 text-red-200 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-bold text-white mb-1">🚨 Urgent Focus Area</p>
+                          <p className="text-xs text-red-100">
+                            Your <strong className="text-white">{stats.weakestTopic}</strong> needs immediate attention!
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-white/90 hover:bg-white text-red-600 font-bold text-xs mt-2 shadow-lg"
+                        onClick={() => navigate('/study-now')}
+                      >
+                        <Target className="h-3 w-3 mr-1" />
+                        Fix This Now - 15 Questions
+                      </Button>
+                    </div>
+                  )}
+        
+                  {/* Strong Point Celebration */}
+                  {stats?.strongestTopic !== "Not enough data" && (
+                    <div className="bg-green-500/20 backdrop-blur-xl rounded-xl p-3 border-2 border-green-300/30 shadow-lg">
+                      <div className="flex items-start gap-2">
+                        <Trophy className="h-5 w-5 text-yellow-300 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-bold text-white mb-1">💪 Your Superpower</p>
+                          <p className="text-xs text-green-100">
+                            You're dominating <strong className="text-white">{stats.strongestTopic}</strong>! Challenge yourself with harder questions.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+        
+                  {/* Motivation Based on Performance */}
+                  {stats?.avgQuestionsPerDay > 0 && (
+                    <div className="bg-blue-500/20 backdrop-blur-xl rounded-xl p-3 border-2 border-blue-300/30 shadow-lg">
+                      <div className="flex items-start gap-2">
+                        <TrendingUp className="h-5 w-5 text-blue-200 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-bold text-white mb-1">📊 Growth Path</p>
+                          <p className="text-xs text-blue-100 mb-2">
+                            You solve <strong className="text-white">{stats.avgQuestionsPerDay} Q/day</strong>. 
+                            Top rankers do <strong className="text-white">{stats.topRankersAvg}</strong>.
+                          </p>
+                          {stats.avgQuestionsPerDay < stats.topRankersAvg && (
+                            <div className="bg-white/10 rounded-lg p-2 mt-2">
+                              <p className="text-xs text-white font-semibold">
+                                💡 Solve just {stats.topRankersAvg - stats.avgQuestionsPerDay} more daily to match top 10!
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+        
+                  {/* Streak Motivation */}
+                  {stats?.streak > 0 && (
+                    <div className="bg-orange-500/20 backdrop-blur-xl rounded-xl p-3 border-2 border-orange-300/30 shadow-lg">
+                      <div className="flex items-start gap-2">
+                        <Flame className="h-5 w-5 text-orange-300 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-bold text-white mb-1">🔥 Streak Alert</p>
+                          <p className="text-xs text-orange-100">
+                            {stats.streak < 7 
+                              ? `${stats.streak} days strong! Keep going to build momentum.`
+                              : stats.streak < 30
+                              ? `${stats.streak} day streak! You're unstoppable! 🚀`
+                              : `${stats.streak} DAYS! You're a LEGEND! 👑 Keep this fire burning!`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+        
+                  {/* Daily Goal Progress */}
+                  {stats?.todayProgress < stats?.todayGoal && (
+                    <div className="bg-purple-500/20 backdrop-blur-xl rounded-xl p-3 border-2 border-purple-300/30 shadow-lg">
+                      <div className="flex items-start gap-2">
+                        <Calendar className="h-5 w-5 text-purple-200 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-white mb-2">🎯 Today's Mission</p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Progress 
+                              value={(stats.todayProgress / stats.todayGoal) * 100} 
+                              className="h-2 flex-1 bg-white/20"
+                            />
+                            <span className="text-xs text-white font-bold">
+                              {Math.round((stats.todayProgress / stats.todayGoal) * 100)}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-purple-100">
+                            Just <strong className="text-white">{stats.todayGoal - stats.todayProgress} more questions</strong> to complete today's goal! 💪
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
-
-          </div>
         </div>
       </div>
     </div>

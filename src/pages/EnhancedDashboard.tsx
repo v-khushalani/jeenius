@@ -41,7 +41,8 @@ const EnhancedDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showBanner, setShowBanner] = useState(true);
+  const [showBanner, setShowBanner] = useState(false);
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date().getHours());
 
   useEffect(() => {
@@ -179,9 +180,21 @@ const EnhancedDashboard = () => {
       setIsLoading(false);
     }
   };
-
+    useEffect(() => {
+    const welcomeKey = `welcome_seen_${user?.id}_${new Date().toDateString()}`;
+    const seen = localStorage.getItem(welcomeKey);
+    setHasSeenWelcome(!!seen);
+  }, [user]);
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Student';
 
+    useEffect(() => {
+    const bannerKey = `notification_seen_${user?.id}_${new Date().toDateString()}`;
+    const seen = localStorage.getItem(bannerKey);
+    
+    if (!seen && notification) {
+      setShowBanner(true);
+    }
+  }, [user, notification]);
   // Time-based personalization
   const getTimeBasedMessage = () => {
     if (currentTime >= 6 && currentTime < 12) {
@@ -281,16 +294,18 @@ const EnhancedDashboard = () => {
                 <p className="text-sm font-medium">{notification.message}</p>
               </div>
               <button
-                onClick={() => setShowBanner(false)}
-                className="text-white/80 hover:text-white transition-colors p-1 shrink-0"
-              >
-                <X className="h-4 w-4" />
+                onClick={() => {
+                  const bannerKey = `notification_seen_${user?.id}_${new Date().toDateString()}`;
+                  localStorage.setItem(bannerKey, 'true');
+                  setShowBanner(false);
+                }}
               </button>
             </div>
           </div>
         )}
-
+        
         {/* Welcome Section - Enhanced */}
+        {!hasSeenWelcome && (
         <div className="mb-8">
           <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-3xl p-8 shadow-2xl border border-blue-800/30 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
@@ -335,6 +350,16 @@ const EnhancedDashboard = () => {
                     >
                       🧪 Take Test
                     </button>
+                    <button
+                      onClick={() => {
+                        const welcomeKey = `welcome_seen_${user?.id}_${new Date().toDateString()}`;
+                        localStorage.setItem(welcomeKey, 'true');
+                        setHasSeenWelcome(true);
+                      }}
+                      className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
                 
@@ -358,7 +383,8 @@ const EnhancedDashboard = () => {
             </div>
           </div>
         </div>
-        
+        )}
+
         {/* Enhanced Quick Stats - 4 Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">

@@ -187,15 +187,6 @@ const EnhancedDashboard = () => {
     setHasSeenWelcome(!!seen);
   }, [user]);
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Student';
-
-    useEffect(() => {
-    const bannerKey = `notification_seen_${user?.id}_${new Date().toDateString()}`;
-    const seen = localStorage.getItem(bannerKey);
-    
-    if (!seen && notification) {
-      setShowBanner(true);
-    }
-  }, [user, notification]);
   // Time-based personalization
   const getTimeBasedMessage = () => {
     if (currentTime >= 6 && currentTime < 12) {
@@ -271,6 +262,15 @@ const EnhancedDashboard = () => {
 
   const notification = stats ? getSmartNotification() : null;
 
+  useEffect(() => {
+    const bannerKey = `notification_seen_${user?.id}_${new Date().toDateString()}`;
+    const seen = localStorage.getItem(bannerKey);
+    
+    if (!seen && notification) {
+      setShowBanner(true);
+    }
+  }, [user, notification]);
+
   // Get accuracy color
   const getAccuracyColor = (accuracy: number) => {
     if (accuracy >= 85) return "text-green-700";
@@ -312,85 +312,82 @@ const EnhancedDashboard = () => {
                   localStorage.setItem(bannerKey, 'true');
                   setShowBanner(false);
                 }}
+                className="text-white/80 hover:text-white transition-colors shrink-0"
+              >
+                <X className="h-5 w-5" />
               </button>
             </div>
           </div>
         )}
         
-        {/* Welcome Section - Enhanced */}
+        {/* Welcome Section - Compact Mobile Optimized */}
         {!hasSeenWelcome && (
-        <div className="mb-8">
-          <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-3xl p-8 shadow-2xl border border-blue-800/30 relative overflow-hidden">
+        <div className="mb-4 sm:mb-6">
+          <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-blue-800/30 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
             <div className="relative z-10">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                      <Brain className="h-6 w-6 text-white" />
-                    </div>
-                    <h1 className="text-3xl lg:text-4xl font-bold">
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  const welcomeKey = `welcome_seen_${user?.id}_${new Date().toDateString()}`;
+                  localStorage.setItem(welcomeKey, 'true');
+                  setHasSeenWelcome(true);
+                }}
+                className="absolute top-2 right-2 text-white/60 hover:text-white transition-colors z-20"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="flex flex-col gap-3 sm:gap-4">
+                {/* Header */}
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                    <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">
                       {timeMessage.greeting}, {displayName}! {timeMessage.icon}
                     </h1>
+                    <p className="text-slate-300 text-xs sm:text-sm">
+                      {timeMessage.message}
+                    </p>
                   </div>
-                  <p className="text-slate-300 mb-2 text-lg">
-                    {timeMessage.message}
-                  </p>
-                  <p className="text-blue-300 mb-6 text-sm font-medium">
-                    Rank #{stats?.rank || 0} • Top {stats?.percentile || 0}% • 
+                </div>
+
+                {/* Stats Row - Compact */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm">
+                    <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-400/30 px-2 py-0.5">
+                      <Trophy className="h-3 w-3 mr-1" />
+                      #{stats?.rank || 0}
+                    </Badge>
+                    <span className="text-blue-300">Top {stats?.percentile || 0}%</span>
                     {stats?.rankChange < 0 && (
-                      <span className="text-green-400"> ↑ {Math.abs(stats.rankChange)} positions this week! 🎉</span>
+                      <span className="text-green-400 text-xs">↑ {Math.abs(stats.rankChange)}</span>
                     )}
-                  </p>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-3">
-                    <button 
-                      onClick={() => navigate('/study-now')} 
-                      className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-blue-500/50 hover:scale-105"
-                    >
-                      📚 {timeMessage.action}
-                    </button>
-                    <button 
-                      onClick={() => navigate('/battle')} 
-                      className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-purple-500/50 hover:scale-105"
-                    >
-                      ⚔️ Battle Friends
-                    </button>
-                    <button 
-                      onClick={() => navigate('/test')} 
-                      className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
-                    >
-                      🧪 Take Test
-                    </button>
-                    <button
-                      onClick={() => {
-                        const welcomeKey = `welcome_seen_${user?.id}_${new Date().toDateString()}`;
-                        localStorage.setItem(welcomeKey, 'true');
-                        setHasSeenWelcome(true);
-                      }}
-                      className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
                   </div>
                 </div>
                 
-                {/* Enhanced Rank Display */}
-                <div className="text-center">
-                  <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-2xl p-6 backdrop-blur-xl border border-yellow-400/30">
-                    <div className="flex items-center justify-center gap-3 mb-2">
-                      <Trophy className="h-8 w-8 text-yellow-400" />
-                      <span className="text-4xl font-bold text-yellow-300">#{stats?.rank || 0}</span>
-                    </div>
-                    <p className="text-sm text-yellow-200 font-medium mb-1">Your Rank</p>
-                    {stats?.rankChange < 0 && (
-                      <Badge className="bg-green-500/20 text-green-300 border-green-400/30">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +{Math.abs(stats.rankChange)} this week
-                      </Badge>
-                    )}
-                  </div>
+                {/* Action Buttons - Compact */}
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => navigate('/study-now')} 
+                    className="flex-1 min-w-[120px] px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                  >
+                    📚 {timeMessage.action}
+                  </button>
+                  <button 
+                    onClick={() => navigate('/battle')} 
+                    className="px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                  >
+                    ⚔️ Battle
+                  </button>
+                  <button 
+                    onClick={() => navigate('/test')} 
+                    className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                  >
+                    🧪 Test
+                  </button>
                 </div>
               </div>
             </div>

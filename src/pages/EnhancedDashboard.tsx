@@ -234,38 +234,27 @@ const EnhancedDashboard = () => {
   if (!stats) return null;
   
   // Real data based notifications
-  if (stats.accuracy < 70 && stats.weakestTopic !== "Not enough data") {
-    return {
-      type: "warning",
-      icon: AlertCircle,
-      color: "orange",
-      message: `Your ${stats.weakestTopic} accuracy is ${stats.accuracy}%. Practice 10 questions to improve!`,
-    };
-  } else if (stats.rankChange < 0 && Math.abs(stats.rankChange) > 0) {
-    return {
-      type: "success",
-      icon: TrendingUp,
-      color: "green",
-      message: `Amazing! Your rank improved by ${Math.abs(stats.rankChange)} positions this week! 🚀`,
-    };
-  } else if (stats.streak >= 7) {
-    return {
-      type: "info",
-      icon: Flame,
-      color: "orange",
-      message: `🔥 ${stats.streak} day streak! You're on fire! Keep the momentum going!`,
-    };
-  } else if (stats.todayProgress === 0) {
+  if (stats.todayProgress === 0 && stats.streak > 0) {
     return {
       type: "info",
       icon: Sparkles,
       color: "blue",
-      message: `Start your day strong! Complete ${stats.todayGoal} questions today to stay on track.`,
+      message: `${stats.streak} day streak active! Complete ${stats.todayGoal} questions today to keep it going! 🔥`,
     };
-  } else {
-    return null; // No banner if nothing important
-  }
-};
+  } else if (stats.accuracy < 70 && stats.totalQuestions >= 50) {
+    return {
+      type: "warning",
+      icon: AlertCircle,
+      color: "orange",
+      message: `Your accuracy is ${stats.accuracy}%. Focus on ${stats.weakestTopic || 'weak topics'} to improve!`,
+    };
+  } else if (stats.todayProgress >= stats.todayGoal) {
+    return {
+      type: "success",
+      icon: Trophy,
+      color: "green",
+      message: `🎉 Daily goal achieved! You completed ${stats.todayProgress} questions today. Keep crushing it!`,
+    };
 
   const notification = stats ? getSmartNotification() : null;
 
@@ -379,7 +368,7 @@ const EnhancedDashboard = () => {
                 <div className="flex flex-wrap gap-2">
                   <button 
                     onClick={() => navigate('/study-now')} 
-                    className="flex-1 min-w-[120px] px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                    className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
                   >
                     📚 {timeMessage.action}
                   </button>

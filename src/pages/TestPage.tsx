@@ -297,31 +297,6 @@ const TestPage = () => {
                 </div>
               </div>
             </div>
-
-            <div className="p-6 rounded-2xl bg-white border-2 border-indigo-200 shadow-lg">
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center flex-shrink-0">
-                  <Brain className="w-7 h-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-                    AI Recommendation
-                    <Sparkles className="w-5 h-5 text-yellow-500" />
-                  </h3>
-                  <p className="text-gray-700 mb-4">
-                    Based on your recent performance, we recommend focusing on <span className="font-bold text-primary">{userStats.weakSubject}</span> chapter tests. 
-                    You've shown strong improvement in <span className="font-bold text-green-600">{userStats.strongSubject}</span>! Keep up the momentum! 🚀
-                  </p>
-                  <Button 
-                    className="border-2 border-primary text-primary hover:bg-primary/5"
-                    onClick={() => setTestMode("chapter")}
-                  >
-                    <Target className="w-4 h-4 mr-2" />
-                    Start Recommended Test
-                  </Button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

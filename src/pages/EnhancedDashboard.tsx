@@ -40,6 +40,7 @@ const EnhancedDashboard = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [attempts, setAttempts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
@@ -232,29 +233,41 @@ const EnhancedDashboard = () => {
 
   // Smart notification based on user data
   const getSmartNotification = () => {
-    if (stats?.accuracy < 70) {
-      return {
-        type: "warning",
-        icon: AlertCircle,
-        color: "orange",
-        message: `Your ${stats.weakestTopic} accuracy is low. Try 10 practice questions?`,
-      };
-    } else if (stats?.rankChange < 0) {
-      return {
-        type: "success",
-        icon: TrendingUp,
-        color: "green",
-        message: `Amazing! Your rank jumped by ${Math.abs(stats.rankChange)} positions this week! 🚀`,
-      };
-    } else {
-      return {
-        type: "info",
-        icon: Sparkles,
-        color: "blue",
-        message: "Physics Marathon: 50 questions in 60 mins - Starting in 2 hours! Join 234 students",
-      };
-    }
-  };
+  if (!stats) return null;
+  
+  // Real data based notifications
+  if (stats.accuracy < 70 && stats.weakestTopic !== "Not enough data") {
+    return {
+      type: "warning",
+      icon: AlertCircle,
+      color: "orange",
+      message: `Your ${stats.weakestTopic} accuracy is ${stats.accuracy}%. Practice 10 questions to improve!`,
+    };
+  } else if (stats.rankChange < 0 && Math.abs(stats.rankChange) > 0) {
+    return {
+      type: "success",
+      icon: TrendingUp,
+      color: "green",
+      message: `Amazing! Your rank improved by ${Math.abs(stats.rankChange)} positions this week! 🚀`,
+    };
+  } else if (stats.streak >= 7) {
+    return {
+      type: "info",
+      icon: Flame,
+      color: "orange",
+      message: `🔥 ${stats.streak} day streak! You're on fire! Keep the momentum going!`,
+    };
+  } else if (stats.todayProgress === 0) {
+    return {
+      type: "info",
+      icon: Sparkles,
+      color: "blue",
+      message: `Start your day strong! Complete ${stats.todayGoal} questions today to stay on track.`,
+    };
+  } else {
+    return null; // No banner if nothing important
+  }
+};
 
   const notification = stats ? getSmartNotification() : null;
 
@@ -497,68 +510,137 @@ const EnhancedDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 sm:p-4">
-                <div className="space-y-3">
-                  {/* Physics - Strong */}
-                  <div className="p-2.5 sm:p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-semibold text-slate-800">Physics</span>
-                          <Badge className="bg-green-500 text-white text-xs">Strong 💪</Badge>
-                        </div>
-                        <p className="text-xs text-slate-600">12 chapters • Real progress tracked</p>
+              <div className="space-y-3">
+                {(() => {
+                  // Step 1: Subject-wise data calculate karo
+                  const subjectStats: any = {};
+                  
+                  attempts?.forEach((attempt: any) => {
+                    const subject = attempt.questions?.subject; // "Physics", "Chemistry", etc.
+                    
+                    if (subject) {
+                      // Pehli baar subject mila
+                      if (!subjectStats[subject]) {
+                        subjectStats[subject] = { correct: 0, total: 0 };
+                      }
+                      
+                      // Total questions count karo
+                      subjectStats[subject].total++;
+                      
+                      // Agar correct answer, to count karo
+                      if (attempt.is_correct) {
+                        subjectStats[subject].correct++;
+                      }
+                    }
+                  });
+              
+                  // Step 2: Agar koi data nahi, to message dikhao
+                  if (Object.keys(subjectStats).length === 0) {
+                    return (
+                      <div className="text-center py-8 text-slate-500">
+                        <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">Start practicing to see your progress!</p>
                       </div>
-                      <span className="text-sm font-bold text-green-600">85%</span>
-                    </div>
-                    <Progress value={85} className="h-2 bg-green-100" />
-                    <div className="mt-2 flex items-center justify-between text-xs">
-                      <span className="text-slate-600">Keep practicing daily!</span>
-                      <button onClick={() => navigate('/study-now')} className="text-blue-600 hover:text-blue-700 font-semibold">Practice →</button>
-                    </div>
-                  </div>
-
-                  {/* Chemistry - Needs Focus */}
-                  <div className="p-2.5 sm:p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg border-2 border-yellow-300">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-semibold text-slate-800">Chemistry</span>
-                          <Badge className="bg-yellow-500 text-white text-xs">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            Focus
-                          </Badge>
+                    );
+                  }
+              
+                  // Step 3: Har subject ke liye card banao
+                  return Object.entries(subjectStats).map(([subject, data]: [string, any]) => {
+                    // Accuracy calculate karo
+                    const accuracy = data.total > 0 
+                      ? Math.round((data.correct / data.total) * 100) 
+                      : 0;
+                    
+                    // Accuracy ke basis pe color decide karo
+                    let colorClass, progressClass, textColor, badge;
+                    
+                    if (accuracy >= 90) {
+                      // Excellent - Purple/Blue
+                      colorClass = "from-blue-50 to-indigo-50 border-blue-200";
+                      progressClass = "bg-purple-100";
+                      textColor = "text-purple-600";
+                      badge = { 
+                        text: "Excellent! 🌟", 
+                        color: "bg-gradient-to-r from-purple-500 to-pink-600" 
+                      };
+                    } else if (accuracy >= 85) {
+                      // Strong - Green
+                      colorClass = "from-green-50 to-emerald-50 border-green-200";
+                      progressClass = "bg-green-100";
+                      textColor = "text-green-600";
+                      badge = { 
+                        text: "Strong 💪", 
+                        color: "bg-green-500" 
+                      };
+                    } else if (accuracy >= 70) {
+                      // Good - Yellow
+                      colorClass = "from-yellow-50 to-amber-50 border-yellow-300";
+                      progressClass = "bg-yellow-100";
+                      textColor = "text-yellow-700";
+                      badge = { 
+                        text: "Good Progress", 
+                        color: "bg-yellow-500" 
+                      };
+                    } else {
+                      // Needs Focus - Orange/Red
+                      colorClass = "from-orange-50 to-red-50 border-orange-300";
+                      progressClass = "bg-orange-100";
+                      textColor = "text-orange-700";
+                      badge = { 
+                        text: "Focus Needed", 
+                        color: "bg-orange-500",
+                        icon: AlertCircle 
+                      };
+                    }
+              
+                    // Card render karo
+                    return (
+                      <div 
+                        key={subject} 
+                        className={`p-2.5 sm:p-3 bg-gradient-to-r ${colorClass} rounded-lg border-2`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-semibold text-slate-800">
+                                {subject}
+                              </span>
+                              <Badge className={`${badge.color} text-white text-xs flex items-center gap-1`}>
+                                {badge.icon && <badge.icon className="h-3 w-3" />}
+                                {badge.text}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-600">
+                              {data.total} questions • {data.correct} correct
+                            </p>
+                          </div>
+                          <span className={`text-sm font-bold ${textColor}`}>
+                            {accuracy}%
+                          </span>
                         </div>
-                        <p className="text-xs text-slate-600">9 chapters • Improve weak topics</p>
-                      </div>
-                      <span className="text-sm font-bold text-yellow-700">72%</span>
-                    </div>
-                    <Progress value={72} className="h-2 bg-yellow-100" />
-                    <div className="mt-2 flex items-center justify-between text-xs">
-                      <span className="text-slate-600">Work on weak areas</span>
-                      <button onClick={() => navigate('/study-now')} className="text-orange-600 hover:text-orange-700 font-semibold">Improve →</button>
-                    </div>
-                  </div>
-
-                  {/* Mathematics - Excellent */}
-                  <div className="p-2.5 sm:p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-semibold text-slate-800">Mathematics</span>
-                          <Badge className="bg-gradient-to-r from-purple-500 to-pink-600 text-white text-xs">Excellent! 🌟</Badge>
+                        
+                        {/* Progress bar */}
+                        <Progress value={accuracy} className={`h-2 ${progressClass}`} />
+                        
+                        <div className="mt-2 flex items-center justify-between text-xs">
+                          <span className="text-slate-600">
+                            {accuracy >= 85 ? 'Excellent work!' : 
+                             accuracy >= 70 ? 'Keep practicing' : 
+                             'Need more practice'}
+                          </span>
+                          <button 
+                            onClick={() => navigate('/study-now')} 
+                            className={`${textColor} hover:opacity-80 font-semibold`}
+                          >
+                            {accuracy >= 85 ? 'Challenge →' : 'Practice →'}
+                          </button>
                         </div>
-                        <p className="text-xs text-slate-600">15 chapters • Outstanding performance</p>
                       </div>
-                      <span className="text-sm font-bold text-purple-600">91%</span>
-                    </div>
-                    <Progress value={91} className="h-2 bg-purple-100" />
-                    <div className="mt-2 flex items-center justify-between text-xs">
-                      <span className="text-slate-600">All topics mastered! ✨</span>
-                      <button onClick={() => navigate('/study-now')} className="text-purple-600 hover:text-purple-700 font-semibold">Challenge →</button>
-                    </div>
-                  </div>
-                </div>
-
+                    );
+                  });
+                })()}
+              </div>
+                
                 {/* Performance Comparison - NEW */}
                 <div className="mt-4 p-3 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border border-slate-200">
                   <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-2">

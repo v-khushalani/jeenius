@@ -556,7 +556,7 @@ const EnhancedDashboard = () => {
                     // Accuracy ke basis pe color decide karo
                     let colorClass, progressClass, textColor, badge;
                     
-                    if (accuracy >= 90) {
+                    if (accuracy >= 85) {
                       // Excellent - Purple/Blue
                       colorClass = "from-blue-50 to-indigo-50 border-blue-200";
                       progressClass = "bg-purple-100";
@@ -565,16 +565,7 @@ const EnhancedDashboard = () => {
                         text: "Excellent! 🌟", 
                         color: "bg-gradient-to-r from-purple-500 to-pink-600" 
                       };
-                    } else if (accuracy >= 85) {
-                      // Strong - Green
-                      colorClass = "from-green-50 to-emerald-50 border-green-200";
-                      progressClass = "bg-green-100";
-                      textColor = "text-green-600";
-                      badge = { 
-                        text: "Strong 💪", 
-                        color: "bg-green-500" 
-                      };
-                    } else if (accuracy >= 70) {
+                    }else if (accuracy >= 70) {
                       // Good - Yellow
                       colorClass = "from-yellow-50 to-amber-50 border-yellow-300";
                       progressClass = "bg-yellow-100";

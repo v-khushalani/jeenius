@@ -298,8 +298,73 @@ else {
 
   const notification = stats ? getSmartNotification() : null;
 
+  const getGoalCardStyle = (progress: number, goal: number) => {
+    const percentage = (progress / goal) * 100;
+    
+    if (percentage >= 150) {
+      return {
+        cardClass: "from-emerald-50 to-green-50 border-emerald-400",
+        gradient: "from-emerald-700 to-green-700",
+        textColor: "text-emerald-800",
+        icon: "🔥",
+        badge: { text: "Beast Mode!", color: "bg-gradient-to-r from-emerald-700 to-green-700" },
+        message: `Incredible! ${progress} questions! You're unstoppable! 🚀`
+      };
+    }
+    else if (percentage >= 120) {
+      return {
+        cardClass: "from-green-50 to-emerald-50 border-green-400",
+        gradient: "from-green-600 to-emerald-600",
+        textColor: "text-green-700",
+        icon: "🏆",
+        badge: { text: "Champion!", color: "bg-gradient-to-r from-green-600 to-emerald-600" },
+        message: `Outstanding! ${progress}/${goal} - Going above & beyond!`
+      };
+    }
+    else if (percentage >= 100) {
+      return {
+        cardClass: "from-green-50 to-lime-50 border-green-300",
+        gradient: "from-green-500 to-lime-500",
+        textColor: "text-green-600",
+        icon: "✅",
+        badge: { text: "Goal Done!", color: "bg-gradient-to-r from-green-500 to-lime-500" },
+        message: `Perfect! Goal complete! Maintain this streak! 💪`
+      };
+    }
+    else if (percentage >= 80) {
+      return {
+        cardClass: "from-blue-50 to-sky-50 border-blue-200",
+        gradient: "from-blue-500 to-sky-500",
+        textColor: "text-blue-600",
+        icon: "⚡",
+        badge: { text: "Almost!", color: "bg-blue-500" },
+        message: `Just ${goal - progress} more! You're so close!`
+      };
+    }
+    else if (percentage >= 50) {
+      return {
+        cardClass: "from-amber-50 to-yellow-50 border-amber-200",
+        gradient: "from-amber-500 to-yellow-500",
+        textColor: "text-amber-600",
+        icon: "🎯",
+        badge: { text: "Good Start", color: "bg-amber-500" },
+        message: `Halfway there! Keep the momentum!`
+      };
+    }
+    else {
+      return {
+        cardClass: "from-orange-50 to-red-50 border-orange-200",
+        gradient: "from-orange-500 to-red-600",
+        textColor: "text-orange-700",
+        icon: "💪",
+        badge: { text: "Let's Go!", color: "bg-orange-500" },
+        message: `${goal - progress} questions left to hit your goal!`
+      };
+    }
+  };
+
   useEffect(() => {
-    const bannerKey = `notification_seen_${user?.id}_${new Date().toDateString()}`;
+    const bannerKey = `notification_seen_${user?.id}_${new Date().toDateString()}`; 
     const seen = localStorage.getItem(bannerKey);
     
     if (!seen && notification) {
@@ -479,29 +544,63 @@ else {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-orange-700 mb-0.5">Today's Goal</p>
-                  <div className="flex items-baseline gap-1">
-                    <p className="text-2xl sm:text-3xl font-bold text-orange-900">{stats?.todayProgress || 0}</p>
-                    <span className="text-lg text-orange-600 font-semibold">/{stats?.todayGoal || 0}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Progress value={(stats?.todayProgress / stats?.todayGoal) * 100 || 0} className="h-1.5 flex-1" />
-                    <span className="text-xs text-orange-600 font-semibold">{Math.round((stats?.todayProgress / stats?.todayGoal) * 100 || 0)}%</span>
-                  </div>
-                  {stats?.todayProgress < stats?.todayGoal && (
-                    <p className="text-xs text-orange-600 mt-1 font-medium">Just {stats?.todayGoal - stats?.todayProgress} more! 💪</p>
-                  )}
+         {(() => {
+          const goalStyle = getGoalCardStyle(stats?.todayProgress || 0, stats?.todayGoal || 30);
+          const percentage = ((stats?.todayProgress || 0) / (stats?.todayGoal || 30)) * 100;
+          
+          return (
+            <Card className={`bg-gradient-to-br ${goalStyle.cardClass} border shadow-xl hover:shadow-2xl transition-all hover:scale-105 relative overflow-hidden`}>
+              {percentage >= 100 && (
+                <div className="absolute top-2 right-2 animate-bounce text-2xl">
+                  🎉
                 </div>
-                <div className="bg-gradient-to-br from-orange-500 to-red-600 p-2 sm:p-3 rounded-xl shadow-lg shrink-0">
-                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              )}
+              {percentage >= 150 && (
+                <div className="absolute -top-1 -right-1 animate-pulse text-3xl">
+                  🔥
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              )}
+              
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-medium mb-0.5 ${goalStyle.textColor}`}>
+                      Today's Goal
+                    </p>
+                    <div className="flex items-baseline gap-1">
+                      <p className={`text-2xl sm:text-3xl font-bold ${goalStyle.textColor}`}>
+                        {stats?.todayProgress || 0}
+                      </p>
+                      <span className={`text-lg font-semibold ${goalStyle.textColor} opacity-70`}>
+                        /{stats?.todayGoal || 30}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Progress 
+                        value={percentage} 
+                        className="h-1.5 flex-1" 
+                      />
+                      <span className={`text-xs font-semibold ${goalStyle.textColor}`}>
+                        {Math.round(percentage)}%
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <Badge className={`${goalStyle.badge.color} text-white text-xs`}>
+                        {goalStyle.icon} {goalStyle.badge.text}
+                      </Badge>
+                    </div>
+                    <p className={`text-xs mt-1 font-medium ${goalStyle.textColor}`}>
+                      {goalStyle.message}
+                    </p>
+                  </div>
+                  <div className={`bg-gradient-to-br ${goalStyle.gradient} p-2 sm:p-3 rounded-xl shadow-lg shrink-0`}>
+                    <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
           <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
             <CardContent className="p-3 sm:p-4">

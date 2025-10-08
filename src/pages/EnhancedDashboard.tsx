@@ -234,37 +234,66 @@ const EnhancedDashboard = () => {
   if (!stats) return null;
   
   // Real data based notifications
-  if (stats.accuracy < 70 && stats.weakestTopic !== "Not enough data") {
-    return {
-      type: "warning",
-      icon: AlertCircle,
-      color: "orange",
-      message: `Your ${stats.weakestTopic} accuracy is ${stats.accuracy}%. Practice 10 questions to improve!`,
-    };
-  } else if (stats.rankChange < 0 && Math.abs(stats.rankChange) > 0) {
-    return {
-      type: "success",
-      icon: TrendingUp,
-      color: "green",
-      message: `Amazing! Your rank improved by ${Math.abs(stats.rankChange)} positions this week! 🚀`,
-    };
-  } else if (stats.streak >= 7) {
-    return {
-      type: "info",
-      icon: Flame,
-      color: "orange",
-      message: `🔥 ${stats.streak} day streak! You're on fire! Keep the momentum going!`,
-    };
-  } else if (stats.todayProgress === 0) {
-    return {
-      type: "info",
-      icon: Sparkles,
-      color: "blue",
-      message: `Start your day strong! Complete ${stats.todayGoal} questions today to stay on track.`,
-    };
-  } else {
-    return null; // No banner if nothing important
-  }
+    // TIER 1: OUTSTANDING (85%+) - Dark Green (Excellence)
+if (accuracy >= 85) {
+  colorClass = "from-green-50 to-emerald-50 border-green-300";
+  progressClass = "bg-gradient-to-r from-green-600 to-emerald-600";
+  textColor = "text-green-700";
+  badge = { 
+    text: "🌟 Outstanding", 
+    color: "bg-gradient-to-r from-green-600 to-emerald-600" 
+  };
+  message = "Excellent! You're crushing it!";
+}
+
+// TIER 2: STRONG (70-84%) - Light Green (Success)
+else if (accuracy >= 70) {
+  colorClass = "from-green-50 to-lime-50 border-green-200";
+  progressClass = "bg-gradient-to-r from-green-500 to-lime-500";
+  textColor = "text-green-600";
+  badge = { 
+    text = "💪 Strong", 
+    color: "bg-gradient-to-r from-green-500 to-lime-500" 
+  };
+  message = "Great work! Keep going!";
+}
+
+// TIER 3: GOOD (55-69%) - Blue (Steady)
+else if (accuracy >= 55) {
+  colorClass = "from-blue-50 to-sky-50 border-blue-200";
+  progressClass = "bg-gradient-to-r from-blue-500 to-sky-500";
+  textColor = "text-blue-700";
+  badge = { 
+    text: "📘 Good", 
+    color: "bg-gradient-to-r from-blue-500 to-sky-500" 
+  };
+  message = "Good progress! Practice more!";
+}
+
+// TIER 4: NEEDS FOCUS (40-54%) - Amber (Warning)
+else if (accuracy >= 40) {
+  colorClass = "from-amber-50 to-yellow-50 border-amber-300";
+  progressClass = "bg-gradient-to-r from-amber-500 to-yellow-500";
+  textColor = "text-amber-700";
+  badge = { 
+    text: "⚡ Focus", 
+    color: "bg-gradient-to-r from-amber-500 to-yellow-500" 
+  };
+  message = "More practice needed!";
+}
+
+// TIER 5: URGENT (<40%) - Red (Alert)
+else {
+  colorClass = "from-red-50 to-orange-50 border-red-300";
+  progressClass = "bg-gradient-to-r from-red-500 to-orange-500";
+  textColor = "text-red-700";
+  badge = { 
+    text: "🎯 Priority", 
+    color: "bg-gradient-to-r from-red-500 to-orange-500",
+    icon: AlertCircle 
+  };
+  message = "Urgent revision required!";
+}
 };
 
   const notification = stats ? getSmartNotification() : null;

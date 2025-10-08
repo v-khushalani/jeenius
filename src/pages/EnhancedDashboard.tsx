@@ -6,28 +6,18 @@ import { Progress } from "@/components/ui/progress";
 import {
   Brain,
   Trophy,
-  Zap,
   Target,
-  Book,
   Calendar,
   Clock,
   TrendingUp,
-  Star,
   BookOpen,
-  Users,
-  Award,
-  CheckCircle2,
-  ArrowRight,
   Play,
   Flame,
   BarChart3,
   AlertCircle,
-  TrendingDown,
   X,
   Sparkles,
-  MessageSquare,
   Lightbulb,
-  ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +34,7 @@ const EnhancedDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date().getHours());
+  const [currentTime] = useState(new Date().getHours());
 
   useEffect(() => {
     if (user) {
@@ -56,32 +46,23 @@ const EnhancedDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Fetch profile
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
         .single();
       
-      if (error) {
-        console.error('Profile fetch error:', error);
-      }
-      
+      if (error) console.error('Profile fetch error:', error);
       setProfile(profileData);
       
-      // Fetch real question attempts
       const { data: attempts, error: attemptsError } = await supabase
         .from('question_attempts')
         .select('*, questions(subject, chapter, topic)')
         .eq('user_id', user?.id);
 
-      if (attemptsError) {
-        console.error('Attempts fetch error:', attemptsError);
-      }
-      
+      if (attemptsError) console.error('Attempts fetch error:', attemptsError);
       setAttempts(attempts || []);
       
-      // Calculate real stats
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -99,7 +80,6 @@ const EnhancedDashboard = () => {
       const totalQuestions = attempts?.length || 0;
       const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
-      // Calculate streak - Only count if daily goal (30 questions) completed
       let streak = 0;
       const DAILY_TARGET = 30;
       
@@ -111,26 +91,22 @@ const EnhancedDashboard = () => {
       currentDate.setHours(0, 0, 0, 0);
       
       for (let i = 0; i < 365; i++) {
-        // Count questions for this specific day
         const questionsOnThisDay = sortedAttempts.filter(a => {
           const attemptDate = new Date(a.created_at);
           attemptDate.setHours(0, 0, 0, 0);
           return attemptDate.getTime() === currentDate.getTime();
         }).length;
         
-        // Only count as streak if target completed
         if (questionsOnThisDay >= DAILY_TARGET) {
           streak++;
           currentDate.setDate(currentDate.getDate() - 1);
         } else if (i === 0 && questionsOnThisDay > 0) {
-          // Today has some activity but target not met - don't break streak yet
           currentDate.setDate(currentDate.getDate() - 1);
         } else {
           break;
         }
       }
 
-      // Find weakest and strongest topics
       const topicStats: any = {};
       attempts?.forEach((attempt: any) => {
         const topic = attempt.questions?.topic;
@@ -166,21 +142,19 @@ const EnhancedDashboard = () => {
         totalQuestions,
         questionsToday: todayAttempts.length,
         questionsWeek: weekAttempts.length,
-        questionsMonth: attempts?.length || 0,
         correctAnswers,
         accuracy,
-        accuracyChange: 2, // TODO: Calculate from historical data
+        accuracyChange: 2,
         streak,
-        weeklyMinutes: Math.round(weekAttempts.length * 1.5), // Estimate 1.5 min per question
-        rank: 15, // TODO: Calculate from leaderboard
+        rank: 15,
         rankChange: -3,
-        percentile: 94.5, // TODO: Calculate from leaderboard
+        percentile: 94.5,
         todayGoal: 30,
         todayProgress: todayAttempts.length,
         weakestTopic,
         strongestTopic,
         avgQuestionsPerDay: totalQuestions > 0 ? Math.round(totalQuestions / Math.max(1, streak || 1)) : 0,
-        topRankersAvg: 48, // TODO: Calculate from top rankers
+        topRankersAvg: 48,
       });
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -188,183 +162,69 @@ const EnhancedDashboard = () => {
       setIsLoading(false);
     }
   };
-    useEffect(() => {
+
+  useEffect(() => {
     const welcomeKey = `welcome_seen_${user?.id}_${new Date().toDateString()}`;
     const seen = localStorage.getItem(welcomeKey);
     setHasSeenWelcome(!!seen);
   }, [user]);
+
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Student';
-  // Time-based personalization
+
   const getTimeBasedMessage = () => {
     if (currentTime >= 6 && currentTime < 12) {
-      return {
-        greeting: "Good morning",
-        message: "Start your day with 5 warm-up questions!",
-        icon: "🌅",
-        action: "Quick Warmup",
-      };
+      return { greeting: "Good morning", message: "Start your day with 5 warm-up questions!", icon: "🌅", action: "Quick Warmup" };
     } else if (currentTime >= 12 && currentTime < 17) {
-      return {
-        greeting: "Good afternoon",
-        message: "Perfect time for focused practice!",
-        icon: "☀️",
-        action: "Start Practice",
-      };
+      return { greeting: "Good afternoon", message: "Perfect time for focused practice!", icon: "☀️", action: "Start Practice" };
     } else if (currentTime >= 17 && currentTime < 21) {
-      return {
-        greeting: "Good evening",
-        message: "Golden study hours - make them count!",
-        icon: "🌆",
-        action: "Deep Focus",
-      };
+      return { greeting: "Good evening", message: "Golden study hours - make them count!", icon: "🌆", action: "Deep Focus" };
     } else {
-      return {
-        greeting: "Burning midnight oil",
-        message: "Review your mistakes and revise key concepts.",
-        icon: "🌙",
-        action: "Quick Revision",
-      };
+      return { greeting: "Burning midnight oil", message: "Review your mistakes and revise key concepts.", icon: "🌙", action: "Quick Revision" };
     }
   };
 
   const timeMessage = getTimeBasedMessage();
 
-  // Smart notification based on user data
   const getSmartNotification = () => {
-  if (!stats) return null;
-  
-  // Real data based notifications
-    // TIER 1: OUTSTANDING (85%+) - Dark Green (Excellence)
-if (accuracy >= 85) {
-  colorClass = "from-green-50 to-emerald-50 border-green-300";
-  progressClass = "bg-gradient-to-r from-green-600 to-emerald-600";
-  textColor = "text-green-700";
-  badge = { 
-    text: "🌟 Outstanding", 
-    color: "bg-gradient-to-r from-green-600 to-emerald-600" 
+    if (!stats) return null;
+    
+    if (stats.accuracy < 70 && stats.weakestTopic !== "Not enough data") {
+      return {
+        type: "warning",
+        icon: AlertCircle,
+        color: "orange",
+        message: `Your ${stats.weakestTopic} accuracy is ${stats.accuracy}%. Practice 10 questions to improve!`,
+      };
+    } else if (stats.rankChange < 0 && Math.abs(stats.rankChange) > 0) {
+      return {
+        type: "success",
+        icon: TrendingUp,
+        color: "green",
+        message: `Amazing! Your rank improved by ${Math.abs(stats.rankChange)} positions this week! 🚀`,
+      };
+    } else if (stats.streak >= 7) {
+      return {
+        type: "info",
+        icon: Flame,
+        color: "orange",
+        message: `🔥 ${stats.streak} day streak! You're on fire! Keep the momentum going!`,
+      };
+    } else if (stats.todayProgress === 0) {
+      return {
+        type: "info",
+        icon: Sparkles,
+        color: "blue",
+        message: `Start your day strong! Complete ${stats.todayGoal} questions today to stay on track.`,
+      };
+    } else {
+      return null;
+    }
   };
-  message = "Excellent! You're crushing it!";
-}
-
-// TIER 2: STRONG (70-84%) - Light Green (Success)
-else if (accuracy >= 70) {
-  colorClass = "from-green-50 to-lime-50 border-green-200";
-  progressClass = "bg-gradient-to-r from-green-500 to-lime-500";
-  textColor = "text-green-600";
-  badge = { 
-    text = "💪 Strong", 
-    color: "bg-gradient-to-r from-green-500 to-lime-500" 
-  };
-  message = "Great work! Keep going!";
-}
-
-// TIER 3: GOOD (55-69%) - Blue (Steady)
-else if (accuracy >= 55) {
-  colorClass = "from-blue-50 to-sky-50 border-blue-200";
-  progressClass = "bg-gradient-to-r from-blue-500 to-sky-500";
-  textColor = "text-blue-700";
-  badge = { 
-    text: "📘 Good", 
-    color: "bg-gradient-to-r from-blue-500 to-sky-500" 
-  };
-  message = "Good progress! Practice more!";
-}
-
-// TIER 4: NEEDS FOCUS (40-54%) - Amber (Warning)
-else if (accuracy >= 40) {
-  colorClass = "from-amber-50 to-yellow-50 border-amber-300";
-  progressClass = "bg-gradient-to-r from-amber-500 to-yellow-500";
-  textColor = "text-amber-700";
-  badge = { 
-    text: "⚡ Focus", 
-    color: "bg-gradient-to-r from-amber-500 to-yellow-500" 
-  };
-  message = "More practice needed!";
-}
-
-// TIER 5: URGENT (<40%) - Red (Alert)
-else {
-  colorClass = "from-red-50 to-orange-50 border-red-300";
-  progressClass = "bg-gradient-to-r from-red-500 to-orange-500";
-  textColor = "text-red-700";
-  badge = { 
-    text: "🎯 Priority", 
-    color: "bg-gradient-to-r from-red-500 to-orange-500",
-    icon: AlertCircle 
-  };
-  message = "Urgent revision required!";
-}
-};
 
   const notification = stats ? getSmartNotification() : null;
 
-  const getGoalCardStyle = (progress: number, goal: number) => {
-    const percentage = (progress / goal) * 100;
-    
-    if (percentage >= 150) {
-      return {
-        cardClass: "from-emerald-50 to-green-50 border-emerald-400",
-        gradient: "from-emerald-700 to-green-700",
-        textColor: "text-emerald-800",
-        icon: "🔥",
-        badge: { text: "Beast Mode!", color: "bg-gradient-to-r from-emerald-700 to-green-700" },
-        message: `Incredible! ${progress} questions! You're unstoppable! 🚀`
-      };
-    }
-    else if (percentage >= 120) {
-      return {
-        cardClass: "from-green-50 to-emerald-50 border-green-400",
-        gradient: "from-green-600 to-emerald-600",
-        textColor: "text-green-700",
-        icon: "🏆",
-        badge: { text: "Champion!", color: "bg-gradient-to-r from-green-600 to-emerald-600" },
-        message: `Outstanding! ${progress}/${goal} - Going above & beyond!`
-      };
-    }
-    else if (percentage >= 100) {
-      return {
-        cardClass: "from-green-50 to-lime-50 border-green-300",
-        gradient: "from-green-500 to-lime-500",
-        textColor: "text-green-600",
-        icon: "✅",
-        badge: { text: "Goal Done!", color: "bg-gradient-to-r from-green-500 to-lime-500" },
-        message: `Perfect! Goal complete! Maintain this streak! 💪`
-      };
-    }
-    else if (percentage >= 80) {
-      return {
-        cardClass: "from-blue-50 to-sky-50 border-blue-200",
-        gradient: "from-blue-500 to-sky-500",
-        textColor: "text-blue-600",
-        icon: "⚡",
-        badge: { text: "Almost!", color: "bg-blue-500" },
-        message: `Just ${goal - progress} more! You're so close!`
-      };
-    }
-    else if (percentage >= 50) {
-      return {
-        cardClass: "from-amber-50 to-yellow-50 border-amber-200",
-        gradient: "from-amber-500 to-yellow-500",
-        textColor: "text-amber-600",
-        icon: "🎯",
-        badge: { text: "Good Start", color: "bg-amber-500" },
-        message: `Halfway there! Keep the momentum!`
-      };
-    }
-    else {
-      return {
-        cardClass: "from-orange-50 to-red-50 border-orange-200",
-        gradient: "from-orange-500 to-red-600",
-        textColor: "text-orange-700",
-        icon: "💪",
-        badge: { text: "Let's Go!", color: "bg-orange-500" },
-        message: `${goal - progress} questions left to hit your goal!`
-      };
-    }
-  };
-
   useEffect(() => {
-    const bannerKey = `notification_seen_${user?.id}_${new Date().toDateString()}`; 
+    const bannerKey = `notification_seen_${user?.id}_${new Date().toDateString()}`;
     const seen = localStorage.getItem(bannerKey);
     
     if (!seen && notification) {
@@ -372,7 +232,72 @@ else {
     }
   }, [user, notification]);
 
-  // Get accuracy color
+  const getGoalCardStyle = (progress: number, goal: number) => {
+    const percentage = (progress / goal) * 100;
+    
+    if (percentage >= 150) {
+      return {
+        cardClass: "from-emerald-100 to-green-100 border-emerald-500",
+        gradient: "from-emerald-700 to-green-800",
+        progressClass: "bg-gradient-to-r from-emerald-700 to-green-800",
+        textColor: "text-emerald-900",
+        icon: "👑",
+        badge: { text: "I'm a legend!", color: "bg-gradient-to-r from-emerald-700 to-green-800" },
+        message: `${progress} questions! Legendary performance! 🔥`
+      };
+    } else if (percentage >= 120) {
+      return {
+        cardClass: "from-green-100 to-emerald-100 border-green-500",
+        gradient: "from-green-600 to-emerald-700",
+        progressClass: "bg-gradient-to-r from-green-600 to-emerald-700",
+        textColor: "text-green-800",
+        icon: "🏆",
+        badge: { text: "I'm a champion!", color: "bg-gradient-to-r from-green-600 to-emerald-700" },
+        message: `Outstanding! ${progress}/${goal} - You're a champion!`
+      };
+    } else if (percentage >= 100) {
+      return {
+        cardClass: "from-green-50 to-lime-50 border-green-400",
+        gradient: "from-green-500 to-lime-600",
+        progressClass: "bg-gradient-to-r from-green-500 to-lime-600",
+        textColor: "text-green-700",
+        icon: "✅",
+        badge: { text: "Goal smashed!", color: "bg-gradient-to-r from-green-500 to-lime-600" },
+        message: `Perfect! Goal complete! Keep this momentum! 💪`
+      };
+    } else if (percentage >= 80) {
+      return {
+        cardClass: "from-blue-50 to-sky-50 border-blue-400",
+        gradient: "from-blue-500 to-sky-600",
+        progressClass: "bg-gradient-to-r from-blue-500 to-sky-600",
+        textColor: "text-blue-700",
+        icon: "⚡",
+        badge: { text: "Almost there!", color: "bg-blue-500" },
+        message: `Just ${goal - progress} more! You're so close!`
+      };
+    } else if (percentage >= 50) {
+      return {
+        cardClass: "from-amber-50 to-yellow-50 border-amber-400",
+        gradient: "from-amber-500 to-yellow-600",
+        progressClass: "bg-gradient-to-r from-amber-500 to-yellow-600",
+        textColor: "text-amber-700",
+        icon: "📈",
+        badge: { text: "Good progress", color: "bg-amber-500" },
+        message: `Halfway there! ${goal - progress} more to go!`
+      };
+    } else {
+      return {
+        cardClass: "from-orange-50 to-red-50 border-orange-400",
+        gradient: "from-orange-500 to-red-600",
+        progressClass: "bg-gradient-to-r from-orange-500 to-red-600",
+        textColor: "text-orange-700",
+        icon: "💪",
+        badge: { text: "Let's push!", color: "bg-orange-500" },
+        message: `${goal - progress} questions left - Let's go! 🚀`
+      };
+    }
+  };
+
   const getAccuracyColor = (accuracy: number) => {
     if (accuracy >= 85) return "text-green-700";
     if (accuracy >= 70) return "text-yellow-700";
@@ -394,7 +319,6 @@ else {
       <Header />
       
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-24">
-        {/* Dismissible Smart Banner */}
         {showBanner && notification && (
           <div className={`mb-4 bg-gradient-to-r ${
             notification.color === 'green' ? 'from-green-500 to-emerald-600' :
@@ -421,82 +345,76 @@ else {
           </div>
         )}
         
-        {/* Welcome Section - Compact Mobile Optimized */}
         {!hasSeenWelcome && (
-        <div className="mb-4 sm:mb-6">
-          <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-blue-800/30 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
-            <div className="relative z-10">
-              {/* Close Button */}
-              <button
-                onClick={() => {
-                  const welcomeKey = `welcome_seen_${user?.id}_${new Date().toDateString()}`;
-                  localStorage.setItem(welcomeKey, 'true');
-                  setHasSeenWelcome(true);
-                }}
-                className="absolute top-2 right-2 text-white/60 hover:text-white transition-colors z-20"
-              >
-                <X className="h-5 w-5" />
-              </button>
+          <div className="mb-4 sm:mb-6">
+            <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-blue-800/30 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
+              <div className="relative z-10">
+                <button
+                  onClick={() => {
+                    const welcomeKey = `welcome_seen_${user?.id}_${new Date().toDateString()}`;
+                    localStorage.setItem(welcomeKey, 'true');
+                    setHasSeenWelcome(true);
+                  }}
+                  className="absolute top-2 right-2 text-white/60 hover:text-white transition-colors z-20"
+                >
+                  <X className="h-5 w-5" />
+                </button>
 
-              <div className="flex flex-col gap-3 sm:gap-4">
-                {/* Header */}
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shrink-0">
-                    <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                <div className="flex flex-col gap-3 sm:gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                      <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">
+                        {timeMessage.greeting}, {displayName}! {timeMessage.icon}
+                      </h1>
+                      <p className="text-slate-300 text-xs sm:text-sm">
+                        {timeMessage.message}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">
-                      {timeMessage.greeting}, {displayName}! {timeMessage.icon}
-                    </h1>
-                    <p className="text-slate-300 text-xs sm:text-sm">
-                      {timeMessage.message}
-                    </p>
-                  </div>
-                </div>
 
-                {/* Stats Row - Compact */}
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2 text-xs sm:text-sm">
-                    <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-400/30 px-2 py-0.5">
-                      <Trophy className="h-3 w-3 mr-1" />
-                      #{stats?.rank || 0}
-                    </Badge>
-                    <span className="text-blue-300">Top {stats?.percentile || 0}%</span>
-                    {stats?.rankChange < 0 && (
-                      <span className="text-green-400 text-xs">↑ {Math.abs(stats.rankChange)}</span>
-                    )}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm">
+                      <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-400/30 px-2 py-0.5">
+                        <Trophy className="h-3 w-3 mr-1" />
+                        #{stats?.rank || 0}
+                      </Badge>
+                      <span className="text-blue-300">Top {stats?.percentile || 0}%</span>
+                      {stats?.rankChange < 0 && (
+                        <span className="text-green-400 text-xs">↑ {Math.abs(stats.rankChange)}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                
-                {/* Action Buttons - Compact */}
-                <div className="flex flex-wrap gap-2">
-                  <button 
-                    onClick={() => navigate('/study-now')} 
-                    className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
-                  >
-                    📚 {timeMessage.action}
-                  </button>
-                  <button 
-                    onClick={() => navigate('/battle')} 
-                    className="px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
-                  >
-                    ⚔️ Battle
-                  </button>
-                  <button 
-                    onClick={() => navigate('/test')} 
-                    className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
-                  >
-                    🧪 Test
-                  </button>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    <button 
+                      onClick={() => navigate('/study-now')} 
+                      className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                    >
+                      📚 {timeMessage.action}
+                    </button>
+                    <button 
+                      onClick={() => navigate('/battle')} 
+                      className="px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                    >
+                      ⚔️ Battle
+                    </button>
+                    <button 
+                      onClick={() => navigate('/test')} 
+                      className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                    >
+                      🧪 Test
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
         )}
 
-        {/* Enhanced Quick Stats - 4 Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 mt-6">
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
             <CardContent className="p-3 sm:p-4">
@@ -544,63 +462,63 @@ else {
             </CardContent>
           </Card>
 
-         {(() => {
-          const goalStyle = getGoalCardStyle(stats?.todayProgress || 0, stats?.todayGoal || 30);
-          const percentage = ((stats?.todayProgress || 0) / (stats?.todayGoal || 30)) * 100;
-          
-          return (
-            <Card className={`bg-gradient-to-br ${goalStyle.cardClass} border shadow-xl hover:shadow-2xl transition-all hover:scale-105 relative overflow-hidden`}>
-              {percentage >= 100 && (
-                <div className="absolute top-2 right-2 animate-bounce text-2xl">
-                  🎉
-                </div>
-              )}
-              {percentage >= 150 && (
-                <div className="absolute -top-1 -right-1 animate-pulse text-3xl">
-                  🔥
-                </div>
-              )}
-              
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-medium mb-0.5 ${goalStyle.textColor}`}>
-                      Today's Goal
-                    </p>
-                    <div className="flex items-baseline gap-1">
-                      <p className={`text-2xl sm:text-3xl font-bold ${goalStyle.textColor}`}>
-                        {stats?.todayProgress || 0}
+          {(() => {
+            const goalStyle = getGoalCardStyle(stats?.todayProgress || 0, stats?.todayGoal || 30);
+            const percentage = ((stats?.todayProgress || 0) / (stats?.todayGoal || 30)) * 100;
+            
+            return (
+              <Card className={`bg-gradient-to-br ${goalStyle.cardClass} border shadow-xl hover:shadow-2xl transition-all hover:scale-105 relative overflow-hidden`}>
+                {percentage >= 100 && (
+                  <div className="absolute top-2 right-2 animate-bounce text-2xl">
+                    🎉
+                  </div>
+                )}
+                {percentage >= 150 && (
+                  <div className="absolute -top-1 -right-1 animate-pulse text-3xl">
+                    🔥
+                  </div>
+                )}
+                
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-medium mb-0.5 ${goalStyle.textColor}`}>
+                        Today's Goal
                       </p>
-                      <span className={`text-lg font-semibold ${goalStyle.textColor} opacity-70`}>
-                        /{stats?.todayGoal || 30}
-                      </span>
+                      <div className="flex items-baseline gap-1">
+                        <p className={`text-2xl sm:text-3xl font-bold ${goalStyle.textColor}`}>
+                          {stats?.todayProgress || 0}
+                        </p>
+                        <span className={`text-lg font-semibold ${goalStyle.textColor} opacity-70`}>
+                          /{stats?.todayGoal || 30}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Progress 
+                          value={percentage} 
+                          className="h-1.5 flex-1" 
+                        />
+                        <span className={`text-xs font-semibold ${goalStyle.textColor}`}>
+                          {Math.round(percentage)}%
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <Badge className={`${goalStyle.badge.color} text-white text-xs`}>
+                          {goalStyle.icon} {goalStyle.badge.text}
+                        </Badge>
+                      </div>
+                      <p className={`text-xs mt-1 font-medium ${goalStyle.textColor}`}>
+                        {goalStyle.message}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Progress 
-                        value={percentage} 
-                        className="h-1.5 flex-1" 
-                      />
-                      <span className={`text-xs font-semibold ${goalStyle.textColor}`}>
-                        {Math.round(percentage)}%
-                      </span>
+                    <div className={`bg-gradient-to-br ${goalStyle.gradient} p-2 sm:p-3 rounded-xl shadow-lg shrink-0`}>
+                      <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
-                    <div className="mt-2">
-                      <Badge className={`${goalStyle.badge.color} text-white text-xs`}>
-                        {goalStyle.icon} {goalStyle.badge.text}
-                      </Badge>
-                    </div>
-                    <p className={`text-xs mt-1 font-medium ${goalStyle.textColor}`}>
-                      {goalStyle.message}
-                    </p>
                   </div>
-                  <div className={`bg-gradient-to-br ${goalStyle.gradient} p-2 sm:p-3 rounded-xl shadow-lg shrink-0`}>
-                    <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })()}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
             <CardContent className="p-3 sm:p-4">
@@ -623,9 +541,7 @@ else {
           </Card>
         </div>
     
-        {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
-          {/* Enhanced Progress Section */}
           <div className="lg:col-span-2">
             <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl h-full">
               <CardHeader className="border-b border-slate-100 p-3 sm:p-4">
@@ -640,129 +556,115 @@ else {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 sm:p-4">
-              <div className="space-y-3">
-                {(() => {
-                  // Step 1: Subject-wise data calculate karo
-                  const subjectStats: any = {};
-                  
-                  attempts?.forEach((attempt: any) => {
-                    const subject = attempt.questions?.subject; // "Physics", "Chemistry", etc.
+                <div className="space-y-3">
+                  {(() => {
+                    const subjectStats: any = {};
                     
-                    if (subject) {
-                      // Pehli baar subject mila
-                      if (!subjectStats[subject]) {
-                        subjectStats[subject] = { correct: 0, total: 0 };
-                      }
+                    attempts?.forEach((attempt: any) => {
+                      const subject = attempt.questions?.subject;
                       
-                      // Total questions count karo
-                      subjectStats[subject].total++;
-                      
-                      // Agar correct answer, to count karo
-                      if (attempt.is_correct) {
-                        subjectStats[subject].correct++;
+                      if (subject) {
+                        if (!subjectStats[subject]) {
+                          subjectStats[subject] = { correct: 0, total: 0 };
+                        }
+                        
+                        subjectStats[subject].total++;
+                        
+                        if (attempt.is_correct) {
+                          subjectStats[subject].correct++;
+                        }
                       }
-                    }
-                  });
-              
-                  // Step 2: Agar koi data nahi, to message dikhao
-                  if (Object.keys(subjectStats).length === 0) {
-                    return (
-                      <div className="text-center py-8 text-slate-500">
-                        <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p className="text-sm">Start practicing to see your progress!</p>
-                      </div>
-                    );
-                  }
-              
-                  // Step 3: Har subject ke liye card banao
-                  return Object.entries(subjectStats).map(([subject, data]: [string, any]) => {
-                    // Accuracy calculate karo
-                    const accuracy = data.total > 0 
-                      ? Math.round((data.correct / data.total) * 100) 
-                      : 0;
-                    
-                    // Accuracy ke basis pe color decide karo
-                    let colorClass, progressClass, textColor, badge;
-                    
-                    if (accuracy >= 85) {
-                      // Excellent - Purple/Blue
-                      colorClass = "from-blue-50 to-indigo-50 border-blue-200";
-                      progressClass = "bg-purple-100";
-                      textColor = "text-purple-600";
-                      badge = { 
-                        text: "Excellent! 🌟", 
-                        color: "bg-gradient-to-r from-purple-500 to-pink-600" 
-                      };
-                    }else if (accuracy >= 70) {
-                      // Good - Yellow
-                      colorClass = "from-yellow-50 to-amber-50 border-yellow-300";
-                      progressClass = "bg-yellow-100";
-                      textColor = "text-yellow-700";
-                      badge = { 
-                        text: "Good Progress", 
-                        color: "bg-yellow-500" 
-                      };
-                    } else {
-                      // Needs Focus - Orange/Red
-                      colorClass = "from-orange-50 to-red-50 border-orange-300";
-                      progressClass = "bg-orange-100";
-                      textColor = "text-orange-700";
-                      badge = { 
-                        text: "Focus Needed", 
-                        color: "bg-orange-500",
-                        icon: AlertCircle 
-                      };
-                    }
-              
-                    // Card render karo
-                    return (
-                      <div 
-                        key={subject} 
-                        className={`p-2.5 sm:p-3 bg-gradient-to-r ${colorClass} rounded-lg border-2`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-semibold text-slate-800">
-                                {subject}
-                              </span>
-                              <Badge className={`${badge.color} text-white text-xs flex items-center gap-1`}>
-                                {badge.icon && <badge.icon className="h-3 w-3" />}
-                                {badge.text}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-slate-600">
-                              {data.total} questions • {data.correct} correct
-                            </p>
-                          </div>
-                          <span className={`text-sm font-bold ${textColor}`}>
-                            {accuracy}%
-                          </span>
-                        </div>
-                        
-                        {/* Progress bar */}
-                        <Progress value={accuracy} className={`h-2 ${progressClass}`} />
-                        
-                        <div className="mt-2 flex items-center justify-between text-xs">
-                          <span className="text-slate-600">
-                            {accuracy >= 85 ? 'Excellent work!' : 
-                             accuracy >= 70 ? 'Keep practicing' : 
-                             'Need more practice'}
-                          </span>
-                          <button 
-                            onClick={() => navigate('/study-now')} 
-                            className={`${textColor} hover:opacity-80 font-semibold`}
-                          >
-                            {accuracy >= 85 ? 'Challenge →' : 'Practice →'}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
+                    });
                 
-                {/* Performance Comparison - NEW */}
+                    if (Object.keys(subjectStats).length === 0) {
+                      return (
+                        <div className="text-center py-8 text-slate-500">
+                          <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p className="text-sm">Start practicing to see your progress!</p>
+                        </div>
+                      );
+                    }
+                
+                    return Object.entries(subjectStats).map(([subject, data]: [string, any]) => {
+                      const accuracy = data.total > 0 
+                        ? Math.round((data.correct / data.total) * 100) 
+                        : 0;
+                      
+                      let colorClass, progressClass, textColor, badge;
+                      
+                      if (accuracy >= 85) {
+                        colorClass = "from-blue-50 to-indigo-50 border-blue-200";
+                        progressClass = "bg-purple-100";
+                        textColor = "text-purple-600";
+                        badge = { 
+                          text: "Excellent! 🌟", 
+                          color: "bg-gradient-to-r from-purple-500 to-pink-600" 
+                        };
+                      } else if (accuracy >= 70) {
+                        colorClass = "from-yellow-50 to-amber-50 border-yellow-300";
+                        progressClass = "bg-yellow-100";
+                        textColor = "text-yellow-700";
+                        badge = { 
+                          text: "Good Progress", 
+                          color: "bg-yellow-500" 
+                        };
+                      } else {
+                        colorClass = "from-orange-50 to-red-50 border-orange-300";
+                        progressClass = "bg-orange-100";
+                        textColor = "text-orange-700";
+                        badge = { 
+                          text: "Focus Needed", 
+                          color: "bg-orange-500",
+                          icon: AlertCircle 
+                        };
+                      }
+                
+                      return (
+                        <div 
+                          key={subject} 
+                          className={`p-2.5 sm:p-3 bg-gradient-to-r ${colorClass} rounded-lg border-2`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-semibold text-slate-800">
+                                  {subject}
+                                </span>
+                                <Badge className={`${badge.color} text-white text-xs flex items-center gap-1`}>
+                                  {badge.icon && <badge.icon className="h-3 w-3" />}
+                                  {badge.text}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-slate-600">
+                                {data.total} questions • {data.correct} correct
+                              </p>
+                            </div>
+                            <span className={`text-sm font-bold ${textColor}`}>
+                              {accuracy}%
+                            </span>
+                          </div>
+                          
+                          <Progress value={accuracy} className={`h-2 ${progressClass}`} />
+                          
+                          <div className="mt-2 flex items-center justify-between text-xs">
+                            <span className="text-slate-600">
+                              {accuracy >= 85 ? 'Excellent work!' : 
+                               accuracy >= 70 ? 'Keep practicing' : 
+                               'Need more practice'}
+                            </span>
+                            <button 
+                              onClick={() => navigate('/study-now')} 
+                              className={`${textColor} hover:opacity-80 font-semibold`}
+                            >
+                              {accuracy >= 85 ? 'Challenge →' : 'Practice →'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+                  
                 <div className="mt-4 p-3 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border border-slate-200">
                   <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-2">
                     <BarChart3 className="h-4 w-4" />
@@ -785,8 +687,6 @@ else {
             </Card>
           </div>
 
-          {/* Sidebar */}
-          {/* Sidebar */}
           <Card className="bg-white/95 backdrop-blur-xl border-2 border-slate-200 shadow-2xl relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/50"></div>
             
@@ -801,7 +701,6 @@ else {
                 </div>
               </div>
           
-              {/* Exam Countdown */}
               <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-xl p-4 mb-4 text-white shadow-lg">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -818,14 +717,12 @@ else {
                 <p className="text-xs mt-2 opacity-90">67% prep time over - Accelerate now!</p>
               </div>
           
-              {/* Weekly Action Plan */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-4 w-4 text-blue-600" />
                   <h4 className="text-sm font-bold text-slate-700">This Week's Focus</h4>
                 </div>
           
-                {/* Monday - Physics */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
                   <div className="flex items-start gap-2">
                     <input 
@@ -852,7 +749,6 @@ else {
                   </div>
                 </div>
           
-                {/* Tuesday - Chemistry */}
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200 opacity-70">
                   <div className="flex items-start gap-2">
                     <input 
@@ -878,7 +774,6 @@ else {
                   </div>
                 </div>
           
-                {/* Wednesday - Maths */}
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-200 opacity-70">
                   <div className="flex items-start gap-2">
                     <input 
@@ -904,7 +799,6 @@ else {
                   </div>
                 </div>
           
-                {/* Thursday - Weak Topics */}
                 <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-3 border border-orange-200 opacity-70">
                   <div className="flex items-start gap-2">
                     <input 
@@ -932,7 +826,6 @@ else {
                 </div>
               </div>
           
-              {/* Quick Actions */}
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <Button 
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-semibold shadow-lg"
@@ -943,7 +836,6 @@ else {
                 </Button>
               </div>
           
-              {/* AI Insight - Compact */}
               {stats?.weakestTopic !== "Not enough data" && (
                 <div className="mt-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg p-3 border border-purple-200">
                   <div className="flex items-start gap-2">

@@ -434,85 +434,41 @@ const EnhancedDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className={`bg-gradient-to-br ${getAccuracyBgColor(stats?.accuracy || 0)} shadow-xl hover:shadow-2xl transition-all hover:scale-105`}>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-slate-700 mb-0.5">Accuracy</p>
-                  <p className={`text-2xl sm:text-3xl font-bold ${getAccuracyColor(stats?.accuracy || 0)}`}>
-                    {stats?.accuracy || 0}%
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-semibold ${stats?.accuracyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {stats?.accuracyChange >= 0 ? '↑' : '↓'} {Math.abs(stats?.accuracyChange || 0)}% week
-                    </span>
-                    {stats?.accuracy < 70 && (
-                      <Badge className="text-xs bg-orange-500 text-white">Focus!</Badge>
-                    )}
-                  </div>
-                </div>
-                <div className={`bg-gradient-to-br ${
-                  stats?.accuracy >= 85 ? 'from-green-500 to-emerald-600' :
-                  stats?.accuracy >= 70 ? 'from-yellow-500 to-amber-600' :
-                  'from-red-500 to-orange-600'
-                } p-2 sm:p-3 rounded-xl shadow-lg shrink-0`}>
-                  <Target className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+          
           {(() => {
             const goalStyle = getGoalCardStyle(stats?.todayProgress || 0, stats?.todayGoal || 30);
             const percentage = ((stats?.todayProgress || 0) / (stats?.todayGoal || 30)) * 100;
             
             return (
-              <Card className={`bg-gradient-to-br ${goalStyle.cardClass} border shadow-xl hover:shadow-2xl transition-all hover:scale-105 relative overflow-hidden`}>
-                {percentage >= 100 && (
-                  <div className="absolute top-2 right-2 animate-bounce text-2xl">
-                    🎉
-                  </div>
-                )}
-                {percentage >= 150 && (
-                  <div className="absolute -top-1 -right-1 animate-pulse text-3xl">
-                    🔥
-                  </div>
-                )}
-                
+              <Card className={`bg-gradient-to-br ${getAccuracyBgColor(stats?.accuracy || 0)} shadow-xl hover:shadow-2xl transition-all hover:scale-105`}>
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-medium mb-0.5 ${goalStyle.textColor}`}>
-                        Today's Goal
+                      <p className="text-xs font-medium text-slate-700 mb-0.5">Today's Accuracy</p>
+                      <p className={`text-2xl sm:text-3xl font-bold ${getAccuracyColor(stats?.todayAccuracy || 0)}`}>
+                        {stats?.todayAccuracy || 0}%
                       </p>
-                      <div className="flex items-baseline gap-1">
-                        <p className={`text-2xl sm:text-3xl font-bold ${goalStyle.textColor}`}>
-                          {stats?.todayProgress || 0}
-                        </p>
-                        <span className={`text-lg font-semibold ${goalStyle.textColor} opacity-70`}>
-                          /{stats?.todayGoal || 30}
-                        </span>
-                      </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <Progress 
-                          value={percentage} 
-                          className="h-1.5 flex-1" 
-                        />
-                        <span className={`text-xs font-semibold ${goalStyle.textColor}`}>
-                          {Math.round(percentage)}%
+                        <span className={`text-xs font-semibold ${stats?.accuracyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {stats?.accuracyChange >= 0 ? '↑' : '↓'} {Math.abs(stats?.accuracyChange || 0)}% week
                         </span>
+                        {stats?.todayAccuracy < 70 && (
+                          <Badge className="text-xs bg-orange-500 text-white">Focus!</Badge>
+                        )}
                       </div>
-                      <div className="mt-2">
-                        <Badge className={`${goalStyle.badge.color} text-white text-xs`}>
-                          {goalStyle.icon} {goalStyle.badge.text}
-                        </Badge>
+                      {/* Overall Accuracy - Small */}
+                      <div className="mt-2 pt-2 border-t border-slate-300/30">
+                        <p className="text-xs text-slate-600">
+                          Overall: <span className="font-semibold text-slate-700">{stats?.accuracy || 0}%</span>
+                        </p>
                       </div>
-                      <p className={`text-xs mt-1 font-medium ${goalStyle.textColor}`}>
-                        {goalStyle.message}
-                      </p>
                     </div>
-                    <div className={`bg-gradient-to-br ${goalStyle.gradient} p-2 sm:p-3 rounded-xl shadow-lg shrink-0`}>
-                      <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    <div className={`bg-gradient-to-br ${
+                      (stats?.todayAccuracy || stats?.accuracy) >= 85 ? 'from-green-500 to-emerald-600' :
+                      (stats?.todayAccuracy || stats?.accuracy) >= 70 ? 'from-yellow-500 to-amber-600' :
+                      'from-red-500 to-orange-600'
+                    } p-2 sm:p-3 rounded-xl shadow-lg shrink-0`}>
+                      <Target className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
                   </div>
                 </CardContent>

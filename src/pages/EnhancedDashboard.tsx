@@ -436,31 +436,37 @@ const EnhancedDashboard = () => {
 
           <Card className={`bg-gradient-to-br ${getAccuracyBgColor(stats?.accuracy || 0)} shadow-xl hover:shadow-2xl transition-all hover:scale-105`}>
             <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-slate-700 mb-0.5">Accuracy</p>
-                  <p className={`text-2xl sm:text-3xl font-bold ${getAccuracyColor(stats?.accuracy || 0)}`}>
-                    {stats?.accuracy || 0}%
-                  </p>
-                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-medium text-slate-700 mb-0.5">Today's Accuracy</p>
+                    <p className={`text-2xl sm:text-3xl font-bold ${getAccuracyColor(stats?.todayAccuracy || 0)}`}>
+                    {stats?.todayAccuracy || 0}%
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
                     <span className={`text-xs font-semibold ${stats?.accuracyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {stats?.accuracyChange >= 0 ? '↑' : '↓'} {Math.abs(stats?.accuracyChange || 0)}% week
+                        {stats?.accuracyChange >= 0 ? '↑' : '↓'} {Math.abs(stats?.accuracyChange || 0)}% week
                     </span>
-                    {stats?.accuracy < 70 && (
-                      <Badge className="text-xs bg-orange-500 text-white">Focus!</Badge>
+                    {stats?.todayAccuracy < 70 && (
+                        <Badge className="text-xs bg-orange-500 text-white">Focus!</Badge>
                     )}
-                  </div>
+                    </div>
+                    {/* Overall Accuracy - Small */}
+                    <div className="mt-2 pt-2 border-t border-slate-300/30">
+                    <p className="text-xs text-slate-600">
+                        Overall: <span className="font-semibold text-slate-700">{stats?.accuracy || 0}%</span>
+                    </p>
+                    </div>
                 </div>
                 <div className={`bg-gradient-to-br ${
-                  stats?.accuracy >= 85 ? 'from-green-500 to-emerald-600' :
-                  stats?.accuracy >= 70 ? 'from-yellow-500 to-amber-600' :
-                  'from-red-500 to-orange-600'
+                    (stats?.todayAccuracy || stats?.accuracy) >= 85 ? 'from-green-500 to-emerald-600' :
+                    (stats?.todayAccuracy || stats?.accuracy) >= 70 ? 'from-yellow-500 to-amber-600' :
+                    'from-red-500 to-orange-600'
                 } p-2 sm:p-3 rounded-xl shadow-lg shrink-0`}>
-                  <Target className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    <Target className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
-              </div>
+                </div>
             </CardContent>
-          </Card>
+        </Card>
 
           {(() => {
             const goalStyle = getGoalCardStyle(stats?.todayProgress || 0, stats?.todayGoal || 30);

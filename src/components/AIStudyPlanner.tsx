@@ -8,18 +8,17 @@ import {
   Clock,
   Target,
   TrendingUp,
-  Flame,
   CheckCircle2,
   Circle,
   RefreshCw,
   Lightbulb,
   AlertCircle,
   Sparkles,
-  Trophy,
   ChevronDown,
   ChevronUp
 } from "lucide-react";
 
+import { supabase } from "@/integrations/supabase/client";
 interface Topic {
   name: string;
   duration: number;
@@ -35,12 +34,11 @@ interface Subject {
   allocatedTime: number;
   priority: string;
   topics: Topic[];
-  focusStrategy?: string;
   aiInsight?: string;
 }
 
 interface StudyPlan {
-  _id: string;
+  id: string;
   subjects: Subject[];
   performance: {
     overallAccuracy: number;
@@ -53,23 +51,19 @@ interface StudyPlan {
     priority: string;
     action?: string;
   }>;
-  totalStudyTime: number;
-  completionStatus: number;
-  aiMetrics?: {
+  total_study_time: number;
+  completion_status: number;
+  ai_metrics?: {
     learningRate: number;
     retentionScore: number;
     consistencyScore: number;
     adaptiveLevel: string;
   };
-  nextRefreshTime: string;
-  lastUpdated: string;
+  next_refresh_time: string;
+  last_updated: string;
 }
 
-interface Props {
-  userId: string;
-}
-
-const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
+const AIStudyPlanner: React.FC = () => {
   const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,13 +72,13 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
 
   useEffect(() => {
     fetchStudyPlan();
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
-    if (studyPlan?.nextRefreshTime) {
+    if (studyPlan?.next_refresh_time) {
       const interval = setInterval(() => {
         const now = new Date().getTime();
-        const refreshTime = new Date(studyPlan.nextRefreshTime).getTime();
+        const refreshTime = new Date(studyPlan.next_refresh_time).getTime();
         const diff = refreshTime - now;
         
         if (diff <= 0) {
@@ -95,7 +89,7 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
           const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
           setTimeUntilRefresh(`${hours}h ${minutes}m`);
         }
-      }, 60000); // Update every minute
+      }, 60000);
       
       return () => clearInterval(interval);
     }
@@ -104,18 +98,26 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
   const fetchStudyPlan = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
-      const response = await fetch('/api/study-plan/current', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setStudyPlan(data.studyPlan);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: plans, error } = await supabase
+        .from('study_plans')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('last_updated', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      const latestPlan = plans?.[0];
+      const needsRefresh = !latestPlan || new Date(latestPlan.next_refresh_time) <= new Date();
+
+      if (needsRefresh) {
+        await generateNewPlan();
+      } else {
+        setStudyPlan(latestPlan);
       }
     } catch (error) {
       console.error('Error fetching study plan:', error);
@@ -124,28 +126,24 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
     }
   };
 
-  const handleRefresh = async () => {
+  const generateNewPlan = async () => {
     try {
-      setRefreshing(true);
-      const token = localStorage.getItem('token');
+      const { data, error } = await supabase.functions.invoke('generate-study-plan');
       
-      const response = await fetch('/api/study-plan/refresh', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      if (error) throw error;
       
-      const data = await response.json();
-      
-      if (data.success) {
+      if (data?.success) {
         setStudyPlan(data.studyPlan);
       }
     } catch (error) {
-      console.error('Error refreshing study plan:', error);
-    } finally {
-      setRefreshing(false);
+      console.error('Error generating study plan:', error);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await generateNewPlan();
+    setRefreshing(false);
   };
 
   const toggleSubject = (index: number) => {
@@ -193,8 +191,8 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
     return (
       <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
         <CardContent className="p-6">
-          <p className="text-slate-600 text-center">No study plan available</p>
-          <Button onClick={fetchStudyPlan} className="w-full mt-4">
+          <p className="text-slate-600 text-center mb-4">No study plan available</p>
+          <Button onClick={fetchStudyPlan} className="w-full">
             Generate Plan
           </Button>
         </CardContent>
@@ -229,8 +227,8 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
       </CardHeader>
 
       <CardContent className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
-      {/* AI Metrics */}
-        {studyPlan.aiMetrics && (
+        {/* AI Metrics */}
+        {studyPlan.ai_metrics && (
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="h-4 w-4 text-indigo-600" />
@@ -239,26 +237,26 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
             <div className="grid grid-cols-3 gap-2">
               <div className="text-center">
                 <div className="text-2xl font-bold text-indigo-600">
-                  {(studyPlan.aiMetrics.learningRate * 100).toFixed(0)}%
+                  {(studyPlan.ai_metrics.learningRate * 100).toFixed(0)}%
                 </div>
                 <p className="text-xs text-slate-600">Learning Rate</p>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {(studyPlan.aiMetrics.retentionScore * 100).toFixed(0)}%
+                  {(studyPlan.ai_metrics.retentionScore * 100).toFixed(0)}%
                 </div>
                 <p className="text-xs text-slate-600">Retention</p>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-pink-600">
-                  {(studyPlan.aiMetrics.consistencyScore * 100).toFixed(0)}%
+                  {(studyPlan.ai_metrics.consistencyScore * 100).toFixed(0)}%
                 </div>
                 <p className="text-xs text-slate-600">Consistency</p>
               </div>
             </div>
             <div className="mt-3 flex items-center justify-center gap-2">
               <Badge className="bg-indigo-600 text-white">
-                {studyPlan.aiMetrics.adaptiveLevel.toUpperCase()} Level
+                {studyPlan.ai_metrics.adaptiveLevel.toUpperCase()} Level
               </Badge>
             </div>
           </div>
@@ -301,12 +299,12 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-sm flex items-center gap-2">
               <Target className="h-4 w-4 text-blue-600" />
-              Today's Schedule ({studyPlan.totalStudyTime} mins)
+              Today's Schedule ({studyPlan.total_study_time} mins)
             </h4>
             <div className="flex items-center gap-2">
-              <Progress value={studyPlan.completionStatus || 0} className="h-2 w-20" />
+              <Progress value={studyPlan.completion_status || 0} className="h-2 w-20" />
               <span className="text-xs font-semibold text-slate-600">
-                {studyPlan.completionStatus || 0}%
+                {studyPlan.completion_status || 0}%
               </span>
             </div>
           </div>
@@ -453,7 +451,7 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
               <p className="text-xs text-slate-600 mb-1">Completion</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-green-600">
-                  {studyPlan.completionStatus || 0}%
+                  {studyPlan.completion_status || 0}%
                 </span>
               </div>
             </div>
@@ -493,7 +491,7 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
         {/* Last Updated Info */}
         <div className="text-center pt-2 border-t border-slate-200">
           <p className="text-xs text-slate-500">
-            Last updated: {new Date(studyPlan.lastUpdated).toLocaleString('en-IN', {
+            Last updated: {new Date(studyPlan.last_updated).toLocaleString('en-IN', {
               hour: '2-digit',
               minute: '2-digit',
               day: 'numeric',
@@ -509,4 +507,4 @@ const AIStudyPlanner: React.FC<Props> = ({ userId }) => {
   );
 };
 
-export default AIStudyPlanner;    
+export default AIStudyPlanner;

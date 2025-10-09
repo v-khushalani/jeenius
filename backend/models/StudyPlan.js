@@ -59,6 +59,24 @@ const studyPlanSchema = new mongoose.Schema({
     helpful: Boolean,
     rating: Number,
     comments: String
+  },
+  aiMetrics: {
+    learningRate: Number, // How fast the student is improving
+    retentionScore: Number, // How well they retain information
+    consistencyScore: Number, // How consistent their study pattern is
+    adaptiveLevel: {
+      type: String,
+      enum: ['beginner', 'intermediate', 'advanced'],
+      default: 'intermediate'
+    }
+  },
+  nextRefreshTime: {
+    type: Date,
+    default: () => new Date(Date.now() + 24 * 60 * 60 * 1000)
+  },
+  version: {
+    type: Number,
+    default: 1
   }
 }, {
   timestamps: true

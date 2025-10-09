@@ -16,7 +16,6 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  Zap,
   Activity
 } from "lucide-react";
 
@@ -83,6 +82,73 @@ const AIStudyPlanner: React.FC = () => {
     streak: 0
   });
 
+  // Helper function - Calculate days remaining
+  const calculateDaysRemaining = () => {
+    const targetDate = new Date('2026-05-24'); // JEE 2026 date
+    const today = new Date();
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // Update topic progress
+  const updateTopicProgress = useCallback(async () => {
+    try {
+      if (!studyPlan) return;
+  
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+  
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+  
+      // Get today's attempts with subject/chapter/topic info
+      const { data: attempts } = await supabase
+        .from('question_attempts')
+        .select('*, questions(subject, chapter, topic)')
+        .eq('user_id', user.id)
+        .gte('created_at', today.toISOString());
+  
+      // Update each topic's progress
+      const updatedSubjects = studyPlan.subjects.map(subject => ({
+        ...subject,
+        topics: subject.topics.map(topic => {
+          // Count questions completed for this specific topic TODAY
+          const topicAttempts = attempts?.filter(a => 
+            a.questions?.subject === subject.name &&
+            a.questions?.topic === topic.topicName
+          ) || [];
+  
+          const questionsCompleted = topicAttempts.length;
+          const isCompleted = questionsCompleted >= topic.questionsRequired;
+  
+          return {
+            ...topic,
+            questionsCompleted,
+            completed: isCompleted
+          };
+        })
+      }));
+  
+      // Calculate overall completion status
+      const totalTopics = updatedSubjects.reduce((sum, s) => sum + s.topics.length, 0);
+      const completedTopics = updatedSubjects.reduce(
+        (sum, s) => sum + s.topics.filter(t => t.completed).length, 
+        0
+      );
+      const completionPercentage = Math.round((completedTopics / totalTopics) * 100);
+  
+      setStudyPlan(prev => prev ? {
+        ...prev,
+        subjects: updatedSubjects,
+        completion_status: completionPercentage
+      } : null);
+  
+    } catch (error) {
+      console.error('Error updating topic progress:', error);
+    }
+  }, [studyPlan]);
+
   // Real-time stats updater
   const updateLiveStats = useCallback(async () => {
     try {
@@ -105,72 +171,6 @@ const AIStudyPlanner: React.FC = () => {
       const todayCorrect = todayAttempts.filter(a => a.is_correct).length;
       const todayTotal = todayAttempts.length;
       const todayAccuracy = todayTotal > 0 ? Math.round((todayCorrect / todayTotal) * 100) : 0;
-
-      const calculateDaysRemaining = () => {
-      const targetDate = new Date('2026-05-24'); // JEE 2026 date
-      const today = new Date();
-      const diffTime = targetDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
-    };
-
-      // Add this new function after updateLiveStats
-      const updateTopicProgress = useCallback(async () => {
-        try {
-          if (!studyPlan) return;
-      
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-      
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-      
-          // Get today's attempts with subject/chapter/topic info
-          const { data: attempts } = await supabase
-            .from('question_attempts')
-            .select('*, questions(subject, chapter, topic)')
-            .eq('user_id', user.id)
-            .gte('created_at', today.toISOString());
-      
-          // Update each topic's progress
-          const updatedSubjects = studyPlan.subjects.map(subject => ({
-            ...subject,
-            topics: subject.topics.map(topic => {
-              // Count questions completed for this specific topic TODAY
-              const topicAttempts = attempts?.filter(a => 
-                a.questions?.subject === subject.name &&
-                a.questions?.topic === topic.topicName
-              ) || [];
-      
-              const questionsCompleted = topicAttempts.length;
-              const isCompleted = questionsCompleted >= topic.questionsRequired;
-      
-              return {
-                ...topic,
-                questionsCompleted,
-                completed: isCompleted
-              };
-            })
-          }));
-      
-          // Calculate overall completion status
-          const totalTopics = updatedSubjects.reduce((sum, s) => sum + s.topics.length, 0);
-          const completedTopics = updatedSubjects.reduce(
-            (sum, s) => sum + s.topics.filter(t => t.completed).length, 
-            0
-          );
-          const completionPercentage = Math.round((completedTopics / totalTopics) * 100);
-      
-          setStudyPlan(prev => prev ? {
-            ...prev,
-            subjects: updatedSubjects,
-            completion_status: completionPercentage
-          } : null);
-      
-        } catch (error) {
-          console.error('Error updating topic progress:', error);
-        }
-      }, [studyPlan]);
             
       // Calculate streak
       let streak = 0;
@@ -213,15 +213,16 @@ const AIStudyPlanner: React.FC = () => {
   // Auto-refresh live stats every 10 seconds
   useEffect(() => {
     updateLiveStats();
-    updateTopicProgress(); // ADD THIS
+    updateTopicProgress();
     
     const interval = setInterval(() => {
       updateLiveStats();
-      updateTopicProgress(); // ADD THIS
-    }, 10000); // Every 10 seconds
+      updateTopicProgress();
+    }, 10000);
     
     return () => clearInterval(interval);
   }, [updateLiveStats, updateTopicProgress]);
+
   useEffect(() => {
     fetchStudyPlan();
   }, []);
@@ -368,24 +369,40 @@ const AIStudyPlanner: React.FC = () => {
           </Button>
         </div>
       </CardHeader>
-      
-      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-3 shadow-lg">
-      {/* Add Target Header */}
-      <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/20">
-        <div className="flex items-center gap-2">
-          <Target className="h-4 w-4" />
-          <span className="font-bold text-sm">Target: JEE 2026</span>
-        </div>
-        <Badge className="bg-white/20 text-white text-xs backdrop-blur">
-          {calculateDaysRemaining()} days left
-        </Badge>
-      </div>
-      
-      <div className="grid grid-cols-3 gap-3 text-center">
-        // ... existing stats
-      </div>
-    </div>
+
       <CardContent className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
+        {/* Live Stats Bar with Target */}
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-3 shadow-lg">
+          <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/20">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              <span className="font-bold text-sm">Target: JEE 2026</span>
+            </div>
+            <Badge className="bg-white/20 text-white text-xs backdrop-blur">
+              {calculateDaysRemaining()} days left
+            </Badge>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <div className="text-2xl font-bold">{liveStats.questionsToday}</div>
+              <p className="text-xs opacity-90">Today</p>
+            </div>
+            <div>
+              <div className={`text-2xl font-bold ${liveStats.accuracyToday >= 70 ? 'text-green-200' : 'text-yellow-200'}`}>
+                {liveStats.accuracyToday}%
+              </div>
+              <p className="text-xs opacity-90">Accuracy</p>
+            </div>
+            <div>
+              <div className="text-2xl font-bold flex items-center justify-center gap-1">
+                🔥 {liveStats.streak}
+              </div>
+              <p className="text-xs opacity-90">Streak</p>
+            </div>
+          </div>
+        </div>
+
         {/* AI Metrics - Enhanced */}
         {studyPlan.ai_metrics && (
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">
@@ -557,6 +574,8 @@ const AIStudyPlanner: React.FC = () => {
                                 {topic.duration} min
                               </Badge>
                             </div>
+                            
+                            {/* Progress Bar */}
                             <div className="mb-1">
                               <div className="flex items-center justify-between text-xs mb-1">
                                 <span className="text-slate-600">
@@ -572,20 +591,6 @@ const AIStudyPlanner: React.FC = () => {
                                 value={(topic.questionsCompleted / topic.questionsRequired) * 100} 
                                 className="h-1.5" 
                               />
-                            </div>
-                            
-                            <p className="text-xs text-slate-600 mb-1">
-                              📌 {topic.reason}
-                            </p>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs">{getDifficultyIcon(topic.difficulty)}</span>
-                              <h6 className="text-xs font-semibold text-slate-800 flex-1">
-                                {topic.name}
-                              </h6>
-                              <Badge variant="outline" className="text-xs">
-                                {topic.duration} min
-                              </Badge>
                             </div>
                             
                             <p className="text-xs text-slate-600 mb-1">

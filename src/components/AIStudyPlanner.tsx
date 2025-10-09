@@ -294,28 +294,6 @@ const AIStudyPlanner: React.FC = () => {
       </CardHeader>
 
       <CardContent className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
-        {/* Live Stats Bar */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-3 shadow-lg">
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div>
-              <div className="text-2xl font-bold">{liveStats.questionsToday}</div>
-              <p className="text-xs opacity-90">Today</p>
-            </div>
-            <div>
-              <div className={`text-2xl font-bold ${liveStats.accuracyToday >= 70 ? 'text-green-200' : 'text-yellow-200'}`}>
-                {liveStats.accuracyToday}%
-              </div>
-              <p className="text-xs opacity-90">Accuracy</p>
-            </div>
-            <div>
-              <div className="text-2xl font-bold flex items-center justify-center gap-1">
-                🔥 {liveStats.streak}
-              </div>
-              <p className="text-xs opacity-90">Streak</p>
-            </div>
-          </div>
-        </div>
-
         {/* AI Metrics - Enhanced */}
         {studyPlan.ai_metrics && (
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">

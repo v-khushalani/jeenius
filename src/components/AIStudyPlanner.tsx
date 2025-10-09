@@ -382,25 +382,6 @@ const AIStudyPlanner: React.FC = () => {
               {calculateDaysRemaining()} days left
             </Badge>
           </div>
-          
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div>
-              <div className="text-2xl font-bold">{liveStats.questionsToday}</div>
-              <p className="text-xs opacity-90">Today</p>
-            </div>
-            <div>
-              <div className={`text-2xl font-bold ${liveStats.accuracyToday >= 70 ? 'text-green-200' : 'text-yellow-200'}`}>
-                {liveStats.accuracyToday}%
-              </div>
-              <p className="text-xs opacity-90">Accuracy</p>
-            </div>
-            <div>
-              <div className="text-2xl font-bold flex items-center justify-center gap-1">
-                🔥 {liveStats.streak}
-              </div>
-              <p className="text-xs opacity-90">Streak</p>
-            </div>
-          </div>
         </div>
 
         {/* AI Metrics - Enhanced */}
@@ -631,61 +612,6 @@ const AIStudyPlanner: React.FC = () => {
           ))}
         </div>
 
-        {/* Performance Summary - Enhanced */}
-        <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-lg p-3 border border-slate-200">
-          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-            Performance Overview
-          </h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-lg p-2">
-              <p className="text-xs text-slate-600 mb-1">Overall</p>
-              <div className="flex items-baseline gap-1">
-                <span className={`text-2xl font-bold ${getMetricColor(studyPlan.performance.overallAccuracy)}`}>
-                  {studyPlan.performance.overallAccuracy.toFixed(0)}%
-                </span>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-2">
-              <p className="text-xs text-slate-600 mb-1">Today</p>
-              <div className="flex items-baseline gap-1">
-                <span className={`text-2xl font-bold ${getMetricColor(liveStats.accuracyToday)}`}>
-                  {liveStats.accuracyToday}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {studyPlan.performance.strengths.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-slate-200">
-              <p className="text-xs font-semibold text-green-700 mb-1">
-                💪 Strengths:
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {studyPlan.performance.strengths.map((strength, idx) => (
-                  <Badge key={idx} className="bg-green-100 text-green-700 text-xs">
-                    {strength}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {studyPlan.performance.weaknesses.length > 0 && (
-            <div className="mt-2">
-              <p className="text-xs font-semibold text-orange-700 mb-1">
-                🎯 Focus Areas:
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {studyPlan.performance.weaknesses.map((weakness, idx) => (
-                  <Badge key={idx} className="bg-orange-100 text-orange-700 text-xs">
-                    {weakness}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

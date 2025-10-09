@@ -666,7 +666,7 @@ const StudyNowPage = () => {
                   <p className="text-xs font-semibold text-slate-700 mb-2">Difficulty:</p>
                   <div className="flex gap-2 flex-wrap">
                     {['all', 'Easy', 'Medium', 'Hard'].map(diff => (
-                      <Button key={diff} onClick={() => setDifficultyFilter(diff)} size="sm" variant={difficultyFilter === diff ? 'default' : 'outline'} className={`text-xs ${difficultyFilter === diff ? 'bg-primary text-white' : 'border-2 border-primary/30 text-primary hover:bg-primary/10'}`}
+                      <Button key={diff} onClick={() => setDifficultyFilter(diff)} size="sm" variant={difficultyFilter === diff ? 'default' : 'outline'} className={`text-xs ${difficultyFilter === diff ? 'bg-primary text-white' : 'border-2 border-primary/30 text-primary hover:bg-primary/10'}`}>
                         {diff === 'all' ? 'All' : diff}
                       </Button>
                     ))}

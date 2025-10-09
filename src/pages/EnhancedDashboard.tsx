@@ -80,6 +80,10 @@ const EnhancedDashboard = () => {
       const totalQuestions = attempts?.length || 0;
       const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
+      const todayCorrect = todayAttempts?.filter(a => a.is_correct).length || 0;
+      const todayTotal = todayAttempts?.length || 0;
+      const todayAccuracy = todayTotal > 0 ? Math.round((todayCorrect / todayTotal) * 100) : 0;
+
       let streak = 0;
       const DAILY_TARGET = 30;
       
@@ -144,6 +148,7 @@ const EnhancedDashboard = () => {
         questionsWeek: weekAttempts.length,
         correctAnswers,
         accuracy,
+        todayAccuracy,
         accuracyChange: 2,
         streak,
         rank: 15,

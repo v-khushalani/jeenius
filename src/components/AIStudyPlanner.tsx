@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,13 @@ import {
   AlertCircle,
   Sparkles,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Zap,
+  Activity
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+
 interface Topic {
   name: string;
   duration: number;
@@ -42,6 +45,7 @@ interface StudyPlan {
   subjects: Subject[];
   performance: {
     overallAccuracy: number;
+    todayAccuracy: number;
     strengths: string[];
     weaknesses: string[];
   };
@@ -53,7 +57,7 @@ interface StudyPlan {
   }>;
   total_study_time: number;
   completion_status: number;
-  ai_metrics?: {
+  ai_metrics: {
     learningRate: number;
     retentionScore: number;
     consistencyScore: number;
@@ -68,32 +72,83 @@ const AIStudyPlanner: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<number>>(new Set([0]));
-  const [timeUntilRefresh, setTimeUntilRefresh] = useState<string>("");
+  const [liveStats, setLiveStats] = useState({
+    questionsToday: 0,
+    accuracyToday: 0,
+    streak: 0
+  });
+
+  // Real-time stats updater
+  const updateLiveStats = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: attempts } = await supabase
+        .from('question_attempts')
+        .select('is_correct, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todayAttempts = attempts?.filter(a => 
+        new Date(a.created_at) >= today
+      ) || [];
+      
+      const todayCorrect = todayAttempts.filter(a => a.is_correct).length;
+      const todayTotal = todayAttempts.length;
+      const todayAccuracy = todayTotal > 0 ? Math.round((todayCorrect / todayTotal) * 100) : 0;
+
+      // Calculate streak
+      let streak = 0;
+      const DAILY_TARGET = 30;
+      const sortedAttempts = [...(attempts || [])].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      
+      let currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+      
+      for (let i = 0; i < 365; i++) {
+        const questionsOnThisDay = sortedAttempts.filter(a => {
+          const attemptDate = new Date(a.created_at);
+          attemptDate.setHours(0, 0, 0, 0);
+          return attemptDate.getTime() === currentDate.getTime();
+        }).length;
+        
+        if (questionsOnThisDay >= DAILY_TARGET) {
+          streak++;
+          currentDate.setDate(currentDate.getDate() - 1);
+        } else if (i === 0 && questionsOnThisDay > 0) {
+          currentDate.setDate(currentDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      setLiveStats({
+        questionsToday: todayTotal,
+        accuracyToday: todayAccuracy,
+        streak: streak
+      });
+
+    } catch (error) {
+      console.error('Error updating live stats:', error);
+    }
+  }, []);
+
+  // Auto-refresh live stats every 10 seconds
+  useEffect(() => {
+    updateLiveStats();
+    const interval = setInterval(updateLiveStats, 10000);
+    return () => clearInterval(interval);
+  }, [updateLiveStats]);
 
   useEffect(() => {
     fetchStudyPlan();
   }, []);
-
-  useEffect(() => {
-    if (studyPlan?.next_refresh_time) {
-      const interval = setInterval(() => {
-        const now = new Date().getTime();
-        const refreshTime = new Date(studyPlan.next_refresh_time).getTime();
-        const diff = refreshTime - now;
-        
-        if (diff <= 0) {
-          setTimeUntilRefresh("Refreshing...");
-          fetchStudyPlan();
-        } else {
-          const hours = Math.floor(diff / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          setTimeUntilRefresh(`${hours}h ${minutes}m`);
-        }
-      }, 60000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [studyPlan]);
 
   const fetchStudyPlan = async () => {
     try {
@@ -143,6 +198,7 @@ const AIStudyPlanner: React.FC = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
     await generateNewPlan();
+    await updateLiveStats();
     setRefreshing(false);
   };
 
@@ -172,6 +228,12 @@ const AIStudyPlanner: React.FC = () => {
       case 'hard': return '🔴';
       default: return '⚪';
     }
+  };
+
+  const getMetricColor = (value: number) => {
+    if (value >= 80) return 'text-green-600';
+    if (value >= 60) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   if (loading) {
@@ -209,8 +271,13 @@ const AIStudyPlanner: React.FC = () => {
               <Brain className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-lg">AI Study Plan</h3>
-              <p className="text-xs text-slate-500">Refreshes in {timeUntilRefresh}</p>
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                AI Study Plan
+                <Badge className="bg-green-500 text-white animate-pulse text-xs">
+                  <Activity className="h-3 w-3 mr-1" />LIVE
+                </Badge>
+              </h3>
+              <p className="text-xs text-slate-500">Updates every 10 seconds</p>
             </div>
           </div>
           <Button
@@ -227,37 +294,62 @@ const AIStudyPlanner: React.FC = () => {
       </CardHeader>
 
       <CardContent className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
-        {/* AI Metrics */}
+        {/* Live Stats Bar */}
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-3 shadow-lg">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <div className="text-2xl font-bold">{liveStats.questionsToday}</div>
+              <p className="text-xs opacity-90">Today</p>
+            </div>
+            <div>
+              <div className={`text-2xl font-bold ${liveStats.accuracyToday >= 70 ? 'text-green-200' : 'text-yellow-200'}`}>
+                {liveStats.accuracyToday}%
+              </div>
+              <p className="text-xs opacity-90">Accuracy</p>
+            </div>
+            <div>
+              <div className="text-2xl font-bold flex items-center justify-center gap-1">
+                🔥 {liveStats.streak}
+              </div>
+              <p className="text-xs opacity-90">Streak</p>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Metrics - Enhanced */}
         {studyPlan.ai_metrics && (
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="h-4 w-4 text-indigo-600" />
-              <h4 className="font-semibold text-sm text-indigo-900">AI Performance Metrics</h4>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-indigo-600" />
+                <h4 className="font-semibold text-sm text-indigo-900">AI Performance Metrics</h4>
+              </div>
+              <Badge className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs">
+                {studyPlan.ai_metrics.adaptiveLevel.toUpperCase()}
+              </Badge>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-indigo-600">
+              <div className="text-center bg-white/70 rounded-lg p-2">
+                <div className={`text-2xl font-bold ${getMetricColor(studyPlan.ai_metrics.learningRate * 100)}`}>
                   {(studyPlan.ai_metrics.learningRate * 100).toFixed(0)}%
                 </div>
-                <p className="text-xs text-slate-600">Learning Rate</p>
+                <p className="text-xs text-slate-600 mt-1">Learning Rate</p>
+                <p className="text-xs text-slate-500">How fast you improve</p>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
+              <div className="text-center bg-white/70 rounded-lg p-2">
+                <div className={`text-2xl font-bold ${getMetricColor(studyPlan.ai_metrics.retentionScore * 100)}`}>
                   {(studyPlan.ai_metrics.retentionScore * 100).toFixed(0)}%
                 </div>
-                <p className="text-xs text-slate-600">Retention</p>
+                <p className="text-xs text-slate-600 mt-1">Retention</p>
+                <p className="text-xs text-slate-500">Memory strength</p>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-pink-600">
+              <div className="text-center bg-white/70 rounded-lg p-2">
+                <div className={`text-2xl font-bold ${getMetricColor(studyPlan.ai_metrics.consistencyScore * 100)}`}>
                   {(studyPlan.ai_metrics.consistencyScore * 100).toFixed(0)}%
                 </div>
-                <p className="text-xs text-slate-600">Consistency</p>
+                <p className="text-xs text-slate-600 mt-1">Consistency</p>
+                <p className="text-xs text-slate-500">Daily discipline</p>
               </div>
-            </div>
-            <div className="mt-3 flex items-center justify-center gap-2">
-              <Badge className="bg-indigo-600 text-white">
-                {studyPlan.ai_metrics.adaptiveLevel.toUpperCase()} Level
-              </Badge>
             </div>
           </div>
         )}
@@ -432,26 +524,26 @@ const AIStudyPlanner: React.FC = () => {
           ))}
         </div>
 
-        {/* Performance Summary */}
+        {/* Performance Summary - Enhanced */}
         <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-lg p-3 border border-slate-200">
           <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-blue-600" />
             Performance Overview
           </h4>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-slate-600 mb-1">Overall Accuracy</p>
+            <div className="bg-white rounded-lg p-2">
+              <p className="text-xs text-slate-600 mb-1">Overall</p>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-blue-600">
+                <span className={`text-2xl font-bold ${getMetricColor(studyPlan.performance.overallAccuracy)}`}>
                   {studyPlan.performance.overallAccuracy.toFixed(0)}%
                 </span>
               </div>
             </div>
-            <div>
-              <p className="text-xs text-slate-600 mb-1">Completion</p>
+            <div className="bg-white rounded-lg p-2">
+              <p className="text-xs text-slate-600 mb-1">Today</p>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-green-600">
-                  {studyPlan.completion_status || 0}%
+                <span className={`text-2xl font-bold ${getMetricColor(liveStats.accuracyToday)}`}>
+                  {liveStats.accuracyToday}%
                 </span>
               </div>
             </div>
@@ -486,21 +578,6 @@ const AIStudyPlanner: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Last Updated Info */}
-        <div className="text-center pt-2 border-t border-slate-200">
-          <p className="text-xs text-slate-500">
-            Last updated: {new Date(studyPlan.last_updated).toLocaleString('en-IN', {
-              hour: '2-digit',
-              minute: '2-digit',
-              day: 'numeric',
-              month: 'short'
-            })}
-          </p>
-          <p className="text-xs text-indigo-600 font-medium mt-1">
-            🤖 Powered by AI • Auto-refreshes every 24 hours
-          </p>
         </div>
       </CardContent>
     </Card>

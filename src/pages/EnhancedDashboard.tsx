@@ -320,6 +320,44 @@ const EnhancedDashboard = () => {
     return <LoadingScreen message="Preparing your genius dashboard..." />;
   }
 
+  const studentProfile = {
+    strengths: [stats?.strongestTopic || "None"],
+    weaknesses: [stats?.weakestTopic || "None"],
+    studyHours: profile?.study_hours || 0,
+    examDate: profile?.exam_date || "Not set",
+    preferredTime: profile?.preferred_time || "Not set",
+    learningStyle: profile?.learning_style || "Not set",
+  };
+  
+  const currentWeek = {
+    completed: stats?.questionsWeek || 0,
+    total: stats?.todayGoal || 30,
+    targets: attempts
+      .slice(0, 4)
+      .map(a => ({
+        subject: a.questions?.subject || "Unknown",
+        topic: a.questions?.topic || "Unknown",
+        status: a.is_correct ? "completed" : "pending",
+        time: "1h",
+      })),
+  };
+  
+  const adaptiveRecommendations = [
+    {
+      type: "Focus Area",
+      title: "Extra Practice Needed",
+      description: `${stats?.weakestTopic || "None"} accuracy is ${stats?.accuracy || 0}%`,
+      action: "Spend 30 min daily on weak topics",
+      priority: "high",
+    },
+    {
+      type: "Strength Building",
+      title: "Leverage Strengths",
+      description: `Your strong topic: ${stats?.strongestTopic || "None"}`,
+      action: "Try advanced questions in strong areas",
+      priority: "medium",
+    },
+  ];
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
       <Header />
@@ -699,7 +737,11 @@ const EnhancedDashboard = () => {
             </Card>
           </div>
 
-          <AIStudyPlanner />
+          <AIStudyPlanner
+            studentProfile={studentProfile}
+            currentWeek={currentWeek}
+            adaptiveRecommendations={adaptiveRecommendations}
+          />
         </div>
       </div>
     </div>

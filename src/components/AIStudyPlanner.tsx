@@ -30,6 +30,11 @@ interface Topic {
   focusArea: string;
   aiRecommendation?: string;
   completed?: boolean;
+  questionsRequired: number; 
+  questionsCompleted: number; 
+  subject: string; 
+  chapter?: string; 
+  topicName: string;
 }
 
 interface Subject {
@@ -101,6 +106,72 @@ const AIStudyPlanner: React.FC = () => {
       const todayTotal = todayAttempts.length;
       const todayAccuracy = todayTotal > 0 ? Math.round((todayCorrect / todayTotal) * 100) : 0;
 
+      const calculateDaysRemaining = () => {
+      const targetDate = new Date('2026-05-24'); // JEE 2026 date
+      const today = new Date();
+      const diffTime = targetDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    };
+
+      // Add this new function after updateLiveStats
+      const updateTopicProgress = useCallback(async () => {
+        try {
+          if (!studyPlan) return;
+      
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+      
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+      
+          // Get today's attempts with subject/chapter/topic info
+          const { data: attempts } = await supabase
+            .from('question_attempts')
+            .select('*, questions(subject, chapter, topic)')
+            .eq('user_id', user.id)
+            .gte('created_at', today.toISOString());
+      
+          // Update each topic's progress
+          const updatedSubjects = studyPlan.subjects.map(subject => ({
+            ...subject,
+            topics: subject.topics.map(topic => {
+              // Count questions completed for this specific topic TODAY
+              const topicAttempts = attempts?.filter(a => 
+                a.questions?.subject === subject.name &&
+                a.questions?.topic === topic.topicName
+              ) || [];
+      
+              const questionsCompleted = topicAttempts.length;
+              const isCompleted = questionsCompleted >= topic.questionsRequired;
+      
+              return {
+                ...topic,
+                questionsCompleted,
+                completed: isCompleted
+              };
+            })
+          }));
+      
+          // Calculate overall completion status
+          const totalTopics = updatedSubjects.reduce((sum, s) => sum + s.topics.length, 0);
+          const completedTopics = updatedSubjects.reduce(
+            (sum, s) => sum + s.topics.filter(t => t.completed).length, 
+            0
+          );
+          const completionPercentage = Math.round((completedTopics / totalTopics) * 100);
+      
+          setStudyPlan(prev => prev ? {
+            ...prev,
+            subjects: updatedSubjects,
+            completion_status: completionPercentage
+          } : null);
+      
+        } catch (error) {
+          console.error('Error updating topic progress:', error);
+        }
+      }, [studyPlan]);
+            
       // Calculate streak
       let streak = 0;
       const DAILY_TARGET = 30;
@@ -142,10 +213,15 @@ const AIStudyPlanner: React.FC = () => {
   // Auto-refresh live stats every 10 seconds
   useEffect(() => {
     updateLiveStats();
-    const interval = setInterval(updateLiveStats, 10000);
+    updateTopicProgress(); // ADD THIS
+    
+    const interval = setInterval(() => {
+      updateLiveStats();
+      updateTopicProgress(); // ADD THIS
+    }, 10000); // Every 10 seconds
+    
     return () => clearInterval(interval);
-  }, [updateLiveStats]);
-
+  }, [updateLiveStats, updateTopicProgress]);
   useEffect(() => {
     fetchStudyPlan();
   }, []);
@@ -292,7 +368,23 @@ const AIStudyPlanner: React.FC = () => {
           </Button>
         </div>
       </CardHeader>
-
+      
+      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-3 shadow-lg">
+      {/* Add Target Header */}
+      <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/20">
+        <div className="flex items-center gap-2">
+          <Target className="h-4 w-4" />
+          <span className="font-bold text-sm">Target: JEE 2026</span>
+        </div>
+        <Badge className="bg-white/20 text-white text-xs backdrop-blur">
+          {calculateDaysRemaining()} days left
+        </Badge>
+      </div>
+      
+      <div className="grid grid-cols-3 gap-3 text-center">
+        // ... existing stats
+      </div>
+    </div>
       <CardContent className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
         {/* AI Metrics - Enhanced */}
         {studyPlan.ai_metrics && (
@@ -448,11 +540,43 @@ const AIStudyPlanner: React.FC = () => {
                         <div className="flex items-start gap-2">
                           <div className="mt-0.5">
                             {topic.completed ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              <CheckCircle2 className="h-4 w-4 text-green-600 animate-pulse" />
                             ) : (
                               <Circle className="h-4 w-4 text-slate-400" />
                             )}
                           </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs">{getDifficultyIcon(topic.difficulty)}</span>
+                              <h6 className={`text-xs font-semibold flex-1 ${
+                                topic.completed ? 'line-through text-slate-500' : 'text-slate-800'
+                              }`}>
+                                {topic.name}
+                              </h6>
+                              <Badge variant="outline" className="text-xs">
+                                {topic.duration} min
+                              </Badge>
+                            </div>
+                            <div className="mb-1">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-slate-600">
+                                  {topic.questionsCompleted}/{topic.questionsRequired} questions
+                                </span>
+                                <span className={`font-semibold ${
+                                  topic.completed ? 'text-green-600' : 'text-blue-600'
+                                }`}>
+                                  {Math.round((topic.questionsCompleted / topic.questionsRequired) * 100)}%
+                                </span>
+                              </div>
+                              <Progress 
+                                value={(topic.questionsCompleted / topic.questionsRequired) * 100} 
+                                className="h-1.5" 
+                              />
+                            </div>
+                            
+                            <p className="text-xs text-slate-600 mb-1">
+                              📌 {topic.reason}
+                            </p>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs">{getDifficultyIcon(topic.difficulty)}</span>

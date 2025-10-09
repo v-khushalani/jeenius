@@ -18,7 +18,7 @@ import {
   ChevronUp
 } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 interface Topic {
   name: string;
   duration: number;
@@ -111,13 +111,13 @@ const AIStudyPlanner: React.FC = () => {
 
       if (error) throw error;
 
-      const latestPlan = plans?.[0];
+      const latestPlan = plans?.[0] as any;
       const needsRefresh = !latestPlan || new Date(latestPlan.next_refresh_time) <= new Date();
 
       if (needsRefresh) {
         await generateNewPlan();
       } else {
-        setStudyPlan(latestPlan);
+        setStudyPlan(latestPlan as StudyPlan);
       }
     } catch (error) {
       console.error('Error fetching study plan:', error);

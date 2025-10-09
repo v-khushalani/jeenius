@@ -699,11 +699,7 @@ const EnhancedDashboard = () => {
             </Card>
           </div>
 
-          <AIStudyPlanner
-            studentProfile={studentProfile}
-            currentWeek={currentWeek}
-            adaptiveRecommendations={adaptiveRecommendations}
-          />
+          <AIStudyPlanner />
         </div>
       </div>
     </div>

@@ -338,11 +338,11 @@ const StudyNowPage = () => {
     const timeElapsed = sessionStats.startTime ? Math.floor((new Date().getTime() - new Date(sessionStats.startTime).getTime()) / 1000) : 0;
 
     return (
-      <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col overflow-hidden">
+      <div className="h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex flex-col overflow-hidden">
         <Header />
         <div className="flex-1 pt-24 pb-6">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl h-full flex flex-col">
-            <Card className="mb-3 border-0 shadow-xl text-white bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 relative overflow-hidden shrink-0">
+            <Card className="mb-3 border-0 shadow-xl text-white bg-gradient-to-br from-primary via-blue-600 to-indigo-700 relative overflow-hidden shrink-0">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20"></div>
               <CardContent className="p-4 relative z-10">
                 <div className="flex items-center justify-between">
@@ -461,8 +461,8 @@ const StudyNowPage = () => {
             </Card>
 
             <Button variant="outline" onClick={() => {
-              if (confirm('Exit practice? Progress will be saved.')) setView('topics');
-            }} className="mt-3 w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-50 h-10 shrink-0">
+                if (confirm('Exit practice? Progress will be saved.')) setView('topics');
+              }} className="mt-3 w-full border-2 border-primary text-primary hover:bg-primary/10 h-10 shrink-0">
               <ArrowLeft className="w-4 h-4 mr-2" />Exit
             </Button>
           </div>
@@ -502,7 +502,7 @@ const StudyNowPage = () => {
                   const Icon = subject.icon;
                   const accuracyColor = subject.accuracy >= 80 ? 'text-green-600' : subject.accuracy >= 60 ? 'text-yellow-600' : subject.accuracy > 0 ? 'text-red-600' : 'text-gray-400';
                   return (
-                    <Card key={subject.name} onClick={() => loadChapters(subject.name)} className={`cursor-pointer hover:scale-105 transition-all duration-300 shadow-lg border-2 overflow-hidden group h-fit ${subject.needsFocus ? 'border-orange-400 ring-2 ring-orange-200' : 'border-transparent'}`}>
+                    <Card key={subject.name} onClick={() => loadChapters(subject.name)} className={`cursor-pointer hover:scale-105 transition-all duration-300 shadow-lg border-2 overflow-hidden group h-fit ${subject.needsFocus ? 'border-orange-400 ring-2 ring-orange-200' : 'border-gray-200 hover:border-primary/50'}`}>
                       <div className={`p-5 text-white text-center relative overflow-hidden bg-gradient-to-br ${subject.color}`}>
                         {subject.needsFocus && (
                           <Badge className="absolute top-2 right-2 bg-orange-500 text-white animate-pulse text-xs">
@@ -537,7 +537,7 @@ const StudyNowPage = () => {
                             <div><p className="font-bold text-red-600">{subject.difficulties.hard}</p><p className="text-gray-600">Hard</p></div>
                           </div>
                         </div>
-                        <Button className={`w-full h-10 text-sm font-semibold text-white transition-opacity bg-gradient-to-r ${subject.color}`}>
+                        <Button className={`w-full h-10 text-sm font-semibold text-white transition-all shadow-md bg-gradient-to-r ${subject.color} hover:shadow-lg`}>
                           {subject.needsFocus ? <><Target className="w-3 h-3 mr-2" />Improve</> : <><BookOpen className="w-3 h-3 mr-2" />Start</>}
                         </Button>
                       </CardContent>
@@ -560,7 +560,7 @@ const StudyNowPage = () => {
         <div className="flex-1 pt-24 pb-4 overflow-hidden">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl h-full flex flex-col">
             <div className="flex items-center justify-between mb-3 shrink-0">
-              <Button variant="outline" onClick={() => setView('subjects')} size="sm" className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50">
+              <Button variant="outline" onClick={() => setView('subjects')} size="sm" className="border-2 border-primary text-primary hover:bg-primary/10">
                 <ArrowLeft className="w-4 h-4 mr-2" />Back
               </Button>
               <Badge className="bg-blue-600 text-white text-sm px-3 py-1">{selectedSubject}</Badge>
@@ -585,7 +585,7 @@ const StudyNowPage = () => {
                 {chapters.map((chapter) => {
                   const accuracyColor = chapter.accuracy >= 80 ? 'text-green-600' : chapter.accuracy >= 60 ? 'text-yellow-600' : chapter.accuracy > 0 ? 'text-red-600' : 'text-gray-400';
                   return (
-                    <Card key={chapter.name} onClick={() => loadTopics(chapter.name)} className={`cursor-pointer hover:scale-105 hover:shadow-xl transition-all duration-300 border-2 shadow-lg overflow-hidden group h-fit ${chapter.needsFocus ? 'border-orange-400 ring-2 ring-orange-200' : 'border-transparent'}`}>
+                    <Card key={chapter.name} onClick={() => loadTopics(chapter.name)} className={`cursor-pointer hover:scale-105 hover:shadow-xl transition-all duration-300 border-2 shadow-lg overflow-hidden group h-fit ${chapter.needsFocus ? 'border-orange-400 ring-2 ring-orange-200' : 'border-gray-200 hover:border-primary/50'}`}>
                       <div className="p-4 text-white relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700">
                         <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
                         <div className="relative z-10">
@@ -626,7 +626,7 @@ const StudyNowPage = () => {
                             <div><p className="font-bold text-red-600">{chapter.difficulties.hard}</p><p className="text-gray-600">Hard</p></div>
                           </div>
                         </div>
-                        <Button className="w-full h-10 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800">
+                        <Button className="w-full h-10 text-sm font-semibold text-white shadow-md bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90">
                           <Sparkles className="w-3 h-3 mr-2" />{chapter.needsFocus ? 'Improve' : 'Explore'}
                         </Button>
                       </CardContent>
@@ -654,7 +654,7 @@ const StudyNowPage = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <Badge className="bg-blue-600 text-white text-xs px-3 py-1">{selectedSubject} • {selectedChapter}</Badge>
-                <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="border-2 border-slate-300">
+                <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="border-2 border-primary/30 hover:border-primary/50">
                   <Filter className="w-4 h-4 mr-1" />Filter<ChevronDown className={`w-3 h-3 ml-1 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
                 </Button>
               </div>
@@ -666,7 +666,7 @@ const StudyNowPage = () => {
                   <p className="text-xs font-semibold text-slate-700 mb-2">Difficulty:</p>
                   <div className="flex gap-2 flex-wrap">
                     {['all', 'Easy', 'Medium', 'Hard'].map(diff => (
-                      <Button key={diff} onClick={() => setDifficultyFilter(diff)} size="sm" variant={difficultyFilter === diff ? 'default' : 'outline'} className={`text-xs ${difficultyFilter === diff ? 'bg-blue-600 text-white' : 'border-2 border-blue-300 text-blue-700 hover:bg-blue-50'}`}>
+                      <Button key={diff} onClick={() => setDifficultyFilter(diff)} size="sm" variant={difficultyFilter === diff ? 'default' : 'outline'} className={`text-xs ${difficultyFilter === diff ? 'bg-primary text-white' : 'border-2 border-primary/30 text-primary hover:bg-primary/10'}`}
                         {diff === 'all' ? 'All' : diff}
                       </Button>
                     ))}
@@ -700,9 +700,9 @@ const StudyNowPage = () => {
                   const accuracyColor = topic.accuracy >= 80 ? 'text-green-600' : topic.accuracy >= 60 ? 'text-yellow-600' : topic.accuracy > 0 ? 'text-red-600' : 'text-gray-400';
                   return (
                     <Card key={topic.name} className={`border-2 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105 overflow-hidden group h-fit ${
-                      topic.needsFocus ? 'border-orange-400 ring-2 ring-orange-200' : topic.recommended ? 'border-green-400 ring-2 ring-green-200' : 'border-transparent'
+                      topic.needsFocus ? 'border-orange-400 ring-2 ring-orange-200' : topic.recommended ? 'border-green-400 ring-2 ring-green-200' : 'border-gray-200 hover:border-primary/50'
                     }`} onClick={() => startPractice(topic)}>
-                      <div className="p-4 text-white relative overflow-hidden bg-gradient-to-br from-indigo-600 to-purple-700">
+                      <div className="p-4 text-white relative overflow-hidden bg-gradient-to-br from-purple-600 to-indigo-600">
                         <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
                         <div className="relative z-10">
                           <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
@@ -743,8 +743,8 @@ const StudyNowPage = () => {
                             <div><p className="font-bold text-red-600">{topic.difficulties.hard}</p><p className="text-gray-600">Hard</p></div>
                           </div>
                         </div>
-                        <Button className={`w-full h-10 text-sm font-semibold text-white ${
-                          topic.needsFocus ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700' : 'bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800'
+                        <Button className={`w-full h-10 text-sm font-semibold text-white shadow-md ${
+                          topic.needsFocus ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-600/90 hover:to-indigo-600/90'
                         }`}>
                           <Zap className="w-3 h-3 mr-2" />{topic.needsFocus ? 'Improve' : topic.recommended ? 'Continue' : 'Start'}
                         </Button>

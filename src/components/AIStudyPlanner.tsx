@@ -17,7 +17,8 @@ import {
   ChevronDown,
   ChevronUp,
   Activity,
-  BarChart3
+  BarChart3,
+  Zap
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -71,7 +72,17 @@ interface StudyPlan {
   next_refresh_time: string;
   last_updated: string;
 }
-
+interface BurnoutStatus {
+  energyScore: number;
+  shouldRest: boolean;
+  message: string;
+  signals: Array<{
+    type: string;
+    severity: string;
+    message: string;
+  }>;
+}
+const [burnoutStatus, setBurnoutStatus] = useState<BurnoutStatus | null>(null);
 const AIStudyPlanner: React.FC = () => {
   const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,7 +141,22 @@ const AIStudyPlanner: React.FC = () => {
           };
         })
       }));
-  
+      // Check burnout status
+      const checkBurnout = useCallback(async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+      
+          const { data, error } = await supabase.functions.invoke('check-burnout');
+          
+          if (error) throw error;
+          
+          setBurnoutStatus(data);
+          
+        } catch (error) {
+          console.error('Error checking burnout:', error);
+        }
+      }, []);
       // Calculate overall completion status
       const totalTopics = updatedSubjects.reduce((sum, s) => sum + s.topics.length, 0);
       const completedTopics = updatedSubjects.reduce(
@@ -215,6 +241,7 @@ const AIStudyPlanner: React.FC = () => {
   useEffect(() => {
     updateLiveStats();
     updateTopicProgress();
+    checkBurnout(); // ADD THIS
     
     const interval = setInterval(() => {
       updateLiveStats();
@@ -222,7 +249,7 @@ const AIStudyPlanner: React.FC = () => {
     }, 10000);
     
     return () => clearInterval(interval);
-  }, [updateLiveStats, updateTopicProgress]);
+  }, [updateLiveStats, updateTopicProgress,checkBurnout]);
 
   useEffect(() => {
     fetchStudyPlan();
@@ -385,7 +412,62 @@ const AIStudyPlanner: React.FC = () => {
             </Badge>
           </div>
         </div>
-
+        {/* Burnout Warning */}
+        {burnoutStatus && burnoutStatus.shouldRest && (
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-lg p-4 shadow-lg">
+            <div className="flex items-start gap-3">
+              <div className="bg-red-500 p-2 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-red-900 text-sm mb-1">
+                  ⚠️ Burnout Alert
+                </h4>
+                <p className="text-sm text-red-800 mb-2">
+                  {burnoutStatus.message}
+                </p>
+                {burnoutStatus.signals.length > 0 && (
+                  <div className="space-y-1">
+                    {burnoutStatus.signals.map((signal, idx) => (
+                      <div key={idx} className="text-xs text-red-700 flex items-center gap-1">
+                        <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+                        {signal.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => setBurnoutStatus(null)}
+                >
+                  I'll take a break
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Energy Score Indicator */}
+        {burnoutStatus && !burnoutStatus.shouldRest && (
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-3 border border-green-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-semibold text-green-900">Energy Score</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Progress value={burnoutStatus.energyScore} className="h-2 w-24" />
+                <Badge className={`text-xs ${
+                  burnoutStatus.energyScore > 70 ? 'bg-green-500' :
+                  burnoutStatus.energyScore > 40 ? 'bg-yellow-500' : 'bg-red-500'
+                } text-white`}>
+                  {burnoutStatus.energyScore}%
+                </Badge>
+              </div>
+            </div>
+          </div>
+        )}
         {/* AI Metrics - Enhanced */}
         {studyPlan.ai_metrics && (
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">

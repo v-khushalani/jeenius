@@ -16,7 +16,8 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  Activity
+  Activity,
+  BarChart3
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -357,16 +358,27 @@ const AIStudyPlanner: React.FC = () => {
               <p className="text-xs text-slate-500">Updates every 10 seconds</p>
             </div>
           </div>
-          <Button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            size="sm"
-            variant="outline"
-            className="gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Updating...' : 'Refresh'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => window.location.href = '/analytics'}
+              size="sm"
+              variant="outline"
+              className="gap-2"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Detailed Analysis
+            </Button>
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              size="sm"
+              variant="outline"
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Updating...' : 'Refresh'}
+            </Button>
+          </div>
         </div>
       </CardHeader>
 

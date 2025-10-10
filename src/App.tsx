@@ -35,6 +35,7 @@ import PeerBattleSystem from './pages/PeerBattleSystem';
 
 // Enhanced Dashboard
 import EnhancedDashboard from "./pages/EnhancedDashboard";
+import AnalyticsPage from "@/pages/AnalyticsPage";
 
 // Components
 import ProtectedRoute from "@/components/ProtectedRoute";

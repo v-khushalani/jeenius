@@ -58,10 +58,12 @@ const AnalyticsPage = () => {
     const subjectStats: any = {};
     const topicStats: any = {};
 
+    // STEP 1: First pass - collect basic stats
     attempts.forEach(attempt => {
       const { subject, chapter, topic, difficulty } = attempt.questions || {};
       if (!subject) return;
 
+      // Initialize subject if not exists
       if (!subjectStats[subject]) {
         subjectStats[subject] = { 
           total: 0, 
@@ -69,85 +71,25 @@ const AnalyticsPage = () => {
           easy: { total: 0, correct: 0 },
           medium: { total: 0, correct: 0 },
           hard: { total: 0, correct: 0 },
-          chapters: new Set(),
-          topics: new Set()
+          chaptersSet: new Set(),
+          topicsSet: new Set(),
+          chapters: {}
         };
       }
+      
       subjectStats[subject].total++;
       if (attempt.is_correct) subjectStats[subject].correct++;
-      subjectStats[subject].chapters.add(chapter);
-      subjectStats[subject].topics.add(topic);
+      subjectStats[subject].chaptersSet.add(chapter);
+      subjectStats[subject].topicsSet.add(topic);
 
-      // Calculate chapter-wise stats within subjects
-      Object.keys(subjectStats).forEach(subject => {
-        const chapterStats: any = {};
-        
-        attempts.forEach(attempt => {
-          if (attempt.questions?.subject === subject) {
-            const chapter = attempt.questions?.chapter;
-            const topic = attempt.questions?.topic;
-            
-            if (chapter) {
-              if (!chapterStats[chapter]) {
-                chapterStats[chapter] = {
-                  total: 0,
-                  correct: 0,
-                  topics: {}
-                };
-              }
-              
-              chapterStats[chapter].total++;
-              if (attempt.is_correct) chapterStats[chapter].correct++;
-              
-              // Topic stats within chapter
-              if (topic) {
-                if (!chapterStats[chapter].topics[topic]) {
-                  chapterStats[chapter].topics[topic] = {
-                    total: 0,
-                    correct: 0,
-                    lastPracticed: attempt.created_at
-                  };
-                }
-                chapterStats[chapter].topics[topic].total++;
-                if (attempt.is_correct) chapterStats[chapter].topics[topic].correct++;
-                
-                if (new Date(attempt.created_at) > new Date(chapterStats[chapter].topics[topic].lastPracticed)) {
-                  chapterStats[chapter].topics[topic].lastPracticed = attempt.created_at;
-                }
-              }
-            }
-          }
-        });
-        
-        // Calculate accuracy for each chapter and topic
-        Object.keys(chapterStats).forEach(chapter => {
-          chapterStats[chapter].accuracy = 
-            (chapterStats[chapter].correct / chapterStats[chapter].total) * 100;
-          
-          Object.keys(chapterStats[chapter].topics).forEach(topic => {
-            const topicData = chapterStats[chapter].topics[topic];
-            topicData.accuracy = (topicData.correct / topicData.total) * 100;
-            topicData.daysSince = Math.floor(
-              (Date.now() - new Date(topicData.lastPracticed).getTime()) / (1000 * 60 * 60 * 24)
-            );
-            
-            // Determine status
-            if (topicData.total === 0) topicData.status = 'not_started';
-            else if (topicData.accuracy >= 85 && topicData.total >= 20) topicData.status = 'mastered';
-            else if (topicData.accuracy < 60 && topicData.total >= 10) topicData.status = 'weak';
-            else topicData.status = 'in_progress';
-          });
-        });
-        
-        subjectStats[subject].chapters = chapterStats;
-      });
-
+      // Difficulty stats
       const diff = difficulty?.toLowerCase() || 'medium';
       if (subjectStats[subject][diff]) {
         subjectStats[subject][diff].total++;
         if (attempt.is_correct) subjectStats[subject][diff].correct++;
       }
 
+      // Old topic stats (for backward compatibility)
       const topicKey = `${subject}-${topic}`;
       if (!topicStats[topicKey]) {
         topicStats[topicKey] = { 
@@ -166,6 +108,79 @@ const AnalyticsPage = () => {
       }
     });
 
+    // STEP 2: Calculate hierarchical structure (Subject -> Chapter -> Topic)
+    Object.keys(subjectStats).forEach(subject => {
+      const subjectAttempts = attempts.filter(a => a.questions?.subject === subject);
+      
+      subjectAttempts.forEach(attempt => {
+        const chapter = attempt.questions?.chapter;
+        const topic = attempt.questions?.topic;
+        
+        if (chapter) {
+          // Initialize chapter if not exists
+          if (!subjectStats[subject].chapters[chapter]) {
+            subjectStats[subject].chapters[chapter] = {
+              total: 0,
+              correct: 0,
+              topics: {}
+            };
+          }
+          
+          subjectStats[subject].chapters[chapter].total++;
+          if (attempt.is_correct) subjectStats[subject].chapters[chapter].correct++;
+          
+          // Topic stats within chapter
+          if (topic) {
+            if (!subjectStats[subject].chapters[chapter].topics[topic]) {
+              subjectStats[subject].chapters[chapter].topics[topic] = {
+                total: 0,
+                correct: 0,
+                lastPracticed: attempt.created_at
+              };
+            }
+            
+            subjectStats[subject].chapters[chapter].topics[topic].total++;
+            if (attempt.is_correct) {
+              subjectStats[subject].chapters[chapter].topics[topic].correct++;
+            }
+            
+            // Update last practiced date
+            const currentDate = new Date(attempt.created_at);
+            const lastDate = new Date(subjectStats[subject].chapters[chapter].topics[topic].lastPracticed);
+            if (currentDate > lastDate) {
+              subjectStats[subject].chapters[chapter].topics[topic].lastPracticed = attempt.created_at;
+            }
+          }
+        }
+      });
+      
+      // STEP 3: Calculate accuracy for chapters and topics
+      Object.keys(subjectStats[subject].chapters).forEach(chapter => {
+        const chapterData = subjectStats[subject].chapters[chapter];
+        chapterData.accuracy = (chapterData.correct / chapterData.total) * 100;
+        
+        Object.keys(chapterData.topics).forEach(topic => {
+          const topicData = chapterData.topics[topic];
+          topicData.accuracy = (topicData.correct / topicData.total) * 100;
+          topicData.daysSince = Math.floor(
+            (Date.now() - new Date(topicData.lastPracticed).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          
+          // Determine topic status
+          if (topicData.total === 0) {
+            topicData.status = 'not_started';
+          } else if (topicData.accuracy >= 85 && topicData.total >= 20) {
+            topicData.status = 'mastered';
+          } else if (topicData.accuracy < 60 && topicData.total >= 10) {
+            topicData.status = 'weak';
+          } else {
+            topicData.status = 'in_progress';
+          }
+        });
+      });
+    });
+
+    // STEP 4: Calculate overall stats
     const totalQuestions = attempts.length;
     const correctAnswers = attempts.filter(a => a.is_correct).length;
     const overallAccuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
@@ -173,10 +188,11 @@ const AnalyticsPage = () => {
     Object.keys(subjectStats).forEach(subject => {
       subjectStats[subject].accuracy = 
         (subjectStats[subject].correct / subjectStats[subject].total) * 100;
-      subjectStats[subject].chaptersCount = subjectStats[subject].chapters.size;
-      subjectStats[subject].topicsCount = subjectStats[subject].topics.size;
+      subjectStats[subject].chaptersCount = subjectStats[subject].chaptersSet.size;
+      subjectStats[subject].topicsCount = subjectStats[subject].topicsSet.size;
     });
 
+    // Old topic list (for backward compatibility)
     const topicList = Object.values(topicStats).map((topic: any) => {
       const accuracy = (topic.correct / topic.total) * 100;
       const daysSince = Math.floor(
@@ -224,7 +240,7 @@ const AnalyticsPage = () => {
 
   if (loading || !analytics) {
     return (
-      <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <Brain className="h-12 w-12 text-blue-500 animate-pulse mx-auto mb-3" />
           <p className="text-slate-600">Loading analytics...</p>
@@ -234,8 +250,8 @@ const AnalyticsPage = () => {
   }
 
   return (
-  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex flex-col overflow-hidden">
-    <Header />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex flex-col overflow-hidden">
+      <Header />
       
       <div className="flex-1 pt-24 pb-12 overflow-hidden">
         <div className="container mx-auto px-4 h-full flex flex-col">
@@ -274,7 +290,7 @@ const AnalyticsPage = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -288,7 +304,7 @@ const AnalyticsPage = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+                <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -300,7 +316,7 @@ const AnalyticsPage = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+                <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -387,7 +403,6 @@ const AnalyticsPage = () => {
               </div>
             </TabsContent>
 
-            {/* Subjects Tab */}
             {/* Detailed Analysis Tab */}
             <TabsContent value="detailed" className="flex-1 overflow-auto mt-4">
               <div className="space-y-6">

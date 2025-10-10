@@ -368,16 +368,6 @@ const AIStudyPlanner: React.FC = () => {
               <BarChart3 className="h-4 w-4" />
               Detailed Analysis
             </Button>
-            <Button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              size="sm"
-              variant="outline"
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Updating...' : 'Refresh'}
-            </Button>
           </div>
         </div>
       </CardHeader>

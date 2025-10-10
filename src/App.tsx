@@ -95,6 +95,8 @@ const App = () => (
             <Route path="/test-attempt/:testId" element={<TestAttemptPage />} />
             <Route path="/test-attempt" element={<TestAttemptPage />} />
             <Route path="/test-results" element={<TestResultsPage />} />
+
+            <Route path="/analytics" element={<AnalyticsPage />} />
             
             {/* Protected Routes - Main Dashboard */}
             <Route

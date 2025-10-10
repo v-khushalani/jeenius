@@ -78,6 +78,70 @@ const AnalyticsPage = () => {
       subjectStats[subject].chapters.add(chapter);
       subjectStats[subject].topics.add(topic);
 
+      // Calculate chapter-wise stats within subjects
+      Object.keys(subjectStats).forEach(subject => {
+        const chapterStats: any = {};
+        
+        attempts.forEach(attempt => {
+          if (attempt.questions?.subject === subject) {
+            const chapter = attempt.questions?.chapter;
+            const topic = attempt.questions?.topic;
+            
+            if (chapter) {
+              if (!chapterStats[chapter]) {
+                chapterStats[chapter] = {
+                  total: 0,
+                  correct: 0,
+                  topics: {}
+                };
+              }
+              
+              chapterStats[chapter].total++;
+              if (attempt.is_correct) chapterStats[chapter].correct++;
+              
+              // Topic stats within chapter
+              if (topic) {
+                if (!chapterStats[chapter].topics[topic]) {
+                  chapterStats[chapter].topics[topic] = {
+                    total: 0,
+                    correct: 0,
+                    lastPracticed: attempt.created_at
+                  };
+                }
+                chapterStats[chapter].topics[topic].total++;
+                if (attempt.is_correct) chapterStats[chapter].topics[topic].correct++;
+                
+                if (new Date(attempt.created_at) > new Date(chapterStats[chapter].topics[topic].lastPracticed)) {
+                  chapterStats[chapter].topics[topic].lastPracticed = attempt.created_at;
+                }
+              }
+            }
+          }
+        });
+        
+        // Calculate accuracy for each chapter and topic
+        Object.keys(chapterStats).forEach(chapter => {
+          chapterStats[chapter].accuracy = 
+            (chapterStats[chapter].correct / chapterStats[chapter].total) * 100;
+          
+          Object.keys(chapterStats[chapter].topics).forEach(topic => {
+            const topicData = chapterStats[chapter].topics[topic];
+            topicData.accuracy = (topicData.correct / topicData.total) * 100;
+            topicData.daysSince = Math.floor(
+              (Date.now() - new Date(topicData.lastPracticed).getTime()) / (1000 * 60 * 60 * 24)
+            );
+            
+            // Determine status
+            if (topicData.total === 0) topicData.status = 'not_started';
+            else if (topicData.accuracy >= 85 && topicData.total >= 20) topicData.status = 'mastered';
+            else if (topicData.accuracy < 60 && topicData.total >= 10) topicData.status = 'weak';
+            else topicData.status = 'in_progress';
+          });
+        });
+        
+        subjectStats[subject].chapters = chapterStats;
+      });
+
       const diff = difficulty?.toLowerCase() || 'medium';
       if (subjectStats[subject][diff]) {
         subjectStats[subject][diff].total++;
@@ -170,32 +234,35 @@ const AnalyticsPage = () => {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col overflow-hidden">
-      <Header />
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex flex-col overflow-hidden">
+    <Header />
       
-      <div className="flex-1 pt-20 pb-4 overflow-hidden">
+      <div className="flex-1 pt-24 pb-12 overflow-hidden">
         <div className="container mx-auto px-4 h-full flex flex-col">
           {/* Page Header */}
-          <div className="mb-4 shrink-0">
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
-              Performance Analytics
-            </h1>
-            <p className="text-sm text-slate-600">Track your progress and identify areas for improvement</p>
+          <div className="mb-6 shrink-0">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                <BarChart3 className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Performance Analytics</h1>
+                <p className="text-sm text-gray-600">Track your progress and identify areas for improvement</p>
+              </div>
+            </div>
           </div>
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid grid-cols-3 w-full max-w-md shrink-0">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="subjects">Subjects</TabsTrigger>
-              <TabsTrigger value="topics">Topics</TabsTrigger>
+            <TabsList className="grid grid-cols-2 w-full max-w-md shrink-0 mb-6">
+              <TabsTrigger value="overview">📊 Overview</TabsTrigger>
+              <TabsTrigger value="detailed">📚 Detailed Analysis</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="flex-1 overflow-auto mt-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -321,20 +388,21 @@ const AnalyticsPage = () => {
             </TabsContent>
 
             {/* Subjects Tab */}
-            <TabsContent value="subjects" className="flex-1 overflow-auto mt-4">
-              <div className="space-y-4">
+            {/* Detailed Analysis Tab */}
+            <TabsContent value="detailed" className="flex-1 overflow-auto mt-4">
+              <div className="space-y-6">
                 {Object.entries(analytics.subjects).map(([subject, data]: [string, any]) => (
-                  <Card key={subject} className="border-2">
-                    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+                  <Card key={subject} className="border-2 border-primary/20 shadow-lg bg-white overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b border-primary/20 p-6">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-bold text-xl">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
                             {subject[0]}
                           </div>
                           <div>
-                            <CardTitle className="text-xl">{subject}</CardTitle>
-                            <p className="text-sm text-slate-600">
-                              {data.topicsCount} topics • {data.chaptersCount} chapters
+                            <CardTitle className="text-2xl font-bold text-gray-900">{subject}</CardTitle>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {Object.keys(data.chapters || {}).length} chapters • {data.topicsCount} topics
                             </p>
                           </div>
                         </div>
@@ -345,114 +413,89 @@ const AnalyticsPage = () => {
                           }`}>
                             {data.accuracy.toFixed(0)}%
                           </div>
-                          <p className="text-sm text-slate-600">Overall Accuracy</p>
+                          <p className="text-sm text-gray-600">Overall Accuracy</p>
                         </div>
                       </div>
                     </CardHeader>
+                    
                     <CardContent className="p-6">
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div className="text-center p-3 bg-slate-50 rounded-lg">
-                          <p className="text-2xl font-bold text-slate-900">{data.total}</p>
-                          <p className="text-xs text-slate-600">Questions Solved</p>
-                        </div>
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <p className="text-2xl font-bold text-green-700">{data.correct}</p>
-                          <p className="text-xs text-slate-600">Correct Answers</p>
-                        </div>
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <p className="text-2xl font-bold text-blue-700">{data.topicsCount}</p>
-                          <p className="text-xs text-slate-600">Topics Covered</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-green-700">Easy</span>
-                            <span className="text-lg font-bold text-green-800">
-                              {data.easy.total > 0 ? ((data.easy.correct / data.easy.total) * 100).toFixed(0) : 0}%
-                            </span>
+                      {/* Chapters */}
+                      <div className="space-y-4">
+                        {Object.entries(data.chapters || {}).map(([chapter, chapterData]: [string, any]) => (
+                          <div key={chapter} className="border-2 border-gray-200 rounded-xl p-4 bg-gray-50">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold shadow-md">
+                                  📖
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-lg text-gray-900">{chapter}</h4>
+                                  <p className="text-xs text-gray-600">
+                                    {chapterData.total} questions • {Object.keys(chapterData.topics).length} topics
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className={`text-2xl font-bold ${
+                                  chapterData.accuracy >= 80 ? 'text-green-600' : 
+                                  chapterData.accuracy >= 60 ? 'text-yellow-600' : 'text-red-600'
+                                }`}>
+                                  {chapterData.accuracy.toFixed(0)}%
+                                </div>
+                                <p className="text-xs text-gray-600">Accuracy</p>
+                              </div>
+                            </div>
+                            
+                            {/* Topics within Chapter */}
+                            <div className="mt-4 space-y-2 pl-4 border-l-2 border-purple-300">
+                              {Object.entries(chapterData.topics).map(([topic, topicData]: [string, any]) => (
+                                <div key={topic} className={`p-3 rounded-lg border-2 ${
+                                  topicData.status === 'mastered' ? 'border-green-300 bg-green-50' :
+                                  topicData.status === 'weak' ? 'border-red-300 bg-red-50' :
+                                  topicData.status === 'in_progress' ? 'border-yellow-300 bg-yellow-50' :
+                                  'border-gray-300 bg-white'
+                                }`}>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <h5 className="font-semibold text-sm text-gray-900">{topic}</h5>
+                                        {getStatusBadge(topicData.status)}
+                                      </div>
+                                      <div className="flex items-center gap-4 text-xs text-gray-600">
+                                        <span>{topicData.total} questions</span>
+                                        <span>Last: {topicData.daysSince}d ago</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <div className="text-right">
+                                        <div className={`text-xl font-bold ${
+                                          topicData.accuracy >= 80 ? 'text-green-600' : 
+                                          topicData.accuracy >= 60 ? 'text-yellow-600' : 'text-red-600'
+                                        }`}>
+                                          {topicData.accuracy.toFixed(0)}%
+                                        </div>
+                                      </div>
+                                      <Button 
+                                        size="sm" 
+                                        className={`${
+                                          topicData.status === 'weak' ? 'bg-red-600 hover:bg-red-700' : 
+                                          'bg-blue-600 hover:bg-blue-700'
+                                        } text-white`}
+                                      >
+                                        {topicData.status === 'weak' ? '🎯 Focus' : '📚 Practice'}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <Progress value={topicData.accuracy} className="h-1.5 mt-2" />
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <p className="text-xs text-slate-600">{data.easy.total} questions</p>
-                        </div>
-                        <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-yellow-700">Medium</span>
-                            <span className="text-lg font-bold text-yellow-800">
-                              {data.medium.total > 0 ? ((data.medium.correct / data.medium.total) * 100).toFixed(0) : 0}%
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-600">{data.medium.total} questions</p>
-                        </div>
-                        <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-red-700">Hard</span>
-                            <span className="text-lg font-bold text-red-800">
-                              {data.hard.total > 0 ? ((data.hard.correct / data.hard.total) * 100).toFixed(0) : 0}%
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-600">{data.hard.total} questions</p>
-                        </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
                 ))}
-              </div>
-            </TabsContent>
-
-            {/* Topics Tab */}
-            <TabsContent value="topics" className="flex-1 overflow-auto mt-4">
-              <div className="space-y-2">
-                {analytics.topics
-                  .sort((a: any, b: any) => a.accuracy - b.accuracy)
-                  .map((topic: any, idx: number) => (
-                    <Card key={idx} className={`border-l-4 ${
-                      topic.status === 'mastered' ? 'border-l-green-500 bg-green-50/50' :
-                      topic.status === 'weak' ? 'border-l-red-500 bg-red-50/50' :
-                      topic.status === 'in_progress' ? 'border-l-yellow-500 bg-yellow-50/50' :
-                      'border-l-gray-500 bg-gray-50/50'
-                    }`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-sm">{topic.topic}</h4>
-                              {getStatusBadge(topic.status)}
-                            </div>
-                            <div className="flex items-center gap-4 text-xs text-slate-600">
-                              <span className="flex items-center gap-1">
-                                <BookOpen className="h-3 w-3" />
-                                {topic.subject} • {topic.chapter}
-                              </span>
-                              <span>{topic.total} questions</span>
-                              <span>Last: {topic.daysSince}d ago</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <div className={`text-2xl font-bold ${
-                                topic.accuracy >= 80 ? 'text-green-600' : 
-                                topic.accuracy >= 60 ? 'text-yellow-600' : 'text-red-600'
-                              }`}>
-                                {topic.accuracy.toFixed(0)}%
-                              </div>
-                              <p className="text-xs text-slate-600">Accuracy</p>
-                            </div>
-                            <Button 
-                              size="sm" 
-                              className={`${
-                                topic.status === 'weak' ? 'bg-red-600 hover:bg-red-700' : 
-                                'bg-blue-600 hover:bg-blue-700'
-                              }`}
-                            >
-                              {topic.status === 'weak' ? 'Focus' : 'Practice'}
-                            </Button>
-                          </div>
-                        </div>
-                        <Progress value={topic.accuracy} className="h-1.5 mt-2" />
-                      </CardContent>
-                    </Card>
-                  ))}
               </div>
             </TabsContent>
           </Tabs>

@@ -82,7 +82,6 @@ interface BurnoutStatus {
     message: string;
   }>;
 }
-const [burnoutStatus, setBurnoutStatus] = useState<BurnoutStatus | null>(null);
 const AIStudyPlanner: React.FC = () => {
   const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,7 +92,8 @@ const AIStudyPlanner: React.FC = () => {
     accuracyToday: 0,
     streak: 0
   });
-
+  const [burnoutStatus, setBurnoutStatus] = useState<BurnoutStatus | null>(null);
+  
   // Helper function - Calculate days remaining
   const calculateDaysRemaining = () => {
     const targetDate = new Date('2026-05-24'); // JEE 2026 date
@@ -103,6 +103,22 @@ const AIStudyPlanner: React.FC = () => {
     return diffDays;
   };
 
+  // Check burnout status
+  const checkBurnout = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+  
+      const { data, error } = await supabase.functions.invoke('check-burnout');
+      
+      if (error) throw error;
+      
+      setBurnoutStatus(data);
+      
+    } catch (error) {
+      console.error('Error checking burnout:', error);
+    }
+  }, []);
   // Update topic progress
   const updateTopicProgress = useCallback(async () => {
     try {
@@ -141,22 +157,7 @@ const AIStudyPlanner: React.FC = () => {
           };
         })
       }));
-      // Check burnout status
-      const checkBurnout = useCallback(async () => {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
       
-          const { data, error } = await supabase.functions.invoke('check-burnout');
-          
-          if (error) throw error;
-          
-          setBurnoutStatus(data);
-          
-        } catch (error) {
-          console.error('Error checking burnout:', error);
-        }
-      }, []);
       // Calculate overall completion status
       const totalTopics = updatedSubjects.reduce((sum, s) => sum + s.topics.length, 0);
       const completedTopics = updatedSubjects.reduce(
@@ -251,10 +252,6 @@ const AIStudyPlanner: React.FC = () => {
     return () => clearInterval(interval);
   }, [updateLiveStats, updateTopicProgress,checkBurnout]);
 
-  useEffect(() => {
-    fetchStudyPlan();
-  }, []);
-
   const fetchStudyPlan = async () => {
     try {
       setLoading(true);
@@ -286,6 +283,10 @@ const AIStudyPlanner: React.FC = () => {
     }
   };
 
+    useEffect(() => {
+      fetchStudyPlan();
+    }, []);
+  
   const generateNewPlan = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('generate-study-plan');
@@ -507,7 +508,7 @@ const AIStudyPlanner: React.FC = () => {
         )}
 
         {/* Priority Recommendations */}
-        {studyPlan.recommendations.length > 0 && (
+        {studyPlan.recommendations?.length > 0 && (
           <div className="space-y-2">
             <h4 className="font-semibold text-sm flex items-center gap-2">
               <Lightbulb className="h-4 w-4 text-yellow-600" />

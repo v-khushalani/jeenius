@@ -25,6 +25,7 @@ const Header = () => {
 
   const protectedNavItems = [
     { name: 'Dashboard', href: '/dashboard', path: '/dashboard', icon: BarChart3 },
+    { name: 'Analysis', href: '/analytics', path: '/analytics', icon: BarChart3 },
     { name: 'Study Now', href: '/study-now', path: '/study-now', icon: BookOpen, highlight: true },
     { name: 'Tests', href: '/tests', path: '/tests', icon: Target },
   ];
@@ -150,14 +151,7 @@ const Header = () => {
 
           {/* Language Toggle & Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <button
-              onClick={toggleLanguage}
-              className="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors"
-            >
-              <Globe className="w-4 h-4" />
-              <span className="text-sm font-medium">{language}</span>
-            </button>
-            
+                        
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

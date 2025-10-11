@@ -348,7 +348,7 @@ const handleAnswer = async (answer) => {
 
   setTimeout(() => {
     nextQuestion();
-  }, 2000);
+  }, 1200);
 };
 
   const nextQuestion = () => {

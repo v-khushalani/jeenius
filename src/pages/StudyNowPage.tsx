@@ -196,60 +196,81 @@ const StudyNowPage = () => {
   };
 
   const loadTopics = async (chapter) => {
-    setLoading(true);
-    setSelectedChapter(chapter);
+  setLoading(true);
+  setSelectedChapter(chapter);
+  
+  try {
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
     
-    try {
-      const { data, error } = await supabase
-        .from('questions')
-        .select('topic')
-        .eq('subject', selectedSubject)
-        .eq('chapter', chapter);
-      
-      if (error) throw error;
+    // Fetch all topics for this chapter
+    const { data, error } = await supabase
+      .from('questions')
+      .select('topic, difficulty')
+      .eq('subject', selectedSubject)
+      .eq('chapter', chapter);
+    
+    if (error) throw error;
 
-      const uniqueTopics = [...new Set(data.map(q => q.topic).filter(Boolean))];
-      
-      if (uniqueTopics.length === 0) {
-        // If no topics, start practice directly with chapter questions
-        startPractice(null);
-        return;
-      }
-
-      const topicStats = await Promise.all(
-        uniqueTopics.map(async (topic) => {
-          const { data: topicQuestions } = await supabase
-            .from('questions')
-            .select('*')
-            .eq('subject', selectedSubject)
-            .eq('chapter', chapter)
-            .eq('topic', topic);
-
-          const totalQuestions = topicQuestions?.length || 0;
-          const difficulties = {
-            easy: topicQuestions?.filter(q => q.difficulty === 'easy').length || 0,
-            medium: topicQuestions?.filter(q => q.difficulty === 'medium').length || 0,
-            hard: topicQuestions?.filter(q => q.difficulty === 'hard').length || 0
-          };
-
-          return {
-            name: topic,
-            totalQuestions,
-            difficulties
-          };
-        })
-      );
-
-      setTopics(topicStats);
-      setView('topics');
-    } catch (error) {
-      console.error('Error fetching topics:', error);
-      toast.error('Failed to load topics');
-    } finally {
-      setLoading(false);
+    // Get unique topics (remove null/empty)
+    const uniqueTopics = [...new Set(data.map(q => q.topic).filter(Boolean))];
+    
+    if (uniqueTopics.length === 0) {
+      // If no topics, start practice directly
+      startPractice(null);
+      return;
     }
-  };
 
+    // Fetch user's attempts for these topics
+    const { data: userAttempts } = await supabase
+      .from('question_attempts')
+      .select('*, questions!inner(subject, chapter, topic)')
+      .eq('user_id', user?.id)
+      .eq('questions.subject', selectedSubject)
+      .eq('questions.chapter', chapter);
+
+    const topicStats = await Promise.all(
+      uniqueTopics.map(async (topic) => {
+        // Get all questions for this topic
+        const topicQuestions = data.filter(q => q.topic === topic);
+        const totalQuestions = topicQuestions.length;
+        
+        // Count difficulties
+        const difficulties = {
+          easy: topicQuestions.filter(q => q.difficulty === 'Easy').length,
+          medium: topicQuestions.filter(q => q.difficulty === 'Medium').length,
+          hard: topicQuestions.filter(q => q.difficulty === 'Hard').length
+        };
+
+        // Get user's attempts for this topic
+        const topicAttempts = userAttempts?.filter(
+          a => a.questions?.topic === topic
+        ) || [];
+        
+        const attempted = topicAttempts.length;
+        const correct = topicAttempts.filter(a => a.is_correct).length;
+        const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+
+        return {
+          name: topic,
+          totalQuestions,
+          difficulties,
+          attempted,
+          accuracy
+        };
+      })
+    );
+
+    setTopics(topicStats);
+    setView('topics');
+  } catch (error) {
+    console.error('Error fetching topics:', error);
+    toast.error('Failed to load topics');
+  } finally {
+    setLoading(false);
+  }
+};
+  
   const startPractice = async (topic = null) => {
     setLoading(true);
     setSelectedTopic(topic);
@@ -660,11 +681,22 @@ const handleAnswer = async (answer) => {
                     <h3 className="font-bold text-lg text-gray-900 mb-2">{topic.name}</h3>
                   </div>
                   <CardContent className="p-4">
-                    <div className="grid grid-cols-1 gap-3 mb-4">
+                    <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="text-center">
                         <div className="text-xl font-bold text-gray-900">{topic.totalQuestions}</div>
-                        <div className="text-xs text-gray-500">Available</div>
+                        <div className="text-xs text-gray-500">Questions</div>
                       </div>
+                      {topic.attempted > 0 && (
+                        <div className="text-center">
+                          <div className={`text-xl font-bold ${
+                            topic.accuracy >= 80 ? 'text-green-600' : 
+                            topic.accuracy >= 60 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {topic.accuracy}%
+                          </div>
+                          <div className="text-xs text-gray-500">Accuracy</div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mb-4 p-2 bg-gray-50 rounded-lg">

@@ -380,7 +380,7 @@ const handleAnswer = async (answer) => {
             
             <Button 
               variant="outline"
-              className="mb-6 border-2 border-blue-600"
+              className="mb-6 border-2 border-blue-600 hover:border-blue-800"
               onClick={() => setView('topics')}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />

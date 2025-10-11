@@ -28,6 +28,11 @@ const PracticeSession = () => {
 
   const loadQuestions = async () => {
     const questionsData = await getRandomQuestions(null, null, null, 10);
+
+      if (questionsData.length === 0) {
+        toast.info('No new questions available. All questions attempted!');
+      }
+    
     setQuestions(questionsData);
   };
 

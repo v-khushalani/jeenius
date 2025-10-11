@@ -604,7 +604,7 @@ const handleAnswer = async (answer) => {
                 <Card 
                   key={chapter.name}
                   onClick={() => loadTopics(chapter.name)}
-                  className="group cursor-pointer hover:scale-105 transition-all border-2 border-blue-200 shadow-lg hover:shadow-xl"
+                  className="group cursor-pointer hover:border-gray-800 hover:scale-105 transition-all border-2 border-blue-200 shadow-lg hover:shadow-xl"
                 >
                   <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
                     <Badge className="mb-2">Chapter {chapter.sequence}</Badge>

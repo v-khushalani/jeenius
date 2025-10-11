@@ -16,22 +16,19 @@ export const useAdminAuth = () => {
       }
 
       try {
-        // Check if user has admin role in profiles table
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', user.id)
-          .single();
+        // Check if user has admin role in user_roles table
+        const { data: roles, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
 
         if (error) {
           console.error('Error checking admin status:', error);
           setIsAdmin(false);
         } else {
-          // For demo, make admin based on email domain or specific emails
-          const adminEmails = ['admin@jeenius.com', 'developer@jeenius.com'];
-          const isAdminUser = adminEmails.includes(profile?.email || '') || 
-                            (profile?.email || '').endsWith('@jeenius.com');
-          setIsAdmin(isAdminUser);
+          setIsAdmin(!!roles);
         }
       } catch (error) {
         console.error('Error checking admin status:', error);

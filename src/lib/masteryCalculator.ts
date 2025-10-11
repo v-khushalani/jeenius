@@ -81,7 +81,13 @@ export function getRecommendedQuestionsPerDay(level: 1 | 2 | 3 | 4): number {
 }
 
 export function calculateProgressPercentage(mastery: TopicMastery): number {
-  const levelConfig = MASTERY_CONFIG[`LEVEL_${mastery.currentLevel}` as keyof typeof MASTERY_CONFIG];
+  const levelKey = `LEVEL_${mastery.currentLevel}` as keyof typeof MASTERY_CONFIG;
+  const levelConfig = MASTERY_CONFIG[levelKey];
+  
+  // Type guard to ensure levelConfig is a level object, not a number
+  if (typeof levelConfig === 'number') {
+    return 0;
+  }
   
   const accuracyProgress = (mastery.accuracy / levelConfig.minAccuracy) * 50;
   const questionsProgress = (mastery.questionsAttempted / levelConfig.questionsNeeded) * 50;

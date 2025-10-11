@@ -53,22 +53,32 @@ const PracticeSession = () => {
     setValidationResult(result);
     setShowExplanation(true);
     
-    // ADD THIS BLOCK HERE ⬇️
     // Update topic mastery after each attempt
     try {
-      const currentQ = questions[currentQuestion];
-      await supabase.functions.invoke('calculate-topic-mastery', {
-        body: {
-          subject: currentQ.subject,
-          chapter: currentQ.chapter || currentQ.topic, // fallback to topic if chapter missing
-          topic: currentQ.topic
-        }
-      });
-      console.log('✅ Topic mastery updated');
-    } catch (masteryError) {
-      console.error('Error updating mastery:', masteryError);
-      // Don't block user flow
+    const currentQ = questions[currentQuestion];
+    
+    console.log('🔍 Calling mastery function for:', {
+      subject: currentQ.subject,
+      chapter: currentQ.chapter || currentQ.topic,
+      topic: currentQ.topic
+    });
+    
+    const { data, error } = await supabase.functions.invoke('calculate-topic-mastery', {
+      body: {
+        subject: currentQ.subject,
+        chapter: currentQ.chapter || currentQ.topic,
+        topic: currentQ.topic
+      }
+    });
+    
+    if (error) {
+      console.error('❌ Mastery function error:', error);
+    } else {
+      console.log('✅ Topic mastery response:', data);
     }
+  } catch (masteryError) {
+    console.error('❌ Error updating mastery:', masteryError);
+  }
     // END OF NEW BLOCK ⬆️
     
     setSessionStats(prev => ({

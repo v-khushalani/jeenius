@@ -47,14 +47,14 @@ const StudyNowPage = () => {
         uniqueSubjects.map(async (subject) => {
           const { data: subjectQuestions } = await supabase
             .from('questions')
-            .select('*')
+            .select('subject, difficulty'),
             .eq('subject', subject);
 
           const totalQuestions = subjectQuestions?.length || 0;
           const difficulties = {
-            easy: subjectQuestions?.filter(q => q.difficulty === 'easy').length || 0,
-            medium: subjectQuestions?.filter(q => q.difficulty === 'medium').length || 0,
-            hard: subjectQuestions?.filter(q => q.difficulty === 'hard').length || 0
+            easy: subjectQuestions?.filter(q => q.difficulty === 'Easy').length || 0,
+            medium: subjectQuestions?.filter(q => q.difficulty === 'Medium').length || 0,
+            hard: subjectQuestions?.filter(q => q.difficulty === 'Hard').length || 0
           };
 
           const icons = {
@@ -262,7 +262,7 @@ const StudyNowPage = () => {
 
     setTimeout(() => {
       nextQuestion();
-    }, 2000);
+    }, 1200);
   };
 
   const nextQuestion = () => {

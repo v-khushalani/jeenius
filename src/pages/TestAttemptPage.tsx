@@ -124,23 +124,38 @@ const TestAttemptPage = () => {
       .padStart(2, "0")}`;
   };
 
-  const handleAnswerSelect = (option: string) => {
-    if (!testSession) return;
+  const handleAnswerSelect = async (option: string) => {
+  if (!testSession) return;
 
-    const currentQuestion = testSession.questions[currentQuestionIndex];
-    const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
+  const currentQuestion = testSession.questions[currentQuestionIndex];
+  const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
 
-    setUserAnswers((prev) => ({
-      ...prev,
-      [currentQuestion.id]: {
-        questionId: currentQuestion.id,
-        selectedOption: option,
-        timeSpent,
-        isMarkedForReview: prev[currentQuestion.id]?.isMarkedForReview || false,
-      },
-    }));
-  };
+  setUserAnswers((prev) => ({
+    ...prev,
+    [currentQuestion.id]: {
+      questionId: currentQuestion.id,
+      selectedOption: option,
+      timeSpent,
+      isMarkedForReview: prev[currentQuestion.id]?.isMarkedForReview || false,
+    },
+  }));
 
+  // Update topic mastery after answer selection
+  if (option) {
+    try {
+      await supabase.functions.invoke('calculate-topic-mastery', {
+        body: {
+          subject: currentQuestion.subjects?.name || 'General',
+          chapter: currentQuestion.chapter,
+          topic: currentQuestion.topic
+        }
+      });
+      console.log('✅ Topic mastery updated for test question');
+    } catch (error) {
+      console.error('Error updating mastery:', error);
+    }
+  }
+};
   const handleMarkForReview = () => {
     if (!testSession) return;
 

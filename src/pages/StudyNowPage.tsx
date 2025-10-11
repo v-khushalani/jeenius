@@ -119,7 +119,8 @@ const StudyNowPage = () => {
     const overallAccuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
     
     setUserStats({ attempted: totalAttempted, accuracy: overallAccuracy });
-    
+    setSubjects(subjectStats);
+
   } catch (error) {
     console.error('Error fetching subjects:', error);
     toast.error('Failed to load subjects');

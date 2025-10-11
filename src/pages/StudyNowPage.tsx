@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import Header from '@/components/Header';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import {
-  Flame, ArrowLeft, Lightbulb, XCircle, CheckCircle2,
+  Flame, ArrowLeft, Lightbulb, XCircle, CheckCircle2, Trophy, Target,
   Sparkles, Zap, Play
 } from "lucide-react";
 
@@ -26,6 +26,7 @@ const StudyNowPage = () => {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showResult, setShowResult] = useState(false);
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0, streak: 0 });
+  const [userStats, setUserStats] = useState({ attempted: 0, accuracy: 0 });
 
   // Fetch subjects with stats
   useEffect(() => {
@@ -35,110 +36,157 @@ const StudyNowPage = () => {
   const fetchSubjects = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('questions')
-        .select('subject');
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Fetch all questions
+    const { data: allQuestions, error } = await supabase
+      .from('questions')
+      .select('subject, difficulty');
       
-      if (error) throw error;
+    if (error) throw error;
 
-      // Get unique subjects and calculate stats
-      const uniqueSubjects = [...new Set(data.map(q => q.subject))];
-      const subjectStats = await Promise.all(
-        uniqueSubjects.map(async (subject) => {
-          const { data: subjectQuestions } = await supabase
-            .from('questions')
-            .select('*')
-            .eq('subject', subject);
+    // Get unique subjects
+    const uniqueSubjects = [...new Set(allQuestions.map(q => q.subject))];
+    
+    // Fetch user's attempts for stats
+    const { data: userAttempts } = await supabase
+      .from('question_attempts')
+      .select('*, questions!inner(subject)')
+      .eq('user_id', user?.id);
 
-          const totalQuestions = subjectQuestions?.length || 0;
-          const difficulties = {
-            easy: subjectQuestions?.filter(q => q.difficulty === 'easy').length || 0,
-            medium: subjectQuestions?.filter(q => q.difficulty === 'medium').length || 0,
-            hard: subjectQuestions?.filter(q => q.difficulty === 'hard').length || 0
-          };
+    const subjectStats = await Promise.all(
+      uniqueSubjects.map(async (subject) => {
+        // Total questions in this subject
+        const subjectQuestions = allQuestions.filter(q => q.subject === subject);
+        const totalQuestions = subjectQuestions.length;
+        
+        // Difficulty breakdown
+        const difficulties = {
+          easy: subjectQuestions.filter(q => q.difficulty === 'Easy').length,
+          medium: subjectQuestions.filter(q => q.difficulty === 'Medium').length,
+          hard: subjectQuestions.filter(q => q.difficulty === 'Hard').length
+        };
 
-          const icons = {
-            'Physics': '⚛️',
-            'Chemistry': '🧪',
-            'Mathematics': '📐'
-          };
+        // User's attempts in this subject
+        const subjectAttempts = userAttempts?.filter(
+          a => a.questions?.subject === subject
+        ) || [];
+        
+        const attempted = subjectAttempts.length;
+        const correct = subjectAttempts.filter(a => a.is_correct).length;
+        const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
 
-          const colors = {
-            'Physics': {
-              color: 'from-blue-500 to-indigo-600',
-              bgColor: 'from-blue-50 to-indigo-50',
-              borderColor: 'border-blue-200'
-            },
-            'Chemistry': {
-              color: 'from-green-500 to-emerald-600',
-              bgColor: 'from-green-50 to-emerald-50',
-              borderColor: 'border-green-200'
-            },
-            'Mathematics': {
-              color: 'from-purple-500 to-pink-600',
-              bgColor: 'from-purple-50 to-pink-50',
-              borderColor: 'border-purple-200'
-            }
-          };
+        const icons = {
+          'Physics': '⚛️',
+          'Chemistry': '🧪',
+          'Mathematics': '📐'
+        };
 
-          return {
-            name: subject,
-            emoji: icons[subject] || '📚',
-            ...colors[subject],
-            totalQuestions,
-            difficulties
-          };
-        })
-      );
+        const colors = {
+          'Physics': {
+            color: 'from-blue-500 to-indigo-600',
+            bgColor: 'from-blue-50 to-indigo-50',
+            borderColor: 'border-blue-200'
+          },
+          'Chemistry': {
+            color: 'from-green-500 to-emerald-600',
+            bgColor: 'from-green-50 to-emerald-50',
+            borderColor: 'border-green-200'
+          },
+          'Mathematics': {
+            color: 'from-purple-500 to-pink-600',
+            bgColor: 'from-purple-50 to-pink-50',
+            borderColor: 'border-purple-200'
+          }
+        };
 
-      setSubjects(subjectStats);
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-      toast.error('Failed to load subjects');
-    } finally {
-      setLoading(false);
-    }
-  };
+        return {
+          name: subject,
+          emoji: icons[subject] || '📚',
+          ...colors[subject],
+          totalQuestions,
+          difficulties,
+          attempted,
+          accuracy
+        };
+      })
+    );
+
+    // Overall stats for banner
+    const totalAttempted = userAttempts?.length || 0;
+    const totalCorrect = userAttempts?.filter(a => a.is_correct).length || 0;
+    const overallAccuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
+    
+    setUserStats({ attempted: totalAttempted, accuracy: overallAccuracy });
+    
+  } catch (error) {
+    console.error('Error fetching subjects:', error);
+    toast.error('Failed to load subjects');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadChapters = async (subject) => {
     setLoading(true);
     setSelectedSubject(subject);
     
-    try {
-      const { data, error } = await supabase
-        .from('questions')
-        .select('chapter')
-        .eq('subject', subject);
-      
-      if (error) throw error;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase
+      .from('questions')
+      .select('chapter, difficulty')
+      .eq('subject', subject);
+    
+    if (error) throw error;
 
-      const uniqueChapters = [...new Set(data.map(q => q.chapter))];
-      const chapterStats = await Promise.all(
-        uniqueChapters.map(async (chapter, index) => {
-          const { data: chapterQuestions } = await supabase
-            .from('questions')
-            .select('*')
-            .eq('subject', subject)
-            .eq('chapter', chapter);
+    const uniqueChapters = [...new Set(data.map(q => q.chapter))];
+    
+    // Fetch user attempts for chapters
+    const { data: userAttempts } = await supabase
+      .from('question_attempts')
+      .select('*, questions!inner(subject, chapter)')
+      .eq('user_id', user?.id)
+      .eq('questions.subject', subject);
+    
+    const chapterStats = await Promise.all(
+      uniqueChapters.map(async (chapter, index) => {
+        const chapterQuestions = data.filter(q => q.chapter === chapter);
+        const totalQuestions = chapterQuestions.length;
+        
+        const difficulties = {
+          easy: chapterQuestions.filter(q => q.difficulty === 'Easy').length,
+          medium: chapterQuestions.filter(q => q.difficulty === 'Medium').length,
+          hard: chapterQuestions.filter(q => q.difficulty === 'Hard').length
+        };
 
-          const totalQuestions = chapterQuestions?.length || 0;
-          const difficulties = {
-            easy: chapterQuestions?.filter(q => q.difficulty === 'easy').length || 0,
-            medium: chapterQuestions?.filter(q => q.difficulty === 'medium').length || 0,
-            hard: chapterQuestions?.filter(q => q.difficulty === 'hard').length || 0
-          };
+        // Chapter attempts
+        const chapterAttempts = userAttempts?.filter(
+          a => a.questions?.chapter === chapter
+        ) || [];
+        
+        const attempted = chapterAttempts.length;
+        const correct = chapterAttempts.filter(a => a.is_correct).length;
+        const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+        const progress = attempted > 0 ? Math.min(100, Math.round((attempted / totalQuestions) * 100)) : 0;
 
-          return {
-            name: chapter,
-            sequence: index + 1,
-            totalQuestions,
-            difficulties
-          };
-        })
-      );
+        return {
+          name: chapter,
+          sequence: index + 1,
+          totalQuestions,
+          difficulties,
+          attempted,
+          accuracy,
+          progress
+        };
+      })
+    );
 
-      setChapters(chapterStats);
-      setView('chapters');
+    setChapters(chapterStats);
+    setView('chapters');
+    
     } catch (error) {
       console.error('Error fetching chapters:', error);
       toast.error('Failed to load chapters');
@@ -245,25 +293,41 @@ const StudyNowPage = () => {
     }
   };
 
-  const handleAnswer = (answer) => {
-    if (showResult) return;
+const handleAnswer = async (answer) => {
+  if (showResult) return;
+  
+  setSelectedAnswer(answer);
+  setShowResult(true);
+  
+  const question = practiceQuestions[currentQuestionIndex];
+  const isCorrect = answer === question.correct_option;
+  
+  // Save to database
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
     
-    setSelectedAnswer(answer);
-    setShowResult(true);
-    
-    const question = practiceQuestions[currentQuestionIndex];
-    const isCorrect = answer === question.correct_option;
-    
-    setSessionStats(prev => ({
-      correct: prev.correct + (isCorrect ? 1 : 0),
-      total: prev.total + 1,
-      streak: isCorrect ? prev.streak + 1 : 0
-    }));
+    await supabase.from('question_attempts').insert({
+      user_id: user.id,
+      question_id: question.id,
+      selected_option: answer,
+      is_correct: isCorrect,
+      time_taken: 30,
+      attempted_at: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error saving attempt:', error);
+  }
+  
+  setSessionStats(prev => ({
+    correct: prev.correct + (isCorrect ? 1 : 0),
+    total: prev.total + 1,
+    streak: isCorrect ? prev.streak + 1 : 0
+  }));
 
-    setTimeout(() => {
-      nextQuestion();
-    }, 2000);
-  };
+  setTimeout(() => {
+    nextQuestion();
+  }, 2000);
+};
 
   const nextQuestion = () => {
     if (currentQuestionIndex < practiceQuestions.length - 1) {
@@ -415,6 +479,20 @@ const StudyNowPage = () => {
         <Header />
         <div className="pt-24 pb-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="mb-12 text-center">
+            <div className="max-w-3xl mx-auto p-8 rounded-2xl bg-white border border-gray-200 shadow-lg">
+              <div className="flex justify-center gap-3">
+                <Badge className="bg-green-50 text-green-700 border-green-200 px-4 py-1.5">
+                  <Target className="w-4 h-4 mr-1" />
+                  Attempted: {userStats.attempted}
+                </Badge>
+                <Badge className="bg-blue-50 text-blue-700 border-blue-200 px-4 py-1.5">
+                  <Trophy className="w-4 h-4 mr-1" />
+                  Accuracy: {userStats.accuracy}%
+                </Badge>
+              </div>
+            </div>
+          </div>  
             <div className="grid md:grid-cols-3 gap-6">
               {subjects.map((subject) => (
                 <Card 
@@ -428,11 +506,22 @@ const StudyNowPage = () => {
                     <Badge className="bg-white/80 text-gray-700">AI Powered</Badge>
                   </div>
                   <CardContent className="p-6">
-                    <div className="grid grid-cols-1 gap-4 mb-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-gray-900">{subject.totalQuestions}</div>
                         <div className="text-xs text-gray-500">Questions</div>
                       </div>
+                      {subject.attempted > 0 && (
+                        <div className="text-center">
+                          <div className={`text-2xl font-bold ${
+                            subject.accuracy >= 80 ? 'text-green-600' : 
+                            subject.accuracy >= 60 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {subject.accuracy}%
+                          </div>
+                          <div className="text-xs text-gray-500">Accuracy</div>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="mb-4 p-3 bg-gray-50 rounded-lg">

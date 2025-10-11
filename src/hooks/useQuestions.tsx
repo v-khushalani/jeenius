@@ -95,18 +95,28 @@ export const useQuestions = (filters?: {
       setLoading(false);
     }
   };
+// Replace the getRandomQuestions function in useQuestions.tsx with this:
 
-  const getRandomQuestions = async (
-    subject?: string | null, 
-    topic?: string | null, 
-    difficulty?: number | null, 
-    count: number = 10
-  ) => {
-    try {
-      setLoading(true);
-      setError(null);
+const getRandomQuestions = async (
+  subject?: string | null, 
+  topic?: string | null, 
+  difficulty?: number | null, 
+  count: number = 10
+) => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      const { supabase } = await import('@/integrations/supabase/client');
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    // Get already attempted question IDs
+    if (isAuthenticated && user) {
+      const { data: attemptedQuestions } = await supabase
+        .from('question_attempts')
+        .select('question_id')
+        .eq('user_id', user.id);
+      
+      const attemptedIds = attemptedQuestions?.map(a => a.question_id) || [];
       
       let query = supabase
         .from('questions')
@@ -126,12 +136,22 @@ export const useQuestions = (filters?: {
         query = query.eq('difficulty', difficultyMap[difficulty as keyof typeof difficultyMap]);
       }
 
+      // Exclude already attempted questions
+      if (attemptedIds.length > 0) {
+        query = query.not('id', 'in', `(${attemptedIds.join(',')})`);
+      }
+
       // Fetch more than needed for random selection
       query = query.limit(count * 3);
 
       const { data, error: queryError } = await query;
 
       if (queryError) throw queryError;
+
+      if (!data || data.length === 0) {
+        setError('No new questions available. All questions attempted!');
+        return [];
+      }
 
       // Map and shuffle
       const mappedQuestions: Question[] = (data || []).map(q => ({
@@ -153,19 +173,22 @@ export const useQuestions = (filters?: {
 
       // Shuffle and take count
       const shuffled = mappedQuestions.sort(() => Math.random() - 0.5);
-      const selected = shuffled.slice(0, count);
+      const selected = shuffled.slice(0, Math.min(count, shuffled.length));
 
       setQuestions(selected);
       return selected;
-    } catch (err) {
-      console.error('Error fetching random questions:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch questions');
-      return [];
-    } finally {
-      setLoading(false);
     }
-  };
-
+    
+    return [];
+  } catch (err) {
+    console.error('Error fetching random questions:', err);
+    setError(err instanceof Error ? err.message : 'Failed to fetch questions');
+    return [];
+  } finally {
+    setLoading(false);
+  }
+};
+  
   const submitAnswer = async (
     questionId: string,
     selectedAnswer: string,

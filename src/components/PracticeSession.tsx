@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Brain, Target, Clock, CheckCircle, XCircle, Lightbulb, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuestions } from '@/hooks/useQuestions';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 
 const PracticeSession = () => {
@@ -39,6 +39,47 @@ const PracticeSession = () => {
     try {
       const timeSpent = Math.floor((Date.now() - sessionStats.startTime) / 1000);
       const result = await submitAnswer(questions[currentQuestion].id, optionKey, timeSpent);
+
+      const handleAnswerSelect = async (optionKey) => {
+  if (!questions[currentQuestion]) return;
+  
+  setSelectedAnswer(optionKey);
+  
+  try {
+    const timeSpent = Math.floor((Date.now() - sessionStats.startTime) / 1000);
+    const result = await submitAnswer(questions[currentQuestion].id, optionKey, timeSpent);
+    
+    // Store validation result to show correct answer and explanation
+    setValidationResult(result);
+    setShowExplanation(true);
+    
+    // ADD THIS BLOCK HERE ⬇️
+    // Update topic mastery after each attempt
+    try {
+      const currentQ = questions[currentQuestion];
+      await supabase.functions.invoke('calculate-topic-mastery', {
+        body: {
+          subject: currentQ.subject,
+          chapter: currentQ.chapter || currentQ.topic, // fallback to topic if chapter missing
+          topic: currentQ.topic
+        }
+      });
+      console.log('✅ Topic mastery updated');
+    } catch (masteryError) {
+      console.error('Error updating mastery:', masteryError);
+      // Don't block user flow
+    }
+    // END OF NEW BLOCK ⬆️
+    
+    setSessionStats(prev => ({
+      ...prev,
+      correct: prev.correct + (result.isCorrect ? 1 : 0),
+      total: prev.total + 1
+    }));
+  } catch (error) {
+    console.error('Error submitting answer:', error);
+  }
+};
       
       // Store validation result to show correct answer and explanation
       setValidationResult(result);

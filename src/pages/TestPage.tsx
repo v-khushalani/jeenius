@@ -61,7 +61,10 @@ const TestPage = () => {
         : [...prev, { subject, chapter }];
     });
   };
-  const startTest = async () => {
+
+  // Replace the startTest function in TestPage.tsx with this:
+
+const startTest = async () => {
   if (selectedChapters.length === 0 && selectedSubjects.length === 0) {
     toast.error("Please select at least one chapter or subject");
     return;
@@ -71,6 +74,23 @@ const TestPage = () => {
   toast.loading("Preparing your test...");
 
   try {
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error("Please login to take tests");
+      navigate('/login');
+      return;
+    }
+    
+    // Get all attempted question IDs by this user
+    const { data: attemptedQuestions } = await supabase
+      .from('question_attempts')
+      .select('question_id')
+      .eq('user_id', user.id);
+    
+    const attemptedIds = attemptedQuestions?.map(a => a.question_id) || [];
+    
     let query = supabase.from('questions').select('*');
     
     if (testMode === "chapter" && selectedChapters.length > 0) {
@@ -82,18 +102,30 @@ const TestPage = () => {
       query = query.in('subject', selectedSubjects);
     }
 
+    // Exclude already attempted questions
+    if (attemptedIds.length > 0) {
+      query = query.not('id', 'in', `(${attemptedIds.join(',')})`);
+    }
+
     const { data: questions, error } = await query.limit(100);
     
     if (error) throw error;
+    
     if (!questions || questions.length === 0) {
-      toast.error("No questions available for selected topics");
+      toast.dismiss();
+      toast.error("No new questions available! All questions already attempted.");
       setLoading(false);
       return;
     }
 
-    // Shuffle and select 25 questions
+    if (questions.length < 25) {
+      toast.dismiss();
+      toast.info(`Only ${questions.length} new questions available. Starting test with ${questions.length} questions.`);
+    }
+
+    // Shuffle and select 25 questions (or less if not available)
     const shuffled = questions.sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, 25);
+    const selected = shuffled.slice(0, Math.min(25, questions.length));
 
     // Create test session
     const testSession = {
@@ -110,7 +142,7 @@ const TestPage = () => {
     localStorage.setItem('currentTest', JSON.stringify(testSession));
     
     toast.dismiss();
-    toast.success("Test started!");
+    toast.success(`Test started with ${selected.length} fresh questions!`);
     navigate('/test-attempt');
   } catch (error) {
     console.error('Error starting test:', error);
@@ -119,6 +151,7 @@ const TestPage = () => {
     setLoading(false);
   }
 };
+  
   if (loading) {
     return <LoadingScreen message="Loading your tests..." />;
   }

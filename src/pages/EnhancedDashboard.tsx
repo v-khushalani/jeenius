@@ -63,9 +63,9 @@ const EnhancedDashboard = () => {
 
       if (attemptsError) console.error('Attempts fetch error:', attemptsError);
       
-      // Filter for study mode (or null/undefined for backward compatibility)
+      // Filter OUT test and battle mode - only show study/practice mode
       const attempts = allAttempts?.filter(a => 
-        !a.mode || a.mode === 'study' || a.mode === 'practice'
+        a.mode !== 'test' && a.mode !== 'battle' // Exclude test and battle modes
       ) || [];
       
       setAttempts(attempts);

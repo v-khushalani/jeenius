@@ -1,4 +1,3 @@
-console.log('📊 Attempts fetched:');
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+console.log('📊 Attempts fetched:');
 
 interface Topic {
   name: string;
@@ -138,12 +138,6 @@ const AIStudyPlanner: React.FC = () => {
         .select('*, questions(subject, chapter, topic)')
         .eq('user_id', user.id)
         .gte('created_at', today.toISOString());
-        const { data: attempts } = await supabase
-          
-          .from('question_attempts')
-          .select('*, questions(subject, chapter, topic)')
-          .eq('user_id', user.id)
-          .gte('created_at', today.toISOString());
         
         // ✅ ADD THIS:
         console.log('📊 Attempts fetched:', attempts);

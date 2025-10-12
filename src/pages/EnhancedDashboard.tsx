@@ -56,6 +56,7 @@ const EnhancedDashboard = () => {
       if (error) console.error('Profile fetch error:', error);
       setProfile(profileData);
       
+       // Fetch all attempts
       const { data: allAttempts, error: attemptsError } = await supabase
         .from('question_attempts')
         .select('*, questions(subject, chapter, topic)')
@@ -63,17 +64,11 @@ const EnhancedDashboard = () => {
 
       if (attemptsError) console.error('Attempts fetch error:', attemptsError);
       
-      // Debug: Check what modes are in the data
-      console.log('All attempts modes:', allAttempts?.map(a => a.mode));
-      
       // Filter OUT test and battle mode - only show study/practice mode
-      const attempts = allAttempts?.filter(a => {
-        const mode = a.mode?.toLowerCase()?.trim(); // Normalize the mode value
-        console.log('Checking attempt:', a.id, 'mode:', mode);
-        return mode !== 'test' && mode !== 'battle';
-      }) || [];
+      const attempts = allAttempts?.filter(a => 
+        a.mode !== 'test' && a.mode !== 'battle'
+      ) || [];
       
-      console.log('Filtered attempts count:', attempts.length);
       setAttempts(attempts);
       
       const today = new Date();

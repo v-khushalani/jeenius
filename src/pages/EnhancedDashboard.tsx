@@ -63,11 +63,17 @@ const EnhancedDashboard = () => {
 
       if (attemptsError) console.error('Attempts fetch error:', attemptsError);
       
-      // Filter OUT test and battle mode - only show study/practice mode
-      const attempts = allAttempts?.filter(a => 
-        a.mode !== 'test' && a.mode !== 'battle' // Exclude test and battle modes
-      ) || [];
+      // Debug: Check what modes are in the data
+      console.log('All attempts modes:', allAttempts?.map(a => a.mode));
       
+      // Filter OUT test and battle mode - only show study/practice mode
+      const attempts = allAttempts?.filter(a => {
+        const mode = a.mode?.toLowerCase()?.trim(); // Normalize the mode value
+        console.log('Checking attempt:', a.id, 'mode:', mode);
+        return mode !== 'test' && mode !== 'battle';
+      }) || [];
+      
+      console.log('Filtered attempts count:', attempts.length);
       setAttempts(attempts);
       
       const today = new Date();

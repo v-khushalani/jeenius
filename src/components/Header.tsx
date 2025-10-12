@@ -27,6 +27,11 @@ const Header = () => {
     { name: 'Dashboard', href: '/dashboard', path: '/dashboard', icon: BarChart3 },
     { name: 'Study Now', href: '/study-now', path: '/study-now', icon: BookOpen, highlight: true },
     { name: 'Tests', href: '/tests', path: '/tests', icon: Target },
+    { name: 'About', href: '/about', path: '/about', icon: Target },
+    { name: 'AdminDashboard', href: '/AdminDashboard', path: '/AdminDashboard', icon: Target },
+    { name: 'AnalyticsPage', href: '/AnalyticsPage', path: '/AnalyticsPage', icon: Target },
+    { name: 'AuthCallback.', href: '/AuthCallback.', path: '/AuthCallback.', icon: Target },
+    { name: 'CertificatesPage', href: '/CertificatesPage', path: '/CertificatesPage', icon: Target },
   ];
 
   const featureDropdownItems = [

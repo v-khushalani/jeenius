@@ -28,12 +28,7 @@ const Header = () => {
     { name: 'Study Now', href: '/study-now', path: '/study-now', icon: BookOpen, highlight: true },
     { name: 'Tests', href: '/tests', path: '/tests', icon: Target },
     { name: 'About', href: '/why-us', path: '/why-us', icon: Target },
-    { name: 'Dashboard', href: '/old-dashboard', path: '/old-dashboard', icon: Target },
-    { name: 'DoubtSolver', href: '/doubts', path: '/doubts', icon: Target },
-    { name: 'FeaturesPage', href: '/ai-tutor', path: '/ai-tutor', icon: Target },
-    { name: 'Index', href: '/mobile/planner', path: '/mobile/planner', icon: Target },
-    { name: 'LessonBuilderPage.', href: '/lesson-builder', path: '/lesson-builder', icon: Target },
-    { name: 'MobileVerification', href: '/verify-mobile', path: '/verify-mobile', icon: Target },
+    { name: 'About', href: '/about', path: '/about', icon: Target },
   ];
 
   const featureDropdownItems = [

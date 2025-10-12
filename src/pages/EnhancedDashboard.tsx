@@ -59,7 +59,8 @@ const EnhancedDashboard = () => {
       const { data: attempts, error: attemptsError } = await supabase
         .from('question_attempts')
         .select('*, questions(subject, chapter, topic)')
-        .eq('user_id', user?.id);
+        .eq('user_id', user?.id)
+        .eq('mode', 'study'); // Only fetch "Study Now" mode questions
 
       if (attemptsError) console.error('Attempts fetch error:', attemptsError);
       setAttempts(attempts || []);

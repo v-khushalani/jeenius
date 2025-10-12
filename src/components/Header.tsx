@@ -28,10 +28,7 @@ const Header = () => {
     { name: 'Study Now', href: '/study-now', path: '/study-now', icon: BookOpen, highlight: true },
     { name: 'Tests', href: '/tests', path: '/tests', icon: Target },
     { name: 'About', href: '/why-us', path: '/why-us', icon: Target },
-    { name: 'AdminDashboard', href: '/AdminDashboard', path: '/AdminDashboard', icon: Target },
-    { name: 'AnalyticsPage', href: '/analytics', path: '/analytics', icon: Target },
-    { name: 'AuthCallback.', href: '/auth/callback', path: '/auth/callback', icon: Target },
-    { name: 'CertificatesPage', href: '/certificates', path: '/certificates', icon: Target },
+    { name: 'AdminDashboard', href: '/admin', path: '/admin', icon: Target },
   ];
 
   const featureDropdownItems = [

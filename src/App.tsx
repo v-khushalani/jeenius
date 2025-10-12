@@ -8,7 +8,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 // Main pages
 import Index from "./pages/Index";
-import About from "./pages/About";
 import StudyNowPage from "./pages/StudyNowPage";
 import TestPage from "./pages/TestPage";
 import TestAttemptPage from "./pages/TestAttemptPage";
@@ -70,7 +69,6 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
-            <Route path="/about" element={<About />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/why-us" element={<WhyUsPage />} />
             <Route path="/features" element={<FeaturesPage />} />

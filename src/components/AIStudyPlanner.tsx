@@ -121,6 +121,7 @@ const AIStudyPlanner: React.FC = () => {
   }, []);
   // Update topic progress
   const updateTopicProgress = useCallback(async () => {
+    console.log('🔥 UPDATE TOPIC PROGRESS CALLED'); // ✅ ADD THIS FIRST LINE
     try {
       if (!studyPlan) return;
   

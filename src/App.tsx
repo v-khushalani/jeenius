@@ -81,13 +81,8 @@ const App = () => (
             <Route path="/auth/callback" element={<AuthCallback />} />
             
             
-            {/* Public Doubt Solver */}
-            <Route path="/doubts" element={<DoubtSolver />} />
-            <Route path="/doubt-solver" element={<DoubtSolver />} />
-            
-            {/* Public Battle & Certificates */}
+            {/* Public Battle */}
             <Route path="/battle" element={<PeerBattleSystem />} />
-            <Route path="/certificates" element={<CertificatesPage />} />
             
             {/* Goal Selection (might be needed after signup) */}
             <Route path="/goal-selection" element={<GoalSelectionPage />} />
@@ -108,17 +103,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            
-            {/* Legacy Dashboard */}
-            <Route
-              path="/old-dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            
+                      
             {/* Study Routes */}
             <Route
               path="/study-now"
@@ -228,19 +213,6 @@ const App = () => (
               } 
             />
             
-            
-            {/* Mobile Verification Route (if needed) */}
-            <Route 
-              path="/verify-mobile" 
-              element={
-                <div className="min-h-screen bg-gray-50 pt-24">
-                  <div className="container mx-auto px-4 text-center">
-                    <h1 className="text-2xl font-bold">Mobile Verification Required</h1>
-                    <p className="text-gray-600 mt-4">Please verify your mobile number to continue.</p>
-                  </div>
-                </div>
-              } 
-            />
             
             {/* Catch-all route - 404 */}
             <Route path="*" element={<NotFound />} />

@@ -1,3 +1,4 @@
+import AIDoubtSolver from '../components/AIDoubtSolver';
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,8 @@ const StudyNowPage = () => {
   const [showResult, setShowResult] = useState(false);
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0, streak: 0 });
   const [userStats, setUserStats] = useState({ attempted: 0, accuracy: 0 });
-
+  const [showAIModal, setShowAIModal] = useState(false);
+  
   // Fetch subjects with stats
   useEffect(() => {
     fetchSubjects();
@@ -476,6 +478,17 @@ const handleAnswer = async (answer) => {
                   })}
                 </div>
 
+                {/* 🔥 YAHA PE ADD KARO - Line ~520 ke aas paas */}
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    onClick={() => setShowAIModal(true)}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-semibold shadow-lg"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Ask AI for Help
+                  </Button>
+                </div>
+                
                 {showResult && question.explanation && (
                   <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600">
                     <div className="flex items-start gap-3">
@@ -491,6 +504,11 @@ const handleAnswer = async (answer) => {
             </Card>
           </div>
         </div>
+          <AIDoubtSolver 
+          question={practiceQuestions[currentQuestionIndex]}
+          isOpen={showAIModal}
+          onClose={() => setShowAIModal(false)}
+          />
       </div>
     );
   }

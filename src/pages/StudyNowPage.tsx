@@ -324,7 +324,7 @@ const handleAnswer = async (answer) => {
   const question = practiceQuestions[currentQuestionIndex];
   const isCorrect = answer === question.correct_option;
   
-  // Save to database with mode = 'study'
+  // Save to database
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -335,10 +335,8 @@ const handleAnswer = async (answer) => {
       is_correct: isCorrect,
       time_taken: 30,
       attempted_at: new Date().toISOString(),
-      mode: 'study' // ✅ Study mode
+      mode: 'study' // 🔥 ADD THIS LINE
     });
-    
-    console.log('✅ Study attempt saved with mode: study');
   } catch (error) {
     console.error('Error saving attempt:', error);
   }

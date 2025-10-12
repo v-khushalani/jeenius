@@ -1,3 +1,4 @@
+console.log('📊 Attempts fetched:');
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

@@ -56,14 +56,19 @@ const EnhancedDashboard = () => {
       if (error) console.error('Profile fetch error:', error);
       setProfile(profileData);
       
-      const { data: attempts, error: attemptsError } = await supabase
+      const { data: allAttempts, error: attemptsError } = await supabase
         .from('question_attempts')
         .select('*, questions(subject, chapter, topic)')
-        .eq('user_id', user?.id)
-        .eq('mode', 'study'); // Only fetch "Study Now" mode questions
+        .eq('user_id', user?.id);
 
       if (attemptsError) console.error('Attempts fetch error:', attemptsError);
-      setAttempts(attempts || []);
+      
+      // Filter for study mode (or null/undefined for backward compatibility)
+      const attempts = allAttempts?.filter(a => 
+        !a.mode || a.mode === 'study' || a.mode === 'practice'
+      ) || [];
+      
+      setAttempts(attempts);
       
       const today = new Date();
       today.setHours(0, 0, 0, 0);

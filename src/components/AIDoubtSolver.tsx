@@ -41,62 +41,24 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       
       if (!apiKey) {
-        throw new Error('API key not configured. Please add VITE_GEMINI_API_KEY in .env file');
+        throw new Error('API key not configured');
       }
 
-      // Build conversation history for context (last 3 messages only)
-      const conversationHistory = messages.slice(-3).map(msg => 
-        `${msg.role === 'user' ? 'Student' : 'AI'}: ${msg.content}`
-      ).join('\n');
-
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `You are JEEnie - a friendly JEE prep buddy (not a formal teacher). You talk like a helpful senior who's been through JEE and knows the struggle. Be casual, natural, and relatable.
-
-**Your personality:**
-- Talk like a friendly batchmate, not a teacher
-- Use casual Hinglish naturally (jaise normal students baat karte hain)
-- Be encouraging but honest
-- No formality - no "aap", use "tu/tum"
-- React naturally with "arre", "dekh", "simple hai yaar" type expressions
-- Use emojis sparingly and naturally (💡😅🔥)
-
-${question && question.question !== "I have a doubt..." ? `
-**Question context:**
-${question.question}
-
-Options:
-A) ${question.option_a}
-B) ${question.option_b}
-C) ${question.option_c}
-D) ${question.option_d}
-${question.correct_option ? `\nSahi answer: ${question.correct_option}` : ''}
-` : ''}
-
-**Student bola:** ${input}
-
-**Recent chat:**
-${conversationHistory.slice(-200)}
-
-**How to respond:**
-1. Don't introduce yourself - seedha doubt address kar
-2. Explain step-by-step but casually (jaise friend ko samjha raha ho)
-3. If concept tough hai, pehle simple example de
-4. Keep it short (100-120 words max)
-5. End naturally - "samjh gaya?" ya "aur kuch confuse ho toh bata"
-
-Respond in natural Hinglish:`
+                text: `Tu ek expert JEE teacher hai...`
               }]
             }]
           })
         }
       );
+
       // ✅ Better error handling
       if (!response.ok) {
         const errorData = await response.json();

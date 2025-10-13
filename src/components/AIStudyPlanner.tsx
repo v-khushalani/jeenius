@@ -21,7 +21,7 @@ import {
   Zap
 } from "lucide-react";
 
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 console.log('📊 Attempts fetched:');
 
 interface Topic {

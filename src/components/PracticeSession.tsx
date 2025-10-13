@@ -3,7 +3,7 @@ import { Brain, Target, Clock, CheckCircle, XCircle, Lightbulb, ArrowRight } fro
 import { Button } from '@/components/ui/button';
 import { useQuestions } from '@/hooks/useQuestions';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { toast } from 'sonner';
 

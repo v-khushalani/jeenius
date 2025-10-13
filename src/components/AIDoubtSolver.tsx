@@ -10,7 +10,7 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const messagesEndRef = useRef(null);
 
   // 🔥 API KEY
-  const MASTER_API_KEY = 'AIzaSyCeo_ug_gBS7NqSG1TjRhzm8EzCQUqzuVM';
+  const MASTER_API_KEY = 'AIzaSyAApuT2icxdnc9eDGi_VcMLYoekXJe71Os';
 
   // Initialize welcome message
   useEffect(() => {
@@ -99,7 +99,7 @@ Correct Answer: ${question.correct_option}
 Student ka doubt: ${input}`;
 
       const response = await fetch(
-        fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=YOUR_KEY', {
+fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=YOUR_KEY', {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

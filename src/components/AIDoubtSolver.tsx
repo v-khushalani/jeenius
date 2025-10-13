@@ -21,18 +21,6 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
         setMessages([{
           role: 'assistant',
           content: `🧞‍♂️ **Namaste! Main JEEnie hun - tumhara AI genie!**
-
-✨ **Mujhse kya pooch sakte ho?**
-
-📚 **Physics**: Laws, Motion, Energy, Waves, etc.
-🧪 **Chemistry**: Organic, Inorganic, Physical, Reactions
-📐 **Maths**: Calculus, Algebra, Trigonometry, Coordinate Geometry
-
-💡 **Example doubts:**
-• "Newton's 2nd law explain karo"
-• "Resonance kya hai chemistry mein?"
-• "Integration by parts ka shortcut?"
-
 **Ab bolo, kya doubt hai?** 🎯`
         }]);
       } else {
@@ -216,8 +204,8 @@ Bohot zyada questions poocho rahe ho!
                 <Flame className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-white text-xl">🧞‍♂️ JEEnie - Your AI Genie</h3>
-                <p className="text-xs text-purple-100">Powered by Gemini • Free Forever 💎</p>
+                <h3 className="font-bold text-white text-xl">JEEnie</h3>
+                <p className="text-xs text-purple-100">Powered by Gemini</p>
               </div>
             </div>
             <button
@@ -310,9 +298,6 @@ Bohot zyada questions poocho rahe ho!
             </Button>
           </div>
           <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-gray-600">
-              💡 Tip: Specific doubt poocho, better answer milega!
-            </p>
             <span className="text-xs text-green-600 font-bold flex items-center gap-1">
               ✓ JEEnie Ready! 🧞‍♂️
             </span>

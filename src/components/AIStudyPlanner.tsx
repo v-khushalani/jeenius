@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-console.log('📊 Attempts fetched:');
 
 interface Topic {
   name: string;
@@ -122,7 +121,6 @@ const AIStudyPlanner: React.FC = () => {
   }, []);
   // Update topic progress
   const updateTopicProgress = useCallback(async () => {
-    console.log('🔥 UPDATE TOPIC PROGRESS CALLED'); // ✅ ADD THIS FIRST LINE
     try {
       if (!studyPlan) return;
   
@@ -138,11 +136,7 @@ const AIStudyPlanner: React.FC = () => {
         .select('*, questions(subject, chapter, topic)')
         .eq('user_id', user.id)
         .gte('created_at', today.toISOString());
-        
-        // ✅ ADD THIS:
-        console.log('📊 Attempts fetched:', attempts);
-        console.log('📊 Study plan topics:', studyPlan.subjects);
-      
+             
       // Update each topic's progress
       const updatedSubjects = studyPlan.subjects.map(subject => ({
         ...subject,

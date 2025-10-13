@@ -479,15 +479,19 @@ const handleAnswer = async (answer) => {
                 </div>
 
                 {/* 🔥 YAHA PE ADD KARO - Line ~520 ke aas paas */}
-                <div className="mt-4 flex justify-center">
+               <div className="mt-6 flex justify-center">
                   <Button
-                    onClick={() => setShowAIModal(true)}
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-semibold shadow-lg"
+                    onClick={() => {
+                      console.log('Button clicked!'); // Debug log
+                      setShowAIModal(true);
+                    }}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-semibold shadow-lg px-6 py-3"
                   >
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <Sparkles className="w-5 h-5 mr-2" />
                     Ask AI for Help
                   </Button>
                 </div>
+
                 
                 {showResult && question.explanation && (
                   <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600">

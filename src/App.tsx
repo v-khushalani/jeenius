@@ -194,7 +194,6 @@ const App = () => (
                     <h1 className="text-2xl font-bold">Lesson Detail - Coming Soon</h1>
                     <p className="text-gray-600 mt-4">This lesson detail page will be implemented soon.</p>
                   </div>
-                  <FloatingAIButton />
                 </div>
               } 
             />
@@ -202,6 +201,7 @@ const App = () => (
             
             {/* Catch-all route - 404 */}
             <Route path="*" element={<NotFound />} />
+            <FloatingAIButton />
           </Routes>
         </TooltipProvider>
       </AuthProvider>

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Loader2, Sparkles, Flame } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const [input, setInput] = useState('');
@@ -9,9 +10,7 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const [lastRequestTime, setLastRequestTime] = useState(0);
   const messagesEndRef = useRef(null);
 
-  // 🔥 API KEY
-  const MASTER_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
+  // Using Lovable AI via Supabase Edge Function (no client API key needed)
   // Initialize welcome message
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -86,60 +85,20 @@ Correct Answer: ${question.correct_option}
 
 Student ka doubt: ${input}`;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${MASTER_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `Tu "JEEnie" naam ka AI tutor hai - ek friendly magical genie jo JEE aspirants ki help karta hai.
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('jeenie', {
+        body: { contextPrompt }
+      });
 
-**Your personality:**
-- Friendly aur encouraging
-- Hinglish mein baat karo (Hindi + English mix)
-- Short, crisp answers (4-6 lines max)
-- Use emojis occasionally 
-- Always motivate the student
-
-**Context:**
-${contextPrompt}
-
-**Instructions:**
-1. Answer in HINGLISH (Hindi-English mix)
-2. Keep it SHORT - max 5-6 lines
-3. Use bullet points (•) for steps
-4. Add 1 motivational line at end
-5. If formula hai, simple language mein explain karo
-6. No long paragraphs - crisp and clear!
-
-**Format:**
-💡 [Main concept in 1-2 lines]
-• [Key point 1]
-• [Key point 2]
-✨ [Quick tip/trick]
-🎯 [Motivational closing]
-
-Ab answer do:`
-              }]
-            }]
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API Error:', errorData);
-        throw new Error(errorData.error?.message || 'API request failed');
+      if (functionError) {
+        throw new Error(functionError.message || 'AI function failed');
       }
 
-      const data = await response.json();
+      const aiText = functionData?.content as string | undefined;
       
-      if (data.candidates && data.candidates[0]) {
+      if (aiText) {
         const aiResponse = {
           role: 'assistant',
-          content: data.candidates[0].content.parts[0].text
+          content: aiText
         };
         setMessages(prev => [...prev, aiResponse]);
       } else {
@@ -150,19 +109,27 @@ Ab answer do:`
       
       let errorMsg = '❌ **Oops!** Kuch technical problem aa gayi.';
       
-      if (error.message?.includes('quota') || error.message?.includes('429')) {
+      if (
+        error.message?.includes('quota') ||
+        error.message?.includes('429') ||
+        error.message?.includes('Rate limits exceeded')
+      ) {
         errorMsg = `⚠️ **API limit khatam ho gayi!**
 
 Bohot zyada questions poocho rahe ho! 
 
 **Solutions:**
 1. 5-10 min wait karo
-2. Ya admin ko batao API key upgrade karne ke liye
-
-**Free tier limit:** 15 requests/minute 🔄`;
+2. Ya admin ko batao AI credits/plan upgrade karne ke liye
+`;
+      } else if (
+        error.message?.includes('Payment required') ||
+        error.message?.includes('402')
+      ) {
+        errorMsg = '💳 **Credits khatam ya billing issue!** Workspace me funds add karo ya plan upgrade karo.';
       } else if (error.message?.includes('invalid') || error.message?.includes('GEMINI_API_KEY')) {
         errorMsg = '🔑 **API key issue hai!** Developer ko batao.';
-      } else if (error.message?.includes('Failed to fetch')) {
+      } else if (error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
         errorMsg = '🌐 **Internet connection check karo!** Network issue lag raha hai.';
       }
       

@@ -7,6 +7,7 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
 
   // 🔥 MASTER API KEY - Yaha apni key daal do (ek baar)
   const MASTER_API_KEY = 'AIzaSyAKKNJu5GPx--GQ43qfol7-pbUfh_XglU8'; //
@@ -29,30 +30,30 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!input.trim()) return;
+  if (!input.trim()) return;
 
     const userMessage = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
-
+  
     try {
       // Build context with question details
       const context = `
-Current Question: ${question.question}
-
-Options:
-A) ${question.option_a}
-B) ${question.option_b}
-C) ${question.option_c}
-D) ${question.option_d}
-
-Correct Answer: ${question.correct_option}
-${question.explanation ? `\nExplanation: ${question.explanation}` : ''}
-
-Student's Doubt: ${input}
-`;
-
+  Current Question: ${question.question}
+  
+  Options:
+  A) ${question.option_a}
+  B) ${question.option_b}
+  C) ${question.option_c}
+  D) ${question.option_d}
+  
+  Correct Answer: ${question.correct_option}
+  ${question.explanation ? `\nExplanation: ${question.explanation}` : ''}
+  
+  Student's Doubt: ${input}
+  `;
+  
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${MASTER_API_KEY}`,
         {
@@ -62,31 +63,38 @@ Student's Doubt: ${input}
             contents: [{
               parts: [{
                 text: `Tu ek expert JEE teacher hai jo students ko doubts clear karta hai.
-
-${context}
-
-Instructions:
-- **Short and crisp** answer do (3-5 sentences max)
-- **Hindi/English mix** (Hinglish) mein baat karo naturally
-- Step-by-step samjhao agar zaroorat ho
-- Concept clear karo with simple example
-- **Encouraging tone** rakho - "Great question!", "Good thinking!" jaise phrases use karo
-- **Formatting**: Use bullet points (•) for steps if needed
-- Agar formula/equation hai toh simple language mein explain karo
-
-Answer in this format:
-💡 [Short explanation]
-• [Key point 1]
-• [Key point 2]
-✨ [Quick tip or memory trick]
-
-Now answer:`
+  
+  ${context}
+  
+  Instructions:
+  - **Short and crisp** answer do (3-5 sentences max)
+  - **Hindi/English mix** (Hinglish) mein baat karo naturally
+  - Step-by-step samjhao agar zaroorat ho
+  - Concept clear karo with simple example
+  - **Encouraging tone** rakho - "Great question!", "Good thinking!" jaise phrases use karo
+  - **Formatting**: Use bullet points (•) for steps if needed
+  - Agar formula/equation hai toh simple language mein explain karo
+  
+  Answer in this format:
+  💡 [Short explanation]
+  - [Key point 1]
+  - [Key point 2]
+  ✨ [Quick tip or memory trick]
+  
+  Now answer:`
               }]
             }]
           })
         }
       );
-
+  
+      // Better error handling
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error:', errorData);
+        throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+      }
+  
       const data = await response.json();
       
       if (data.candidates && data.candidates[0]) {
@@ -100,15 +108,29 @@ Now answer:`
       }
     } catch (error) {
       console.error('AI Error:', error);
+      
+      // Specific error messages
+      let errorMsg = '❌ Sorry! Kuch technical issue aa gaya.';
+      
+      if (error.message.includes('quota') || error.message.includes('RESOURCE_EXHAUSTED')) {
+        errorMsg = '⚠️ API quota khatam ho gaya! Naya API key chahiye. Developer ko batao!';
+      } else if (error.message.includes('invalid') || error.message.includes('API_KEY_INVALID')) {
+        errorMsg = '🔑 API key invalid hai. Developer se naya key lo!';
+      } else if (error.message.includes('429')) {
+        errorMsg = '⏳ Bahut zyada requests ho gayi! 1 minute wait karo.';
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMsg = '🌐 Internet connection check karo!';
+      }
+      
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '❌ Sorry! Kuch technical issue aa gaya. Thodi der baad try karo ya question refresh karke dobara poocho.'
+        content: errorMsg + '\n\nThodi der baad dobara try karo.'
       }]);
     }
-
+  
     setLoading(false);
   };
-
+  
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();

@@ -66,7 +66,7 @@ const EnhancedDashboard = () => {
       
       // Filter OUT test and battle mode - only show study/practice mode
       const attempts = allAttempts?.filter(a => 
-        a.mode !== 'test' && a.mode !== 'battle'
+        (a as any).mode !== 'test' && (a as any).mode !== 'battle'
       ) || [];
       
       setAttempts(attempts);

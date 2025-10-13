@@ -5,6 +5,7 @@ import { useQuestions } from '@/hooks/useQuestions';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import LoadingScreen from '@/components/ui/LoadingScreen';
+import { toast } from 'sonner';
 
 const PracticeSession = () => {
   const { isAuthenticated } = useAuth();

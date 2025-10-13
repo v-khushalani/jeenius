@@ -12,7 +12,6 @@ import StudyNowPage from "./pages/StudyNowPage";
 import TestPage from "./pages/TestPage";
 import TestAttemptPage from "./pages/TestAttemptPage";
 import TestResultsPage from "./pages/TestResultsPage";
-import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -24,11 +23,9 @@ import AuthCallback from '@/pages/AuthCallback';
 
 // Feature pages
 import Pricing from "./pages/Pricing";
-import DoubtSolver from "./pages/DoubtSolver";
 import FeaturesPage from "./pages/FeaturesPage";
 import LessonBuilderPage from "./pages/LessonBuilderPage";
 import WhyUsPage from "./pages/WhyUsPage";
-import CertificatesPage from './pages/CertificatesPage';
 import GoalSelectionPage from '@/pages/GoalSelectionPage';
 import PeerBattleSystem from './pages/PeerBattleSystem';
 
@@ -39,7 +36,6 @@ import AnalyticsPage from "@/pages/AnalyticsPage";
 // Components
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
-import AITutor from "@/components/AIDoubtSolver";
 import AdminDashboard from "@/pages/AdminDashboard";
 
 // Mobile pages
@@ -118,16 +114,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <TestPage />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* AI Features */}
-            <Route
-              path="/ai-tutor"
-              element={
-                <ProtectedRoute>
-                  <AITutor />
                 </ProtectedRoute>
               }
             />

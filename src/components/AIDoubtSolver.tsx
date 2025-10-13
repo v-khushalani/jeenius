@@ -10,7 +10,7 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const messagesEndRef = useRef(null);
 
   // 🔥 API KEY
-  const MASTER_API_KEY = 'AIzaSyAApuT2icxdnc9eDGi_VcMLYoekXJe71Os';
+  const MASTER_API_KEY = process.env.VITE_GEMINI_API_KEY;
 
   // Initialize welcome message
   useEffect(() => {

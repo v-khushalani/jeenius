@@ -596,6 +596,7 @@ const handleAnswer = async (answer) => {
               ))}
             </div>
           </div>
+          <FloatingAIButton />
         </div>
       </div>
     );

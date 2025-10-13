@@ -1,32 +1,77 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Loader2, Lightbulb, Sparkles, Bot } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Flame } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: question ? `Main tumhe **"${question.question}"** ke baare mein help kar sakta hun. Koi specific doubt hai?` : 'Namaste! 🙏 Main tumhara AI Doubt Solver hun. Koi bhi JEE doubt pucho!'
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastRequestTime, setLastRequestTime] = useState(0);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef(null);
+
+  // 🔥 API KEY
+  const MASTER_API_KEY = 'AIzaSyCeo_ug_gBS7NqSG1TjRhzm8EzCQUqzuVM';
+
+  // Initialize welcome message
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      const isGeneralDoubt = !question?.option_a || question?.question?.includes("koi bhi");
+      
+      if (isGeneralDoubt) {
+        setMessages([{
+          role: 'assistant',
+          content: `🧞‍♂️ **Namaste! Main JEEnie hun - tumhara AI genie!**
+
+✨ **Mujhse kya pooch sakte ho?**
+
+📚 **Physics**: Laws, Motion, Energy, Waves, etc.
+🧪 **Chemistry**: Organic, Inorganic, Physical, Reactions
+📐 **Maths**: Calculus, Algebra, Trigonometry, Coordinate Geometry
+
+💡 **Example doubts:**
+• "Newton's 2nd law explain karo"
+• "Resonance kya hai chemistry mein?"
+• "Integration by parts ka shortcut?"
+
+**Ab bolo, kya doubt hai?** 🎯`
+        }]);
+      } else {
+        setMessages([{
+          role: 'assistant',
+          content: `🧞‍♂️ **Hey! Main JEEnie hun!**
+
+**Tumhara question:**
+"${question.question}"
+
+**Options:**
+${question.option_a ? `A) ${question.option_a}` : ''}
+${question.option_b ? `B) ${question.option_b}` : ''}
+${question.option_c ? `C) ${question.option_c}` : ''}
+${question.option_d ? `D) ${question.option_d}` : ''}
+
+💬 **Kya doubt hai? Poocho!**`
+        }]);
+      }
+    }
+  }, [isOpen, question]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToBottom();
   }, [messages]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
-    // ✅ Rate limit check (1 request per 2 seconds)
+    // Rate limit check
     const now = Date.now();
     if (now - lastRequestTime < 2000) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '⏳ Thoda wait karo! AI thoda busy hai (2 sec wait).'
+        content: '⏳ **Ek second ruko bhai!** Main thoda busy hun... 2 seconds wait karo! 😅'
       }]);
       return;
     }
@@ -38,31 +83,67 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      // Build JEE-specific context
+      const isGeneralDoubt = !question?.option_a || question?.question?.includes("koi bhi");
       
-      if (!apiKey) {
-        throw new Error('API key not configured');
-      }
+      const contextPrompt = isGeneralDoubt ? 
+        `Student ka doubt: ${input}` :
+        `Question: ${question.question}
+Options:
+A) ${question.option_a}
+B) ${question.option_b}
+C) ${question.option_c}
+D) ${question.option_d}
+Correct Answer: ${question.correct_option}
+
+Student ka doubt: ${input}`;
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${MASTER_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `Tu ek expert JEE teacher hai...`
+                text: `Tu "JEEnie" naam ka AI tutor hai - ek friendly magical genie jo JEE aspirants ki help karta hai.
+
+**Your personality:**
+- Friendly aur encouraging
+- Hinglish mein baat karo (Hindi + English mix)
+- Short, crisp answers (4-6 lines max)
+- Use emojis occasionally 
+- Always motivate the student
+
+**Context:**
+${contextPrompt}
+
+**Instructions:**
+1. Answer in HINGLISH (Hindi-English mix)
+2. Keep it SHORT - max 5-6 lines
+3. Use bullet points (•) for steps
+4. Add 1 motivational line at end
+5. If formula hai, simple language mein explain karo
+6. No long paragraphs - crisp and clear!
+
+**Format:**
+💡 [Main concept in 1-2 lines]
+• [Key point 1]
+• [Key point 2]
+✨ [Quick tip/trick]
+🎯 [Motivational closing]
+
+Ab answer do:`
               }]
             }]
           })
         }
       );
 
-      // ✅ Better error handling
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'API Error');
+        console.error('API Error:', errorData);
+        throw new Error(errorData.error?.message || 'API request failed');
       }
 
       const data = await response.json();
@@ -77,17 +158,24 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
         throw new Error('No response from AI');
       }
     } catch (error) {
-      console.error('AI Error:', error);
+      console.error('🔥 JEEnie Error:', error);
       
-      // ✅ Specific error messages
-      let errorMsg = '❌ Sorry! Kuch technical issue aa gaya.';
+      let errorMsg = '❌ **Oops!** Kuch technical problem aa gayi.';
       
-      if (error.message.includes('quota')) {
-        errorMsg = '⚠️ API quota khatam ho gaya! Thodi der baad try karo.';
-      } else if (error.message.includes('invalid')) {
-        errorMsg = '🔑 API key invalid hai. Developer ko batao!';
-      } else if (error.message.includes('429')) {
-        errorMsg = '⏳ Too many requests! 1 minute wait karo.';
+      if (error.message?.includes('quota') || error.message?.includes('429')) {
+        errorMsg = `⚠️ **API limit khatam ho gayi!**
+
+Bohot zyada questions poocho rahe ho! 
+
+**Solutions:**
+1. 5-10 min wait karo
+2. Ya admin ko batao API key upgrade karne ke liye
+
+**Free tier limit:** 15 requests/minute 🔄`;
+      } else if (error.message?.includes('invalid') || error.message?.includes('API_KEY')) {
+        errorMsg = '🔑 **API key issue hai!** Developer ko batao.';
+      } else if (error.message?.includes('Failed to fetch')) {
+        errorMsg = '🌐 **Internet connection check karo!** Network issue lag raha hai.';
       }
       
       setMessages(prev => [...prev, {
@@ -106,30 +194,30 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
     }
   };
 
-  // Quick doubt suggestions
+  // JEE-specific quick doubts
   const quickDoubts = [
-    "Ye step samajh nahi aaya",
-    "Options mein confusion hai",
-    "Formula explain karo",
-    "Shortcut trick batao"
+    "📐 Formula explain karo",
+    "💡 Shortcut trick batao",
+    "🎯 Concept clear karo",
+    "⚡ Quick revision point"
   ];
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
         
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 rounded-t-2xl">
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
-                <Bot className="w-6 h-6 text-white" />
+              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl animate-pulse">
+                <Flame className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-white text-lg">AI Doubt Solver</h3>
-                <p className="text-xs text-purple-100">Powered by Google Gemini • 100% Free</p>
+                <h3 className="font-bold text-white text-xl">🧞‍♂️ JEEnie - Your AI Genie</h3>
+                <p className="text-xs text-purple-100">Powered by Gemini • Free Forever 💎</p>
               </div>
             </div>
             <button
@@ -142,16 +230,16 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-gray-50 to-white">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-purple-50 to-white">
           {messages.length === 1 && (
             <div className="mb-3">
-              <p className="text-xs text-gray-500 mb-2 text-center">💡 Quick doubts:</p>
+              <p className="text-xs text-gray-600 mb-2 text-center font-semibold">⚡ Quick doubts:</p>
               <div className="grid grid-cols-2 gap-2">
                 {quickDoubts.map((doubt, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setInput(doubt)}
-                    className="text-xs p-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg text-left text-purple-700 transition-colors"
+                    onClick={() => setInput(doubt.split(' ').slice(1).join(' '))}
+                    className="text-xs p-2.5 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-200 rounded-lg text-left text-purple-700 transition-all hover:scale-105"
                   >
                     {doubt}
                   </button>
@@ -169,13 +257,13 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
                 className={`max-w-[85%] p-3 rounded-2xl shadow-md ${
                   msg.role === 'user'
                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                    : 'bg-white border border-gray-200 text-gray-800'
+                    : 'bg-white border-2 border-purple-100 text-gray-800'
                 }`}
               >
                 {msg.role === 'assistant' && (
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-4 h-4 text-purple-600" />
-                    <span className="text-xs font-semibold text-purple-600">AI Teacher</span>
+                    <span className="text-xs font-bold text-purple-600">JEEnie 🧞‍♂️</span>
                   </div>
                 )}
                 <div className="text-sm whitespace-pre-wrap leading-relaxed">
@@ -187,10 +275,10 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
           
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 p-3 rounded-2xl shadow-md">
+              <div className="bg-white border-2 border-purple-200 p-3 rounded-2xl shadow-md">
                 <div className="flex items-center gap-2">
                   <Loader2 className="animate-spin text-purple-600" size={18} />
-                  <span className="text-sm text-gray-600">Thinking...</span>
+                  <span className="text-sm text-gray-700 font-medium">JEEnie soch raha hai... 🤔</span>
                 </div>
               </div>
             </div>
@@ -199,14 +287,14 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
+        <div className="p-4 border-t border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
           <div className="flex gap-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Apna doubt type karo... (Enter to send)"
-              className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none text-sm"
+              placeholder="Apna doubt yaha type karo... (Enter to send)"
+              className="flex-1 px-4 py-3 border-2 border-purple-300 rounded-xl focus:border-purple-500 focus:outline-none text-sm"
               disabled={loading}
             />
             <Button
@@ -222,10 +310,12 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
             </Button>
           </div>
           <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-gray-500">
-              💡 Tip: "Step 2 explain karo" ya "Shortcut batao" type karo
+            <p className="text-xs text-gray-600">
+              💡 Tip: Specific doubt poocho, better answer milega!
             </p>
-            <span className="text-xs text-green-600 font-semibold">✓ AI Ready</span>
+            <span className="text-xs text-green-600 font-bold flex items-center gap-1">
+              ✓ JEEnie Ready! 🧞‍♂️
+            </span>
           </div>
         </div>
       </div>

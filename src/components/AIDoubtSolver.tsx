@@ -9,6 +9,9 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const [lastRequestTime, setLastRequestTime] = useState(0);
   const messagesEndRef = useRef(null);
 
+  // 🔥 API KEY
+  const MASTER_API_KEY = 'AIzaSyCeo_ug_gBS7NqSG1TjRhzm8EzCQUqzuVM';
+
   // Initialize welcome message
   useEffect(() => {
     if (isOpen && messages.length === 0) {

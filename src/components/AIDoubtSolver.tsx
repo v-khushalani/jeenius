@@ -9,7 +9,7 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const messagesEndRef = useRef(null);
 
   // 🔥 MASTER API KEY - Yaha apni key daal do (ek baar)
-  const MASTER_API_KEY = 'AIzaSyCeo_ug_gBS7NqSG1TjRhzm8EzCQUqzuVM'; //
+  const MASTER_API_KEY = 'AIzaSyAKKNJu5GPx--GQ43qfol7-pbUfh_XglU8'; //
   useEffect(() => {
     if (isOpen && question) {
       // Initial welcome message

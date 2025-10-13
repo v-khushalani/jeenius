@@ -3,57 +3,29 @@ import { X, Send, Loader2, Lightbulb, Sparkles, Bot } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 const AIDoubtSolver = ({ question, isOpen, onClose }) => {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef(null);
   const [lastRequestTime, setLastRequestTime] = useState(0);
 
-  // 🔥 MASTER API KEY - Yaha apni key daal do (ek baar)
-  const MASTER_API_KEY = 'AIzaSyAKKNJu5GPx--GQ43qfol7-pbUfh_XglU8'; //
-  useEffect(() => {
-    if (isOpen && question) {
-      // Initial welcome message
-      setMessages([{
-        role: 'assistant',
-        content: `👋 **Namaste!** Main tumhara AI tutor hu.\n\n**Current Question:**\n"${question.question}"\n\n**Options:**\nA) ${question.option_a}\nB) ${question.option_b}\nC) ${question.option_c}\nD) ${question.option_d}\n\n✨ Kya doubt hai? Poocho!`
-      }]);
-    }
-  }, [isOpen, question]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const handleSendMessage = async () => {
-  if (!input.trim()) return;
+    if (!input.trim()) return;
+
+    // ✅ Rate limit check (1 request per 2 seconds)
+    const now = Date.now();
+    if (now - lastRequestTime < 2000) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: '⏳ Thoda wait karo! AI thoda busy hai (2 sec wait).'
+      }]);
+      return;
+    }
+    setLastRequestTime(now);
 
     const userMessage = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
-  
+
     try {
-      // Build context with question details
-      const context = `
-  Current Question: ${question.question}
-  
-  Options:
-  A) ${question.option_a}
-  B) ${question.option_b}
-  C) ${question.option_c}
-  D) ${question.option_d}
-  
-  Correct Answer: ${question.correct_option}
-  ${question.explanation ? `\nExplanation: ${question.explanation}` : ''}
-  
-  Student's Doubt: ${input}
-  `;
-  
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${MASTER_API_KEY}`,
         {
@@ -62,39 +34,19 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `Tu ek expert JEE teacher hai jo students ko doubts clear karta hai.
-  
-  ${context}
-  
-  Instructions:
-  - **Short and crisp** answer do (3-5 sentences max)
-  - **Hindi/English mix** (Hinglish) mein baat karo naturally
-  - Step-by-step samjhao agar zaroorat ho
-  - Concept clear karo with simple example
-  - **Encouraging tone** rakho - "Great question!", "Good thinking!" jaise phrases use karo
-  - **Formatting**: Use bullet points (•) for steps if needed
-  - Agar formula/equation hai toh simple language mein explain karo
-  
-  Answer in this format:
-  💡 [Short explanation]
-  - [Key point 1]
-  - [Key point 2]
-  ✨ [Quick tip or memory trick]
-  
-  Now answer:`
+                text: `Tu ek expert JEE teacher hai...`
               }]
             }]
           })
         }
       );
-  
-      // Better error handling
+
+      // ✅ Better error handling
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API Error:', errorData);
-        throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'API Error');
       }
-  
+
       const data = await response.json();
       
       if (data.candidates && data.candidates[0]) {
@@ -109,28 +61,26 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
     } catch (error) {
       console.error('AI Error:', error);
       
-      // Specific error messages
+      // ✅ Specific error messages
       let errorMsg = '❌ Sorry! Kuch technical issue aa gaya.';
       
-      if (error.message.includes('quota') || error.message.includes('RESOURCE_EXHAUSTED')) {
-        errorMsg = '⚠️ API quota khatam ho gaya! Naya API key chahiye. Developer ko batao!';
-      } else if (error.message.includes('invalid') || error.message.includes('API_KEY_INVALID')) {
-        errorMsg = '🔑 API key invalid hai. Developer se naya key lo!';
+      if (error.message.includes('quota')) {
+        errorMsg = '⚠️ API quota khatam ho gaya! Thodi der baad try karo.';
+      } else if (error.message.includes('invalid')) {
+        errorMsg = '🔑 API key invalid hai. Developer ko batao!';
       } else if (error.message.includes('429')) {
-        errorMsg = '⏳ Bahut zyada requests ho gayi! 1 minute wait karo.';
-      } else if (error.message.includes('Failed to fetch')) {
-        errorMsg = '🌐 Internet connection check karo!';
+        errorMsg = '⏳ Too many requests! 1 minute wait karo.';
       }
       
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: errorMsg + '\n\nThodi der baad dobara try karo.'
+        content: errorMsg
       }]);
+    } finally {
+      setLoading(false);
     }
-  
-    setLoading(false);
   };
-  
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();

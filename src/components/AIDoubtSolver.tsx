@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Loader2, Sparkles, Flame } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { supabase } from "@/integrations/supabase/client";
 
 const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const [input, setInput] = useState('');
@@ -9,10 +9,6 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [lastRequestTime, setLastRequestTime] = useState(0);
   const messagesEndRef = useRef(null);
-
-  // Gemini AI initialization
-  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
   // Initialize welcome message
   useEffect(() => {
@@ -73,7 +69,7 @@ ${question.option_d ? `D) ${question.option_d}` : ''}
     setLoading(true);
 
     try {
-      // Build JEE-specific context
+      // Build JEE-specific context prompt
       const isGeneralDoubt = !question?.option_a || question?.question?.includes("koi bhi");
       
       let contextPrompt = '';
@@ -107,46 +103,70 @@ Instructions:
 - If shortcut exists, mention it`;
       }
 
-      // Call Gemini API
-      const result = await model.generateContent(contextPrompt);
-      const response = await result.response;
-      const aiText = response.text();
+      // Call Supabase Edge Function (which calls Gemini API)
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('jeenie', {
+        body: { contextPrompt }
+      });
 
+      if (functionError) {
+        console.error('Edge Function Error:', functionError);
+        throw new Error(functionError.message || 'Edge function failed');
+      }
+
+      const aiText = functionData?.content;
+      
       if (aiText) {
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: aiText
         }]);
       } else {
-        throw new Error('No response from Gemini AI');
+        throw new Error('No response from AI');
       }
 
     } catch (error) {
-      console.error('🔥 Gemini API Error:', error);
+      console.error('🔥 JEEnie Error:', error);
       
       let errorMsg = '❌ **Oops!** Kuch technical problem aa gayi.';
       
-      // Check specific error types
-      if (error.message?.includes('API key not valid') || error.message?.includes('API_KEY_INVALID')) {
-        errorMsg = '🔑 **API Key invalid hai!** Developer se check karwao .env file me VITE_GEMINI_API_KEY sahi hai ya nahi.';
-      } else if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('Resource has been exhausted')) {
-        errorMsg = `⚠️ **Gemini API quota khatam ho gaya!**
+      // Detailed error messages
+      if (error.message?.includes('Rate limits exceeded') || error.message?.includes('429')) {
+        errorMsg = `⚠️ **Gemini API ka rate limit hit ho gaya!**
 
 **Solutions:**
 1. 1-2 minute wait karo
-2. Free tier me 15 requests/minute limit hai
-3. Ya Google AI Studio me billing enable karo`;
+2. Free tier: 15 requests/minute limit hai
+3. Supabase Dashboard me check karo billing status`;
+      } else if (error.message?.includes('quota') || error.message?.includes('exhausted')) {
+        errorMsg = `⚠️ **API quota khatam ho gaya!**
+
+**Solutions:**
+1. Thoda wait karo (1-2 min)
+2. Google AI Studio me billing check karo
+3. Supabase secrets me API key verify karo`;
+      } else if (error.message?.includes('invalid') || error.message?.includes('API key')) {
+        errorMsg = `🔑 **API Key issue hai!**
+
+**Fix:**
+1. Supabase Dashboard → Settings → Edge Functions → Secrets
+2. Check GEMINI_API_KEY valid hai ya nahi
+3. Google AI Studio se naya key generate karo`;
       } else if (error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
-        errorMsg = '🌐 **Internet connection check karo!** Network issue lag raha hai.';
-      } else if (error.message?.includes('blocked') || error.message?.includes('safety')) {
-        errorMsg = '🛡️ **Safety filter ne block kar diya!** Question thoda differently poocho.';
+        errorMsg = '🌐 **Network issue!** Internet connection check karo.';
+      } else if (error.message?.includes('FunctionsRelayError') || error.message?.includes('not found')) {
+        errorMsg = `🔧 **Edge Function setup nahi hua!**
+
+**Setup Steps:**
+1. Supabase Dashboard me jao
+2. Edge Functions section me 'jeenie' function create karo
+3. Ya developer se setup karwao`;
       } else {
-        errorMsg = `❌ **Error:** ${error.message || 'Unknown error'}
+        errorMsg = `❌ **Error:** ${error.message}
 
 **Try:**
 1. Page refresh karo
-2. API key check karo
-3. Internet connection verify karo`;
+2. Supabase Dashboard me Edge Function check karo
+3. Browser console me detailed error dekho`;
       }
       
       setMessages(prev => [...prev, {
@@ -282,7 +302,7 @@ Instructions:
           </div>
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-green-600 font-bold flex items-center gap-1">
-              ✓ Gemini 1.5 Pro Ready! 🧞‍♂️
+              ✓ Gemini 1.5 Pro via Supabase 🧞‍♂️
             </span>
           </div>
         </div>

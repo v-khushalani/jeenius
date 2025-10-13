@@ -38,8 +38,7 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      const apiKey = 'AIzaSyAKKNJu5GPx--GQ43qfol7-pbUfh_XglU8';
-      // const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       
       if (!apiKey) {
         throw new Error('API key not configured');

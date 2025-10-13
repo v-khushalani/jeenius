@@ -3,8 +3,20 @@ import { X, Send, Loader2, Lightbulb, Sparkles, Bot } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 const AIDoubtSolver = ({ question, isOpen, onClose }) => {
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: question ? `Main tumhe **"${question.question}"** ke baare mein help kar sakta hun. Koi specific doubt hai?` : 'Namaste! 🙏 Main tumhara AI Doubt Solver hun. Koi bhi JEE doubt pucho!'
+    }
+  ]);
   const [loading, setLoading] = useState(false);
   const [lastRequestTime, setLastRequestTime] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
@@ -26,8 +38,14 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
     setLoading(true);
 
     try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error('API key not configured');
+      }
+
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${MASTER_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

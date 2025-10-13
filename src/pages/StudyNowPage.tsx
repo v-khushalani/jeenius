@@ -1,3 +1,4 @@
+import FloatingAIButton from '@/components/FloatingAIButton';
 import AIDoubtSolver from '@/components/AIDoubtSolver';
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

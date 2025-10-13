@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Loader2, Sparkles, Flame } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const [input, setInput] = useState('');
@@ -10,7 +10,10 @@ const AIDoubtSolver = ({ question, isOpen, onClose }) => {
   const [lastRequestTime, setLastRequestTime] = useState(0);
   const messagesEndRef = useRef(null);
 
-  // Using Lovable AI via Supabase Edge Function (no client API key needed)
+  // Gemini AI initialization
+  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
   // Initialize welcome message
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -53,7 +56,7 @@ ${question.option_d ? `D) ${question.option_d}` : ''}
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
-    // Rate limit check
+    // Rate limit check (2 seconds)
     const now = Date.now();
     if (now - lastRequestTime < 2000) {
       setMessages(prev => [...prev, {
@@ -73,64 +76,77 @@ ${question.option_d ? `D) ${question.option_d}` : ''}
       // Build JEE-specific context
       const isGeneralDoubt = !question?.option_a || question?.question?.includes("koi bhi");
       
-      const contextPrompt = isGeneralDoubt ? 
-        `Student ka doubt: ${input}` :
-        `Question: ${question.question}
+      let contextPrompt = '';
+      
+      if (isGeneralDoubt) {
+        contextPrompt = `You are JEEnie, a friendly AI tutor for JEE/NEET students in India. Student asks: "${input}"
+
+Reply in simple Hinglish (mix of Hindi and English), keep it short (3-5 lines max), friendly, and exam-focused. Use emojis occasionally. Be encouraging!`;
+      } else {
+        contextPrompt = `You are JEEnie, an AI tutor for JEE/NEET preparation. 
+
+Question: ${question.question}
+
 Options:
 A) ${question.option_a}
 B) ${question.option_b}
 C) ${question.option_c}
 D) ${question.option_d}
+
 Correct Answer: ${question.correct_option}
 
-Student ka doubt: ${input}`;
+Student's doubt: "${input}"
 
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('jeenie', {
-        body: { contextPrompt }
-      });
-
-      if (functionError) {
-        throw new Error(functionError.message || 'AI function failed');
+Instructions:
+- Reply in simple Hinglish (Hindi + English mix)
+- Keep response short (4-6 lines)
+- Focus on clarifying the doubt
+- Use emojis occasionally
+- Be friendly and encouraging
+- If formula needed, explain it simply
+- If shortcut exists, mention it`;
       }
 
-      const aiText = functionData?.content as string | undefined;
-      
+      // Call Gemini API
+      const result = await model.generateContent(contextPrompt);
+      const response = await result.response;
+      const aiText = response.text();
+
       if (aiText) {
-        const aiResponse = {
+        setMessages(prev => [...prev, {
           role: 'assistant',
           content: aiText
-        };
-        setMessages(prev => [...prev, aiResponse]);
+        }]);
       } else {
-        throw new Error('No response from AI');
+        throw new Error('No response from Gemini AI');
       }
+
     } catch (error) {
-      console.error('🔥 JEEnie Error:', error);
+      console.error('🔥 Gemini API Error:', error);
       
       let errorMsg = '❌ **Oops!** Kuch technical problem aa gayi.';
       
-      if (
-        error.message?.includes('quota') ||
-        error.message?.includes('429') ||
-        error.message?.includes('Rate limits exceeded')
-      ) {
-        errorMsg = `⚠️ **API limit khatam ho gayi!**
-
-Bohot zyada questions poocho rahe ho! 
+      // Check specific error types
+      if (error.message?.includes('API key not valid') || error.message?.includes('API_KEY_INVALID')) {
+        errorMsg = '🔑 **API Key invalid hai!** Developer se check karwao .env file me VITE_GEMINI_API_KEY sahi hai ya nahi.';
+      } else if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('Resource has been exhausted')) {
+        errorMsg = `⚠️ **Gemini API quota khatam ho gaya!**
 
 **Solutions:**
-1. 5-10 min wait karo
-2. Ya admin ko batao AI credits/plan upgrade karne ke liye
-`;
-      } else if (
-        error.message?.includes('Payment required') ||
-        error.message?.includes('402')
-      ) {
-        errorMsg = '💳 **Credits khatam ya billing issue!** Workspace me funds add karo ya plan upgrade karo.';
-      } else if (error.message?.includes('invalid') || error.message?.includes('GEMINI_API_KEY')) {
-        errorMsg = '🔑 **API key issue hai!** Developer ko batao.';
+1. 1-2 minute wait karo
+2. Free tier me 15 requests/minute limit hai
+3. Ya Google AI Studio me billing enable karo`;
       } else if (error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
         errorMsg = '🌐 **Internet connection check karo!** Network issue lag raha hai.';
+      } else if (error.message?.includes('blocked') || error.message?.includes('safety')) {
+        errorMsg = '🛡️ **Safety filter ne block kar diya!** Question thoda differently poocho.';
+      } else {
+        errorMsg = `❌ **Error:** ${error.message || 'Unknown error'}
+
+**Try:**
+1. Page refresh karo
+2. API key check karo
+3. Internet connection verify karo`;
       }
       
       setMessages(prev => [...prev, {
@@ -172,7 +188,7 @@ Bohot zyada questions poocho rahe ho!
               </div>
               <div>
                 <h3 className="font-bold text-white text-xl">JEEnie</h3>
-                <p className="text-xs text-purple-100">Powered by Gemini</p>
+                <p className="text-xs text-purple-100">Powered by Gemini 1.5 Pro</p>
               </div>
             </div>
             <button
@@ -266,7 +282,7 @@ Bohot zyada questions poocho rahe ho!
           </div>
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-green-600 font-bold flex items-center gap-1">
-              ✓ JEEnie Ready! 🧞‍♂️
+              ✓ Gemini 1.5 Pro Ready! 🧞‍♂️
             </span>
           </div>
         </div>

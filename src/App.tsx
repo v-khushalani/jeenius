@@ -201,8 +201,8 @@ const App = () => (
             
             {/* Catch-all route - 404 */}
             <Route path="*" element={<NotFound />} />
-            <FloatingAIButton />
           </Routes>
+          <FloatingAIButton />
         </TooltipProvider>
       </AuthProvider>
     </BrowserRouter>

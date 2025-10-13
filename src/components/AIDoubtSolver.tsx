@@ -160,7 +160,7 @@ Bohot zyada questions poocho rahe ho!
 2. Ya admin ko batao API key upgrade karne ke liye
 
 **Free tier limit:** 15 requests/minute 🔄`;
-      } else if (error.message?.includes('invalid') || error.message?.includes('API_KEY')) {
+      } else if (error.message?.includes('invalid') || error.message?.includes('GEMINI_API_KEY')) {
         errorMsg = '🔑 **API key issue hai!** Developer ko batao.';
       } else if (error.message?.includes('Failed to fetch')) {
         errorMsg = '🌐 **Internet connection check karo!** Network issue lag raha hai.';

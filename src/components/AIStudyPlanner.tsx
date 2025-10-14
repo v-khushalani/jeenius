@@ -1,405 +1,110 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import {
-  Brain,
-  Clock,
-  Target,
-  TrendingUp,
-  CheckCircle2,
-  Circle,
-  RefreshCw,
-  Lightbulb,
-  AlertCircle,
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Activity,
-  BarChart3,
-  Zap
-} from "lucide-react";
+  Brain, Target, Trophy, Flame, Zap, TrendingUp, Clock,
+  CheckCircle2, Circle, Sparkles, AlertCircle, PlayCircle,
+  RefreshCw, Calendar, Award, BarChart3
+} from 'lucide-react';
 
-import { supabase } from "@/integrations/supabase/client";
-
-interface Topic {
-  name: string;
-  duration: number;
-  difficulty: string;
-  reason: string;
-  focusArea: string;
-  aiRecommendation?: string;
-  completed?: boolean;
-  questionsRequired: number; 
-  questionsCompleted: number; 
-  subject: string; 
-  chapter?: string; 
-  topicName: string;
-}
-
-interface Subject {
-  name: string;
-  allocatedTime: number;
-  priority: string;
-  topics: Topic[];
-  aiInsight?: string;
-}
-
-interface StudyPlan {
-  id: string;
-  subjects: Subject[];
-  performance: {
-    overallAccuracy: number;
-    todayAccuracy: number;
-    strengths: string[];
-    weaknesses: string[];
-  };
-  recommendations: Array<{
-    type: string;
-    message: string;
-    priority: string;
-    action?: string;
-  }>;
-  total_study_time: number;
-  completion_status: number;
-  ai_metrics: {
-    learningRate: number;
-    retentionScore: number;
-    consistencyScore: number;
-    adaptiveLevel: string;
-  };
-  next_refresh_time: string;
-  last_updated: string;
-}
-
-interface BurnoutStatus {
-  energyScore: number;
-  shouldRest: boolean;
-  message: string;
-  signals: Array<{
-    type: string;
-    severity: string;
-    message: string;
-  }>;
-}
-
-const AIStudyPlanner: React.FC = () => {
-  const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [expandedSubjects, setExpandedSubjects] = useState<Set<number>>(new Set([0]));
+const ModernStudyPlanner = () => {
+  const [studyPlan, setStudyPlan] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [liveStats, setLiveStats] = useState({
-    questionsToday: 0,
-    accuracyToday: 0,
-    streak: 0
+    questionsToday: 12,
+    accuracyToday: 78,
+    streak: 5,
+    timeStudied: 145
   });
-  const [burnoutStatus, setBurnoutStatus] = useState<BurnoutStatus | null>(null);
-  
-  // Helper function - Calculate days remaining
-  const calculateDaysRemaining = () => {
-    const targetDate = new Date('2026-05-24');
-    const today = new Date();
-    const diffTime = targetDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+
+  // Mock study plan data (replace with actual Supabase call)
+  const mockPlan = {
+    subjects: [
+      {
+        name: 'Physics',
+        priority: 'high',
+        allocatedTime: 90,
+        progress: 65,
+        topics: [
+          { name: 'Newton\'s Laws', completed: true, difficulty: 'easy', questions: 10 },
+          { name: 'Kinematics', completed: false, difficulty: 'medium', questions: 15 },
+          { name: 'Work & Energy', completed: false, difficulty: 'hard', questions: 12 }
+        ],
+        aiInsight: 'Your mechanics concepts need reinforcement. Focus on problem-solving.'
+      },
+      {
+        name: 'Chemistry',
+        priority: 'medium',
+        allocatedTime: 60,
+        progress: 45,
+        topics: [
+          { name: 'Organic Chemistry', completed: false, difficulty: 'medium', questions: 12 },
+          { name: 'Periodic Table', completed: true, difficulty: 'easy', questions: 8 }
+        ],
+        aiInsight: 'Strong foundation. Ready for advanced organic chemistry.'
+      },
+      {
+        name: 'Mathematics',
+        priority: 'high',
+        allocatedTime: 90,
+        progress: 80,
+        topics: [
+          { name: 'Calculus', completed: true, difficulty: 'hard', questions: 15 },
+          { name: 'Algebra', completed: true, difficulty: 'medium', questions: 10 }
+        ],
+        aiInsight: 'Excellent progress! Maintain this momentum.'
+      }
+    ],
+    recommendations: [
+      { message: 'Complete 5 more questions to hit today\'s target!', priority: 'high' },
+      { message: 'Your Physics accuracy dropped to 65%. Review basics.', priority: 'medium' }
+    ],
+    ai_metrics: {
+      learningRate: 0.85,
+      retentionScore: 0.78,
+      consistencyScore: 0.92,
+      adaptiveLevel: 'Advanced'
+    }
   };
 
-  // Real-time stats updater
-  const updateLiveStats = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: attempts } = await supabase
-        .from('question_attempts')
-        .select('is_correct, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const todayAttempts = attempts?.filter(a => 
-        new Date(a.created_at) >= today
-      ) || [];
-      
-      const todayCorrect = todayAttempts.filter(a => a.is_correct).length;
-      const todayTotal = todayAttempts.length;
-      const todayAccuracy = todayTotal > 0 ? Math.round((todayCorrect / todayTotal) * 100) : 0;
-            
-      // Calculate streak
-      let streak = 0;
-      const DAILY_TARGET = 30;
-      const sortedAttempts = [...(attempts || [])].sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      
-      let currentDate = new Date();
-      currentDate.setHours(0, 0, 0, 0);
-      
-      for (let i = 0; i < 365; i++) {
-        const questionsOnThisDay = sortedAttempts.filter(a => {
-          const attemptDate = new Date(a.created_at);
-          attemptDate.setHours(0, 0, 0, 0);
-          return attemptDate.getTime() === currentDate.getTime();
-        }).length;
-        
-        if (questionsOnThisDay >= DAILY_TARGET) {
-          streak++;
-          currentDate.setDate(currentDate.getDate() - 1);
-        } else if (i === 0 && questionsOnThisDay > 0) {
-          currentDate.setDate(currentDate.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-
-      setLiveStats({
-        questionsToday: todayTotal,
-        accuracyToday: todayAccuracy,
-        streak: streak
-      });
-
-    } catch (error) {
-      console.error('Error updating live stats:', error);
-    }
-  }, []);
-
-  // Update topic progress
-  const updateTopicProgress = useCallback(async () => {
-    try {
-      if (!studyPlan) return;
-  
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-  
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-  
-      const { data: attempts } = await supabase
-        .from('question_attempts')
-        .select('*, questions(subject, chapter, topic)')
-        .eq('user_id', user.id)
-        .gte('created_at', today.toISOString());
-             
-      const updatedSubjects = studyPlan.subjects.map(subject => ({
-        ...subject,
-        topics: subject.topics.map(topic => {
-          const topicAttempts = attempts?.filter(a => 
-            a.questions?.subject === subject.name &&
-            a.questions?.topic === topic.topicName
-          ) || [];
-  
-          const questionsCompleted = topicAttempts.length;
-          const isCompleted = questionsCompleted >= topic.questionsRequired;
-  
-          return {
-            ...topic,
-            questionsCompleted,
-            completed: isCompleted
-          };
-        })
-      }));
-      
-      const totalTopics = updatedSubjects.reduce((sum, s) => sum + s.topics.length, 0);
-      const completedTopics = updatedSubjects.reduce(
-        (sum, s) => sum + s.topics.filter(t => t.completed).length, 
-        0
-      );
-      const completionPercentage = Math.round((completedTopics / totalTopics) * 100);
-  
-      setStudyPlan(prev => prev ? {
-        ...prev,
-        subjects: updatedSubjects,
-        completion_status: completionPercentage
-      } : null);
-  
-    } catch (error) {
-      console.error('Error updating topic progress:', error);
-    }
-  }, [studyPlan]);
-
-  // Check burnout status
-  const checkBurnout = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-  
-      const { data, error } = await supabase.functions.invoke('check-burnout');
-      
-      if (error) {
-        console.log('Burnout check not available yet');
-        return;
-      }
-      
-      setBurnoutStatus(data);
-      
-    } catch (error) {
-      console.log('Burnout feature coming soon');
-    }
-  }, []);
-
-  const fetchStudyPlan = async () => {
-    try {
-      setLoading(true);
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: plans, error } = await supabase
-        .from('study_plans')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('last_updated', { ascending: false })
-        .limit(1);
-
-      if (error) throw error;
-
-      const latestPlan = plans?.[0] as any;
-      const needsRefresh = !latestPlan || new Date(latestPlan.next_refresh_time) <= new Date();
-
-      if (needsRefresh) {
-        await generateNewPlan();
-      } else {
-        setStudyPlan(latestPlan as StudyPlan);
-      }
-    } catch (error) {
-      console.error('Error fetching study plan:', error);
-    } finally {
+  useEffect(() => {
+    // Simulate loading
+    setLoading(true);
+    setTimeout(() => {
+      setStudyPlan(mockPlan);
       setLoading(false);
-    }
-  };
-  
-  const generateNewPlan = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-study-plan');
-      
-      if (error) throw error;
-      
-      if (data?.success) {
-        setStudyPlan(data.studyPlan);
-      }
-    } catch (error) {
-      console.error('Error generating study plan:', error);
-    }
-  }, []);
+    }, 1000);
 
-  // Auto-refresh live stats every 10 seconds
-  useEffect(() => {
-    updateLiveStats();
-    updateTopicProgress();
-    checkBurnout();
-    
+    // Update stats every 5 seconds
     const interval = setInterval(() => {
-      updateLiveStats();
-      updateTopicProgress();
-    }, 10000);
-    
+      setLiveStats(prev => ({
+        ...prev,
+        questionsToday: prev.questionsToday + Math.floor(Math.random() * 2),
+        timeStudied: prev.timeStudied + 1
+      }));
+    }, 5000);
+
     return () => clearInterval(interval);
-  }, [updateLiveStats, updateTopicProgress]);
-
-  // Auto-adjustment checker - runs every 5 minutes
-  useEffect(() => {
-    const checkAdjustmentNeeded = async () => {
-      if (!studyPlan) return false;
-      
-      try {
-        const topicCompleted = studyPlan.completion_status >= 100;
-        const accuracyDropped = liveStats.accuracyToday < 60 && liveStats.questionsToday >= 10;
-        
-        const lastUpdateTime = new Date(studyPlan.last_updated);
-        const hoursSinceUpdate = (Date.now() - lastUpdateTime.getTime()) / (1000 * 60 * 60);
-        const needsTimeBasedUpdate = hoursSinceUpdate >= 6;
-        
-        const performingExcellent = liveStats.accuracyToday > 90 && liveStats.questionsToday >= 15;
-        
-        console.log('🔍 Adjustment Check:', {
-          topicCompleted,
-          accuracyDropped,
-          hoursSinceUpdate: hoursSinceUpdate.toFixed(1),
-          needsTimeBasedUpdate,
-          performingExcellent
-        });
-        
-        return topicCompleted || accuracyDropped || needsTimeBasedUpdate || performingExcellent;
-        
-      } catch (error) {
-        console.error('Error checking adjustment:', error);
-        return false;
-      }
-    };
-
-    const performAutoAdjustment = async () => {
-      const shouldAdjust = await checkAdjustmentNeeded();
-      
-      if (shouldAdjust) {
-        console.log('📊 Triggering auto-adjustment...');
-        await generateNewPlan();
-        console.log('✅ Plan adjusted successfully!');
-      }
-    };
-
-    performAutoAdjustment();
-    
-    const adjustmentInterval = setInterval(performAutoAdjustment, 5 * 60 * 1000);
-    
-    return () => clearInterval(adjustmentInterval);
-  }, [studyPlan, liveStats, generateNewPlan]);
-
-  useEffect(() => {
-    fetchStudyPlan();
   }, []);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await generateNewPlan();
-    await updateLiveStats();
-    setRefreshing(false);
-  };
-
-  const toggleSubject = (index: number) => {
-    const newExpanded = new Set(expandedSubjects);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
-    }
-    setExpandedSubjects(newExpanded);
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-700 border-red-300';
-      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
-      case 'low': return 'bg-green-100 text-green-700 border-green-300';
-      default: return 'bg-gray-100 text-gray-700 border-gray-300';
-    }
-  };
-
-  const getDifficultyIcon = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return '🟢';
-      case 'medium': return '🟡';
-      case 'hard': return '🔴';
-      default: return '⚪';
-    }
-  };
-
-  const getMetricColor = (value: number) => {
-    if (value >= 80) return 'text-green-600';
-    if (value >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+  const getDaysRemaining = () => {
+    const target = new Date('2026-05-24');
+    const today = new Date();
+    return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
   };
 
   if (loading) {
     return (
-      <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
-        <CardContent className="p-6 flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Brain className="h-12 w-12 text-blue-500 animate-pulse mx-auto mb-3" />
-            <p className="text-slate-600">AI is crafting your perfect study plan...</p>
+      <Card className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border-0 shadow-2xl">
+        <CardContent className="p-12 flex flex-col items-center justify-center min-h-[500px]">
+          <div className="relative">
+            <Brain className="h-24 w-24 text-indigo-600 animate-pulse" />
+            <Sparkles className="h-8 w-8 text-yellow-500 absolute -top-2 -right-2 animate-spin" />
           </div>
+          <h3 className="text-2xl font-bold text-indigo-900 mt-6 mb-2">AI is Analyzing...</h3>
+          <p className="text-indigo-600">Creating your personalized study roadmap</p>
         </CardContent>
       </Card>
     );
@@ -407,11 +112,14 @@ const AIStudyPlanner: React.FC = () => {
 
   if (!studyPlan) {
     return (
-      <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
-        <CardContent className="p-6">
-          <p className="text-slate-600 text-center mb-4">No study plan available</p>
-          <Button onClick={fetchStudyPlan} className="w-full">
-            Generate Plan
+      <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-0 shadow-2xl">
+        <CardContent className="p-12 text-center">
+          <Brain className="h-20 w-20 text-blue-600 mx-auto mb-6" />
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Dominate JEE?</h2>
+          <p className="text-gray-600 mb-8">Let AI create your perfect study plan</p>
+          <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 text-lg">
+            <Sparkles className="mr-2 h-5 w-5" />
+            Generate My Plan
           </Button>
         </CardContent>
       </Card>
@@ -419,292 +127,214 @@ const AIStudyPlanner: React.FC = () => {
   }
 
   return (
-    <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
-      <CardHeader className="border-b border-slate-100 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-2 rounded-lg">
-              <Brain className="h-5 w-5 text-white" />
+    <div className="space-y-6">
+      {/* Hero Stats Bar */}
+      <Card className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 border-0 shadow-2xl overflow-hidden">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Target className="h-5 w-5 text-white/80 mr-2" />
+                <span className="text-white/80 text-sm font-medium">JEE 2026</span>
+              </div>
+              <div className="text-3xl font-bold text-white">{getDaysRemaining()}</div>
+              <div className="text-white/70 text-xs mt-1">days left</div>
             </div>
-            <div>
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                AI Study Plan
-                <Badge className="bg-green-500 text-white animate-pulse text-xs">
-                  <Activity className="h-3 w-3 mr-1" />LIVE
-                </Badge>
-              </h3>
-              <p className="text-xs text-slate-500">Updates every 10 seconds • Auto-adjusts every 5 minutes</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => window.location.href = '/analytics'}
-              size="sm"
-              variant="outline"
-              className="gap-2"
-            >
-              <BarChart3 className="h-4 w-4" />
-              Detailed Analysis
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
 
-      <CardContent className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
-        {/* Live Stats Bar with Target */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-3 shadow-lg">
-          <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/20">
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              <span className="font-bold text-sm">Target: JEE 2026</span>
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Flame className="h-5 w-5 text-orange-300 mr-2" />
+                <span className="text-white/80 text-sm font-medium">Streak</span>
+              </div>
+              <div className="text-3xl font-bold text-white">{liveStats.streak}</div>
+              <div className="text-white/70 text-xs mt-1">days strong</div>
             </div>
-            <Badge className="bg-white/20 text-white text-xs backdrop-blur">
-              {calculateDaysRemaining()} days left
+
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Trophy className="h-5 w-5 text-yellow-300 mr-2" />
+                <span className="text-white/80 text-sm font-medium">Today</span>
+              </div>
+              <div className="text-3xl font-bold text-white">{liveStats.questionsToday}</div>
+              <div className="text-white/70 text-xs mt-1">questions solved</div>
+            </div>
+
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Zap className="h-5 w-5 text-green-300 mr-2" />
+                <span className="text-white/80 text-sm font-medium">Accuracy</span>
+              </div>
+              <div className="text-3xl font-bold text-white">{liveStats.accuracyToday}%</div>
+              <div className="text-white/70 text-xs mt-1">on fire!</div>
+            </div>
+          </div>
+
+          <div className="mt-6 bg-white/10 backdrop-blur rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white/90 text-sm font-medium">Daily Target Progress</span>
+              <span className="text-white font-bold">{liveStats.questionsToday}/30</span>
+            </div>
+            <Progress value={(liveStats.questionsToday / 30) * 100} className="h-3 bg-white/20" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Performance Metrics */}
+      <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50 to-purple-50">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Brain className="h-5 w-5 text-indigo-600" />
+              AI Performance Metrics
+            </h3>
+            <Badge className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+              {studyPlan.ai_metrics.adaptiveLevel}
             </Badge>
           </div>
-        </div>
-        
-        {/* Burnout Warning */}
-        {burnoutStatus && burnoutStatus.shouldRest && (
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-lg p-4 shadow-lg">
-            <div className="flex items-start gap-3">
-              <div className="bg-red-500 p-2 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-red-900 text-sm mb-1">
-                  ⚠️ Burnout Alert
-                </h4>
-                <p className="text-sm text-red-800 mb-2">
-                  {burnoutStatus.message}
-                </p>
-                {burnoutStatus.signals.length > 0 && (
-                  <div className="space-y-1">
-                    {burnoutStatus.signals.map((signal, idx) => (
-                      <div key={idx} className="text-xs text-red-700 flex items-center gap-1">
-                        <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                        {signal.message}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Button 
-                  size="sm" 
-                  className="mt-3 bg-red-600 hover:bg-red-700 text-white"
-                  onClick={() => setBurnoutStatus(null)}
-                >
-                  I'll take a break
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Energy Score Indicator */}
-        {burnoutStatus && !burnoutStatus.shouldRest && (
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-3 border border-green-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-semibold text-green-900">Energy Score</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Progress value={burnoutStatus.energyScore} className="h-2 w-24" />
-                <Badge className={`text-xs ${
-                  burnoutStatus.energyScore > 70 ? 'bg-green-500' :
-                  burnoutStatus.energyScore > 40 ? 'bg-yellow-500' : 'bg-red-500'
-                } text-white`}>
-                  {burnoutStatus.energyScore}%
-                </Badge>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* AI Metrics */}
-        {studyPlan.ai_metrics && (
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-indigo-600" />
-                <h4 className="font-semibold text-sm text-indigo-900">AI Performance Metrics</h4>
-              </div>
-              <Badge className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs">
-                {studyPlan.ai_metrics.adaptiveLevel.toUpperCase()}
-              </Badge>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="text-center bg-white/70 rounded-lg p-2">
-                <div className={`text-2xl font-bold ${getMetricColor(studyPlan.ai_metrics.learningRate * 100)}`}>
-                  {(studyPlan.ai_metrics.learningRate * 100).toFixed(0)}%
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: 'Learning', value: studyPlan.ai_metrics.learningRate * 100, icon: TrendingUp, color: 'text-green-600' },
+              { label: 'Retention', value: studyPlan.ai_metrics.retentionScore * 100, icon: Brain, color: 'text-blue-600' },
+              { label: 'Consistency', value: studyPlan.ai_metrics.consistencyScore * 100, icon: Flame, color: 'text-orange-600' }
+            ].map((metric, idx) => (
+              <div key={idx} className="bg-white rounded-xl p-4 shadow-md">
+                <metric.icon className={`h-5 w-5 ${metric.color} mb-2`} />
+                <div className={`text-3xl font-bold ${metric.color}`}>
+                  {metric.value.toFixed(0)}%
                 </div>
-                <p className="text-xs text-slate-600 mt-1">Learning Rate</p>
-                <p className="text-xs text-slate-500">How fast you improve</p>
-              </div>
-              <div className="text-center bg-white/70 rounded-lg p-2">
-                <div className={`text-2xl font-bold ${getMetricColor(studyPlan.ai_metrics.retentionScore * 100)}`}>
-                  {(studyPlan.ai_metrics.retentionScore * 100).toFixed(0)}%
-                </div>
-                <p className="text-xs text-slate-600 mt-1">Retention</p>
-                <p className="text-xs text-slate-500">Memory strength</p>
-              </div>
-              <div className="text-center bg-white/70 rounded-lg p-2">
-                <div className={`text-2xl font-bold ${getMetricColor(studyPlan.ai_metrics.consistencyScore * 100)}`}>
-                  {(studyPlan.ai_metrics.consistencyScore * 100).toFixed(0)}%
-                </div>
-                <p className="text-xs text-slate-600 mt-1">Consistency</p>
-                <p className="text-xs text-slate-500">Daily discipline</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Priority Recommendations */}
-        {studyPlan.recommendations?.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="font-semibold text-sm flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-yellow-600" />
-              Smart Recommendations
-            </h4>
-            {studyPlan.recommendations.slice(0, 3).map((rec, idx) => (
-              <div
-                key={idx}
-                className={`p-3 rounded-lg border-l-4 ${
-                  rec.priority === 'high'
-                    ? 'bg-red-50 border-red-500'
-                    : rec.priority === 'medium'
-                    ? 'bg-yellow-50 border-yellow-500'
-                    : 'bg-blue-50 border-blue-500'
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  {rec.priority === 'high' && <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />}
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-900">{rec.message}</p>
-                    {rec.action && (
-                      <p className="text-xs text-slate-600 mt-1">💡 {rec.action}</p>
-                    )}
-                  </div>
-                </div>
+                <div className="text-sm text-gray-600 mt-1">{metric.label}</div>
+                <Progress value={metric.value} className="h-1.5 mt-2" />
               </div>
             ))}
           </div>
-        )}
+        </CardContent>
+      </Card>
 
-        {/* Today's Study Schedule */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-sm flex items-center gap-2">
-              <Target className="h-4 w-4 text-blue-600" />
-              Today's Schedule ({studyPlan.total_study_time} mins)
+      {/* Action Items */}
+      {studyPlan.recommendations.length > 0 && (
+        <Card className="border-0 shadow-xl bg-gradient-to-r from-yellow-50 to-orange-50">
+          <CardContent className="p-4">
+            <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              Action Required
             </h4>
-            <div className="flex items-center gap-2">
-              <Progress value={studyPlan.completion_status || 0} className="h-2 w-20" />
-              <span className="text-xs font-semibold text-slate-600">
-                {studyPlan.completion_status || 0}%
-              </span>
+            <div className="space-y-2">
+              {studyPlan.recommendations.map((rec, idx) => (
+                <div key={idx} className="bg-white rounded-lg p-3 border-l-4 border-orange-500 flex items-start gap-3">
+                  <Zap className="h-4 w-4 text-orange-600 mt-0.5" />
+                  <p className="text-sm text-gray-800 flex-1">{rec.message}</p>
+                  <Button size="sm" variant="outline" className="text-xs">Act Now</Button>
+                </div>
+              ))}
             </div>
-          </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Subjects List */}
-          {studyPlan.subjects.map((subject, subjectIdx) => (
-            <div
-              key={subjectIdx}
-              className={`rounded-lg border-2 overflow-hidden transition-all ${
-                subject.priority === 'high'
-                  ? 'border-red-300 bg-red-50'
-                  : subject.priority === 'medium'
-                  ? 'border-yellow-300 bg-yellow-50'
-                  : 'border-green-300 bg-green-50'
-              }`}
-            >
-              <button
-                onClick={() => toggleSubject(subjectIdx)}
-                className="w-full p-3 flex items-center justify-between hover:bg-white/50 transition-colors"
-              >
-                <div className="flex items-center gap-2 flex-1">
-                  <div className={`p-1.5 rounded-lg ${getPriorityColor(subject.priority)}`}>
+      {/* Subject Cards */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Target className="h-5 w-5 text-blue-600" />
+            Today's Focus
+          </h3>
+          <Button size="sm" variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Regenerate
+          </Button>
+        </div>
+
+        {studyPlan.subjects.map((subject, idx) => (
+          <Card key={idx} className={`border-2 shadow-lg transition-all hover:shadow-2xl ${
+            subject.priority === 'high' ? 'border-red-300 bg-gradient-to-br from-red-50 to-orange-50' :
+            subject.priority === 'medium' ? 'border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50' :
+            'border-green-300 bg-gradient-to-br from-green-50 to-emerald-50'
+          }`}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-xl ${
+                    subject.priority === 'high' ? 'bg-red-100' :
+                    subject.priority === 'medium' ? 'bg-yellow-100' : 'bg-green-100'
+                  }`}>
                     {subject.priority === 'high' ? '🔥' : subject.priority === 'medium' ? '📚' : '✅'}
                   </div>
-                  <div className="text-left">
-                    <div className="flex items-center gap-2">
-                      <h5 className="font-semibold text-sm text-slate-900">{subject.name}</h5>
-                      <Badge className={`text-xs ${getPriorityColor(subject.priority)}`}>
-                        {subject.priority}
-                      </Badge>
-                    </div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900">{subject.name}</h4>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-slate-600 flex items-center gap-1">
+                      <span className="text-sm text-gray-600 flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {subject.allocatedTime} mins
                       </span>
-                      <span className="text-xs text-slate-600">
+                      <Badge variant="outline" className="text-xs">
                         {subject.topics.length} topics
-                      </span>
+                      </Badge>
                     </div>
                   </div>
                 </div>
-                {expandedSubjects.has(subjectIdx) ? (
-                  <ChevronUp className="h-4 w-4 text-slate-600" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-slate-600" />
-                )}
-              </button>
+                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
+                  <PlayCircle className="h-4 w-4 mr-2" />
+                  Start
+                </Button>
+              </div>
+            </CardHeader>
 
-              {expandedSubjects.has(subjectIdx) && (
-                <div className="px-3 pb-3 space-y-2">
-                  {subject.aiInsight && (
-                    <div className="bg-white/70 rounded-lg p-2 border border-slate-200">
-                      <p className="text-xs text-slate-700">
-                        <Brain className="h-3 w-3 inline mr-1 text-purple-600" />
-                        {subject.aiInsight}
-                      </p>
-                    </div>
-                  )}
+            <CardContent className="space-y-4">
+              {/* Progress */}
+              <div className="bg-white/70 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Progress</span>
+                  <span className="text-sm font-bold text-gray-900">{subject.progress}%</span>
+                </div>
+                <Progress value={subject.progress} className="h-2" />
+              </div>
 
-                  <div className="space-y-2">
-                    {subject.topics.map((topic, topicIdx) => (
-                      <div
-                        key={topicIdx}
-                        className="bg-white rounded-lg p-2.5 border border-slate-200 hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-start gap-2">
-                          <div className="mt-0.5">
-                            {topic.completed ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600 animate-pulse" />
-                            ) : (
-                              <Circle className="h-4 w-4 text-slate-400" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mt-2">
-                              <Badge
-                                className={`text-xs ${
-                                  topic.focusArea === 'weakness'
-                                    ? 'bg-red-100 text-red-700'
-                                    : topic.focusArea === 'revision'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-green-100 text-green-700'
-                                }`}
-                              >
-                                {topic.focusArea === 'weakness' ? '🎯 Weakness' :
-                                 topic.focusArea === 'revision' ? '🔄 Revision' :
-                                 '⭐ Strength'}
-                              </Badge>
-                            </div>
+              {/* AI Insight */}
+              <div className="bg-white/70 rounded-lg p-3 border-l-4 border-purple-500">
+                <div className="flex items-start gap-2">
+                  <Brain className="h-4 w-4 text-purple-600 mt-0.5" />
+                  <p className="text-sm text-gray-700">{subject.aiInsight}</p>
+                </div>
+              </div>
+
+              {/* Topics */}
+              <div className="space-y-2">
+                {subject.topics.map((topic, tidx) => (
+                  <div key={tidx} className={`bg-white rounded-lg p-3 border transition-all hover:shadow-md ${
+                    topic.completed ? 'border-green-300' : 'border-gray-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        {topic.completed ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <Circle className="h-5 w-5 text-gray-400" />
+                        )}
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{topic.name}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {topic.difficulty === 'easy' ? '🟢' : topic.difficulty === 'medium' ? '🟡' : '🔴'}
+                              {topic.difficulty}
+                            </Badge>
+                            <span className="text-xs text-gray-600">{topic.questions} questions</span>
                           </div>
                         </div>
                       </div>
-                    ))}
+                      {!topic.completed && (
+                        <Button size="sm" variant="outline">Practice</Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-      </CardContent>
-    </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 };
 

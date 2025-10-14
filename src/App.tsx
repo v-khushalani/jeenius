@@ -90,8 +90,16 @@ const App = () => (
             <Route path="/analytics" element={<AnalyticsPage />} />
             
             {/* Protected Routes - Main Dashboard */}
-            <Route path="/dashboard" element={<EnhancedDashboard />} />
-                      
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <EnhancedDashboard />
+                </ProtectedRoute>
+              } 
+            />
+
+            
             {/* Study Routes */}
             <Route
               path="/study-now"

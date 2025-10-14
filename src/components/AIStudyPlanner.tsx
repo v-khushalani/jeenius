@@ -356,8 +356,10 @@ const AIStudyPlanner: React.FC = () => {
         </CardContent>
       </Card>
     );
+    // Yaha se function END - aage nahi jayega
   }
-
+  
+  // ===== EARLY RETURN 2: No data check =====
   if (!studyPlan) {
     return (
       <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
@@ -369,6 +371,22 @@ const AIStudyPlanner: React.FC = () => {
         </CardContent>
       </Card>
     );
+    // Yaha se function END
+  }
+  
+  // ===== EARLY RETURN 3: Empty subjects check =====
+  if (!studyPlan.subjects || studyPlan.subjects.length === 0) {
+    return (
+      <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
+        <CardContent className="p-6">
+          <p className="text-slate-600 text-center">Study plan is empty. Generating new one...</p>
+          <Button onClick={handleRefresh} className="w-full mt-4">
+            Refresh Plan
+          </Button>
+        </CardContent>
+      </Card>
+    );
+    // Yaha se function END
   }
 
   const daysRemaining = calculateDaysRemaining();
@@ -590,8 +608,12 @@ const AIStudyPlanner: React.FC = () => {
             </div>
           </div>
 
+          // Before mapping, add defaults:
+          const subjects = studyPlan?.subjects || [];
+          const recommendations = studyPlan?.recommendations || [];
+          
           {/* Subjects List */}
-          {studyPlan.subjects.map((subject, subjectIdx) => (
+          {studyPlan?.subjects || []).map((subject, subjectIdx) => (
             <div
               key={subjectIdx}
               className={`rounded-lg border-2 overflow-hidden transition-all ${
@@ -728,6 +750,10 @@ const AIStudyPlanner: React.FC = () => {
               )}
             </div>
           ))}
+          {recommendations.slice(0, 3).map((rec, idx) => (
+            // ...
+          ))}
+
         </div>
 
         {/* Last Updated */}

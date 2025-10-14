@@ -18,7 +18,9 @@ import {
   ChevronUp,
   Activity,
   BarChart3,
-  Zap
+  Zap,
+  Calendar,
+  BookOpen
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -73,15 +75,12 @@ interface StudyPlan {
   last_updated: string;
 }
 
-interface BurnoutStatus {
-  energyScore: number;
-  shouldRest: boolean;
-  message: string;
-  signals: Array<{
-    type: string;
-    severity: string;
-    message: string;
-  }>;
+interface SyllabusStats {
+  totalTopics: number;
+  pendingTopics: number;
+  inProgressTopics: number;
+  completedTopics: number;
+  completionPercentage: number;
 }
 
 const AIStudyPlanner: React.FC = () => {
@@ -89,14 +88,13 @@ const AIStudyPlanner: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<number>>(new Set([0]));
+  const [syllabusStats, setSyllabusStats] = useState<SyllabusStats | null>(null);
   const [liveStats, setLiveStats] = useState({
     questionsToday: 0,
     accuracyToday: 0,
     streak: 0
   });
-  const [burnoutStatus, setBurnoutStatus] = useState<BurnoutStatus | null>(null);
   
-  // Helper function - Calculate days remaining
   const calculateDaysRemaining = () => {
     const targetDate = new Date('2026-05-24');
     const today = new Date();
@@ -105,7 +103,37 @@ const AIStudyPlanner: React.FC = () => {
     return diffDays;
   };
 
-  // Real-time stats updater
+  // Fetch syllabus completion stats
+  const fetchSyllabusStats = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: priorities } = await supabase
+        .from('topic_priorities')
+        .select('status')
+        .eq('user_id', user.id);
+
+      if (priorities) {
+        const total = priorities.length;
+        const pending = priorities.filter(p => p.status === 'pending').length;
+        const inProgress = priorities.filter(p => p.status === 'in_progress').length;
+        const completed = priorities.filter(p => p.status === 'completed').length;
+        const percentage = Math.round((completed / total) * 100);
+
+        setSyllabusStats({
+          totalTopics: total,
+          pendingTopics: pending,
+          inProgressTopics: inProgress,
+          completedTopics: completed,
+          completionPercentage: percentage
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching syllabus stats:', error);
+    }
+  }, []);
+
   const updateLiveStats = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -128,7 +156,6 @@ const AIStudyPlanner: React.FC = () => {
       const todayTotal = todayAttempts.length;
       const todayAccuracy = todayTotal > 0 ? Math.round((todayCorrect / todayTotal) * 100) : 0;
             
-      // Calculate streak
       let streak = 0;
       const DAILY_TARGET = 30;
       const sortedAttempts = [...(attempts || [])].sort((a, b) => 
@@ -166,7 +193,6 @@ const AIStudyPlanner: React.FC = () => {
     }
   }, []);
 
-  // Update topic progress
   const updateTopicProgress = useCallback(async () => {
     try {
       if (!studyPlan) return;
@@ -220,32 +246,15 @@ const AIStudyPlanner: React.FC = () => {
     }
   }, [studyPlan]);
 
-  // Check burnout status
-  const checkBurnout = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-  
-      const { data, error } = await supabase.functions.invoke('check-burnout');
-      
-      if (error) {
-        console.log('Burnout check not available yet');
-        return;
-      }
-      
-      setBurnoutStatus(data);
-      
-    } catch (error) {
-      console.log('Burnout feature coming soon');
-    }
-  }, []);
-
   const fetchStudyPlan = async () => {
     try {
       setLoading(true);
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Initialize student profile if doesn't exist
+      await supabase.functions.invoke('initialize-student');
 
       const { data: plans, error } = await supabase
         .from('study_plans')
@@ -285,67 +294,19 @@ const AIStudyPlanner: React.FC = () => {
     }
   }, []);
 
-  // Auto-refresh live stats every 10 seconds
   useEffect(() => {
     updateLiveStats();
     updateTopicProgress();
-    checkBurnout();
+    fetchSyllabusStats();
     
     const interval = setInterval(() => {
       updateLiveStats();
       updateTopicProgress();
+      fetchSyllabusStats();
     }, 10000);
     
     return () => clearInterval(interval);
-  }, [updateLiveStats, updateTopicProgress]);
-
-  // Auto-adjustment checker - runs every 5 minutes
-  useEffect(() => {
-    const checkAdjustmentNeeded = async () => {
-      if (!studyPlan) return false;
-      
-      try {
-        const topicCompleted = studyPlan.completion_status >= 100;
-        const accuracyDropped = liveStats.accuracyToday < 60 && liveStats.questionsToday >= 10;
-        
-        const lastUpdateTime = new Date(studyPlan.last_updated);
-        const hoursSinceUpdate = (Date.now() - lastUpdateTime.getTime()) / (1000 * 60 * 60);
-        const needsTimeBasedUpdate = hoursSinceUpdate >= 6;
-        
-        const performingExcellent = liveStats.accuracyToday > 90 && liveStats.questionsToday >= 15;
-        
-        console.log('🔍 Adjustment Check:', {
-          topicCompleted,
-          accuracyDropped,
-          hoursSinceUpdate: hoursSinceUpdate.toFixed(1),
-          needsTimeBasedUpdate,
-          performingExcellent
-        });
-        
-        return topicCompleted || accuracyDropped || needsTimeBasedUpdate || performingExcellent;
-        
-      } catch (error) {
-        console.error('Error checking adjustment:', error);
-        return false;
-      }
-    };
-
-    const performAutoAdjustment = async () => {
-      const shouldAdjust = await checkAdjustmentNeeded();
-      
-      if (shouldAdjust) {
-        console.log('📊 Triggering auto-adjustment...');
-        await generateNewPlan();
-        console.log('✅ Plan adjusted successfully!');
-      }
-    };
-
-    performAutoAdjustment();
-    
-    const adjustmentInterval = setInterval(performAutoAdjustment, 5 * 60 * 1000);
-    
-    return () => clearInterval(adjustmentInterval);
-  }, [studyPlan, liveStats, generateNewPlan]);
+  }, [updateLiveStats, updateTopicProgress, fetchSyllabusStats]);
 
   useEffect(() => {
     fetchStudyPlan();
@@ -355,6 +316,7 @@ const AIStudyPlanner: React.FC = () => {
     setRefreshing(true);
     await generateNewPlan();
     await updateLiveStats();
+    await fetchSyllabusStats();
     setRefreshing(false);
   };
 
@@ -374,15 +336,6 @@ const AIStudyPlanner: React.FC = () => {
       case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
       case 'low': return 'bg-green-100 text-green-700 border-green-300';
       default: return 'bg-gray-100 text-gray-700 border-gray-300';
-    }
-  };
-
-  const getDifficultyIcon = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return '🟢';
-      case 'medium': return '🟡';
-      case 'hard': return '🔴';
-      default: return '⚪';
     }
   };
 
@@ -418,6 +371,11 @@ const AIStudyPlanner: React.FC = () => {
     );
   }
 
+  const daysRemaining = calculateDaysRemaining();
+  const topicsPerDay = syllabusStats 
+    ? (syllabusStats.pendingTopics + syllabusStats.inProgressTopics) / daysRemaining 
+    : 0;
+
   return (
     <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
       <CardHeader className="border-b border-slate-100 p-4">
@@ -433,93 +391,90 @@ const AIStudyPlanner: React.FC = () => {
                   <Activity className="h-3 w-3 mr-1" />LIVE
                 </Badge>
               </h3>
-              <p className="text-xs text-slate-500">Updates every 10 seconds • Auto-adjusts every 5 minutes</p>
+              <p className="text-xs text-slate-500">Auto-updates • Smart recommendations</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Button
-              onClick={() => window.location.href = '/analytics'}
+              onClick={handleRefresh}
               size="sm"
               variant="outline"
+              disabled={refreshing}
               className="gap-2"
             >
-              <BarChart3 className="h-4 w-4" />
-              Detailed Analysis
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
-        {/* Live Stats Bar with Target */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-3 shadow-lg">
-          <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/20">
+        
+        {/* Exam Timeline Card */}
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-4 shadow-lg">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              <span className="font-bold text-sm">Target: JEE 2026</span>
+              <Target className="h-5 w-5" />
+              <span className="font-bold">JEE 2026 Countdown</span>
             </div>
-            <Badge className="bg-white/20 text-white text-xs backdrop-blur">
-              {calculateDaysRemaining()} days left
+            <Badge className="bg-white/20 text-white backdrop-blur">
+              <Calendar className="h-3 w-3 mr-1" />
+              {daysRemaining} days left
             </Badge>
           </div>
+          
+          {syllabusStats && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Syllabus Completion</span>
+                <span className="font-bold">{syllabusStats.completionPercentage}%</span>
+              </div>
+              <Progress value={syllabusStats.completionPercentage} className="h-2 bg-white/20" />
+              
+              <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                <div className="bg-white/10 rounded p-2 backdrop-blur">
+                  <div className="font-bold text-lg">{syllabusStats.completedTopics}</div>
+                  <div className="opacity-90">✅ Completed</div>
+                </div>
+                <div className="bg-white/10 rounded p-2 backdrop-blur">
+                  <div className="font-bold text-lg">{syllabusStats.inProgressTopics}</div>
+                  <div className="opacity-90">📚 In Progress</div>
+                </div>
+                <div className="bg-white/10 rounded p-2 backdrop-blur">
+                  <div className="font-bold text-lg">{syllabusStats.pendingTopics}</div>
+                  <div className="opacity-90">⏳ Pending</div>
+                </div>
+              </div>
+
+              <div className="bg-white/10 rounded-lg p-2 mt-3 backdrop-blur">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="opacity-90">Daily Target:</span>
+                  <span className="font-bold">{topicsPerDay.toFixed(1)} topics/day</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        
-        {/* Burnout Warning */}
-        {burnoutStatus && burnoutStatus.shouldRest && (
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-lg p-4 shadow-lg">
-            <div className="flex items-start gap-3">
-              <div className="bg-red-500 p-2 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-red-900 text-sm mb-1">
-                  ⚠️ Burnout Alert
-                </h4>
-                <p className="text-sm text-red-800 mb-2">
-                  {burnoutStatus.message}
-                </p>
-                {burnoutStatus.signals.length > 0 && (
-                  <div className="space-y-1">
-                    {burnoutStatus.signals.map((signal, idx) => (
-                      <div key={idx} className="text-xs text-red-700 flex items-center gap-1">
-                        <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                        {signal.message}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Button 
-                  size="sm" 
-                  className="mt-3 bg-red-600 hover:bg-red-700 text-white"
-                  onClick={() => setBurnoutStatus(null)}
-                >
-                  I'll take a break
-                </Button>
-              </div>
-            </div>
+
+        {/* Live Performance Stats */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+            <div className="text-2xl font-bold text-green-600">{liveStats.questionsToday}</div>
+            <p className="text-xs text-green-700 mt-1">Questions Today</p>
+            <p className="text-xs text-green-600">Target: 30</p>
           </div>
-        )}
-        
-        {/* Energy Score Indicator */}
-        {burnoutStatus && !burnoutStatus.shouldRest && (
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-3 border border-green-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-semibold text-green-900">Energy Score</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Progress value={burnoutStatus.energyScore} className="h-2 w-24" />
-                <Badge className={`text-xs ${
-                  burnoutStatus.energyScore > 70 ? 'bg-green-500' :
-                  burnoutStatus.energyScore > 40 ? 'bg-yellow-500' : 'bg-red-500'
-                } text-white`}>
-                  {burnoutStatus.energyScore}%
-                </Badge>
-              </div>
-            </div>
+          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200">
+            <div className="text-2xl font-bold text-blue-600">{liveStats.accuracyToday}%</div>
+            <p className="text-xs text-blue-700 mt-1">Today's Accuracy</p>
+            <p className="text-xs text-blue-600">Target: 75%</p>
           </div>
-        )}
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-3 border border-orange-200">
+            <div className="text-2xl font-bold text-orange-600">{liveStats.streak} 🔥</div>
+            <p className="text-xs text-orange-700 mt-1">Day Streak</p>
+            <p className="text-xs text-orange-600">Keep going!</p>
+          </div>
+        </div>
 
         {/* AI Metrics */}
         {studyPlan.ai_metrics && (
@@ -539,27 +494,56 @@ const AIStudyPlanner: React.FC = () => {
                   {(studyPlan.ai_metrics.learningRate * 100).toFixed(0)}%
                 </div>
                 <p className="text-xs text-slate-600 mt-1">Learning Rate</p>
-                <p className="text-xs text-slate-500">How fast you improve</p>
               </div>
               <div className="text-center bg-white/70 rounded-lg p-2">
                 <div className={`text-2xl font-bold ${getMetricColor(studyPlan.ai_metrics.retentionScore * 100)}`}>
                   {(studyPlan.ai_metrics.retentionScore * 100).toFixed(0)}%
                 </div>
                 <p className="text-xs text-slate-600 mt-1">Retention</p>
-                <p className="text-xs text-slate-500">Memory strength</p>
               </div>
               <div className="text-center bg-white/70 rounded-lg p-2">
                 <div className={`text-2xl font-bold ${getMetricColor(studyPlan.ai_metrics.consistencyScore * 100)}`}>
                   {(studyPlan.ai_metrics.consistencyScore * 100).toFixed(0)}%
                 </div>
                 <p className="text-xs text-slate-600 mt-1">Consistency</p>
-                <p className="text-xs text-slate-500">Daily discipline</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Priority Recommendations */}
+        {/* Performance Overview */}
+        <div className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-lg p-3 border border-slate-200">
+          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-slate-600" />
+            Performance Overview
+          </h4>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className="text-xs text-slate-600">Overall Accuracy</p>
+              <p className="text-lg font-bold text-slate-900">{studyPlan.performance.overallAccuracy}%</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-600">Today's Accuracy</p>
+              <p className="text-lg font-bold text-slate-900">{studyPlan.performance.todayAccuracy}%</p>
+            </div>
+          </div>
+          
+          {studyPlan.performance.strengths.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs text-green-700 font-semibold">💪 Strengths:</p>
+              <p className="text-xs text-green-600">{studyPlan.performance.strengths.join(', ')}</p>
+            </div>
+          )}
+          
+          {studyPlan.performance.weaknesses.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs text-red-700 font-semibold">🎯 Focus Areas:</p>
+              <p className="text-xs text-red-600">{studyPlan.performance.weaknesses.join(', ')}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Smart Recommendations */}
         {studyPlan.recommendations?.length > 0 && (
           <div className="space-y-2">
             <h4 className="font-semibold text-sm flex items-center gap-2">
@@ -591,11 +575,11 @@ const AIStudyPlanner: React.FC = () => {
           </div>
         )}
 
-        {/* Today's Study Schedule */}
+        {/* Today's Schedule */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-sm flex items-center gap-2">
-              <Target className="h-4 w-4 text-blue-600" />
+              <BookOpen className="h-4 w-4 text-blue-600" />
               Today's Schedule ({studyPlan.total_study_time} mins)
             </h4>
             <div className="flex items-center gap-2">
@@ -641,6 +625,9 @@ const AIStudyPlanner: React.FC = () => {
                       <span className="text-xs text-slate-600">
                         {subject.topics.length} topics
                       </span>
+                      <span className="text-xs text-slate-600">
+                        {subject.topics.filter(t => t.completed).length}/{subject.topics.length} done
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -657,7 +644,7 @@ const AIStudyPlanner: React.FC = () => {
                     <div className="bg-white/70 rounded-lg p-2 border border-slate-200">
                       <p className="text-xs text-slate-700">
                         <Brain className="h-3 w-3 inline mr-1 text-purple-600" />
-                        {subject.aiInsight}
+                        <span className="font-semibold">AI Insight:</span> {subject.aiInsight}
                       </p>
                     </div>
                   )}
@@ -666,18 +653,34 @@ const AIStudyPlanner: React.FC = () => {
                     {subject.topics.map((topic, topicIdx) => (
                       <div
                         key={topicIdx}
-                        className="bg-white rounded-lg p-2.5 border border-slate-200 hover:shadow-md transition-all"
+                        className={`bg-white rounded-lg p-2.5 border transition-all ${
+                          topic.completed 
+                            ? 'border-green-300 bg-green-50' 
+                            : 'border-slate-200 hover:shadow-md'
+                        }`}
                       >
                         <div className="flex items-start gap-2">
                           <div className="mt-0.5">
                             {topic.completed ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600 animate-pulse" />
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
                             ) : (
                               <Circle className="h-4 w-4 text-slate-400" />
                             )}
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h6 className="text-sm font-medium text-slate-900">{topic.topicName}</h6>
+                                {topic.chapter && (
+                                  <p className="text-xs text-slate-500">{topic.chapter}</p>
+                                )}
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {topic.duration} min
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
                               <Badge
                                 className={`text-xs ${
                                   topic.focusArea === 'weakness'
@@ -689,9 +692,33 @@ const AIStudyPlanner: React.FC = () => {
                               >
                                 {topic.focusArea === 'weakness' ? '🎯 Weakness' :
                                  topic.focusArea === 'revision' ? '🔄 Revision' :
-                                 '⭐ Strength'}
+                                 '⭐ New Topic'}
+                              </Badge>
+                              
+                              <Badge variant="outline" className="text-xs">
+                                {topic.difficulty === 'hard' ? '🔴' : topic.difficulty === 'medium' ? '🟡' : '🟢'} {topic.difficulty}
                               </Badge>
                             </div>
+
+                            {/* Progress bar */}
+                            <div className="mt-2">
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-slate-600">Progress</span>
+                                <span className="font-semibold text-slate-700">
+                                  {topic.questionsCompleted}/{topic.questionsRequired}
+                                </span>
+                              </div>
+                              <Progress 
+                                value={(topic.questionsCompleted / topic.questionsRequired) * 100} 
+                                className="h-1.5"
+                              />
+                            </div>
+
+                            {topic.reason && !topic.completed && (
+                              <p className="text-xs text-slate-600 mt-2 italic">
+                                📌 {topic.reason}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -703,6 +730,10 @@ const AIStudyPlanner: React.FC = () => {
           ))}
         </div>
 
+        {/* Last Updated */}
+        <div className="text-center text-xs text-slate-500">
+          Last updated: {new Date(studyPlan.last_updated).toLocaleTimeString()}
+        </div>
       </CardContent>
     </Card>
   );

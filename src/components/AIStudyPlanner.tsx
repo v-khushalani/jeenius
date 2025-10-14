@@ -503,7 +503,7 @@ const AIStudyPlanner: React.FC = () => {
                 <h4 className="font-semibold text-sm text-indigo-900">AI Performance Metrics</h4>
               </div>
               <Badge className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs">
-                studyPlan.ai_metrics?.adaptiveLevel?.toUpperCase() || 'BEGINNER'
+                {studyPlan.ai_metrics?.adaptiveLevel?.toUpperCase() || 'BEGINNER'}
               </Badge>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -608,12 +608,8 @@ const AIStudyPlanner: React.FC = () => {
             </div>
           </div>
 
-          // Before mapping, add defaults:
-          const subjects = studyPlan?.subjects || [];
-          const recommendations = studyPlan?.recommendations || [];
-          
           {/* Subjects List */}
-          {studyPlan?.subjects || []).map((subject, subjectIdx) => (
+          {(studyPlan?.subjects || []).map((subject, subjectIdx) => (
             <div
               key={subjectIdx}
               className={`rounded-lg border-2 overflow-hidden transition-all ${
@@ -749,9 +745,6 @@ const AIStudyPlanner: React.FC = () => {
                 </div>
               )}
             </div>
-          ))}
-          {recommendations.slice(0, 3).map((rec, idx) => (
-            // ...
           ))}
 
         </div>

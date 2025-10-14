@@ -9,7 +9,7 @@ import {
   RefreshCw, Calendar, Award, BarChart3
 } from 'lucide-react';
 
-const ModernStudyPlanner = () => {
+const AIStudyPlanner = () => {
   const [studyPlan, setStudyPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [liveStats, setLiveStats] = useState({

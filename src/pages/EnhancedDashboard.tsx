@@ -377,10 +377,10 @@ const EnhancedDashboard = () => {
                 <div className="flex flex-col gap-3 sm:gap-4">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shrink-0">
-                      <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                      <Brain className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">
+                      <h1 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">
                         {timeMessage.greeting}, {displayName}! {timeMessage.icon}
                       </h1>
                       <p className="text-slate-300 text-xs sm:text-sm">
@@ -402,22 +402,22 @@ const EnhancedDashboard = () => {
                     </div>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <button 
                       onClick={() => navigate('/study-now')} 
-                      className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                      className="w-full sm:w-auto px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-sm font-semibold transition-all shadow-lg"
                     >
                       📚 {timeMessage.action}
                     </button>
                     <button 
                       onClick={() => navigate('/battle')} 
-                      className="px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                      className="w-full sm:w-auto px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg text-sm font-semibold transition-all shadow-lg"
                     >
                       ⚔️ Battle
                     </button>
                     <button 
                       onClick={() => navigate('/test')} 
-                      className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
+                      className="w-full sm:w-auto px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg text-sm font-semibold transition-all shadow-lg"
                     >
                       🧪 Test
                     </button>
@@ -428,20 +428,20 @@ const EnhancedDashboard = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-blue-700 mb-0.5">Questions</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-blue-900">{stats?.totalQuestions || 0}</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900">{stats?.totalQuestions || 0}</p>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-green-600 font-semibold">+{stats?.questionsToday || 0} today</span>
                     <span className="text-xs text-slate-500">• {stats?.questionsWeek || 0}/week</span>
                   </div>
                 </div>
-                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 sm:p-3 rounded-xl shadow-lg shrink-0">
-                  <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-1.5 sm:p-2 lg:p-3 rounded-xl shadow-lg shrink-0">
+                  <Brain className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -515,7 +515,7 @@ const EnhancedDashboard = () => {
                       <div className="flex items-center gap-2 mt-1">
                         <Progress 
                           value={percentage} 
-                          className="h-1.5 flex-1" 
+                          className="h-1 sm:h-1.5 flex-1" 
                         />
                         <span className={`text-xs font-semibold ${goalStyle.textColor}`}>
                           {Math.round(percentage)}%
@@ -574,7 +574,7 @@ const EnhancedDashboard = () => {
                   <Badge className="bg-blue-100 text-blue-700">This Week</Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 sm:p-4">
+             <CardContent className="p-2.5 sm:p-3 lg:p-4">
                 <div className="space-y-3">
                   {(() => {
                     const subjectStats: any = {};
@@ -646,7 +646,7 @@ const EnhancedDashboard = () => {
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm font-semibold text-slate-800">
+                                <span className="text-xs sm:text-sm font-semibold text-slate-800">
                                   {subject}
                                 </span>
                                 <Badge className={`${badge.color} text-white text-xs flex items-center gap-1`}>

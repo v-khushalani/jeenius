@@ -360,7 +360,7 @@ const EnhancedDashboard = () => {
         
         {!hasSeenWelcome && (
           <div className="mb-4 sm:mb-6">
-            <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-6 sm:p-6 shadow-2xl border border-blue-800/30 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-blue-800/30 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
               <div className="relative z-10">
                 <button

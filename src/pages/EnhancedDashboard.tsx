@@ -331,7 +331,7 @@ const EnhancedDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
       <Header />
       
-      <div className="container mx-auto px-3 sm:px-4 lg:px-8 max-w-7xl pt-20 sm:pt-24 lg:pt-28">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-8 max-w-7xl pt-20 sm:pt-28 lg:pt-28">
         {showBanner && notification && (
           <div className={`mt-2 sm:mt-0 mb-4 bg-gradient-to-r ${
             notification.color === 'green' ? 'from-green-500 to-emerald-600' :

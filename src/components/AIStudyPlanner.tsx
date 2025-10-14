@@ -72,7 +72,6 @@ interface StudyPlan {
   next_refresh_time: string;
   last_updated: string;
 }
-
 interface BurnoutStatus {
   energyScore: number;
   shouldRest: boolean;
@@ -83,7 +82,6 @@ interface BurnoutStatus {
     message: string;
   }>;
 }
-
 const AIStudyPlanner: React.FC = () => {
   const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -98,12 +96,86 @@ const AIStudyPlanner: React.FC = () => {
   
   // Helper function - Calculate days remaining
   const calculateDaysRemaining = () => {
-    const targetDate = new Date('2026-05-24');
+    const targetDate = new Date('2026-05-24'); // JEE 2026 date
     const today = new Date();
     const diffTime = targetDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
+
+  // Check burnout status
+  const checkBurnout = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+  
+      const { data, error } = await supabase.functions.invoke('check-burnout');
+      
+      if (error) throw error;
+      
+      setBurnoutStatus(data);
+      
+    } catch (error) {
+      console.error('Error checking burnout:', error);
+    }
+  }, []);
+  // Update topic progress
+  const updateTopicProgress = useCallback(async () => {
+    try {
+      if (!studyPlan) return;
+  
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+  
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+  
+      // Get today's attempts with subject/chapter/topic info
+      const { data: attempts } = await supabase
+        .from('question_attempts')
+        .select('*, questions(subject, chapter, topic)')
+        .eq('user_id', user.id)
+        .gte('created_at', today.toISOString());
+             
+      // Update each topic's progress
+      const updatedSubjects = studyPlan.subjects.map(subject => ({
+        ...subject,
+        topics: subject.topics.map(topic => {
+          // Count questions completed for this specific topic TODAY
+          const topicAttempts = attempts?.filter(a => 
+            a.questions?.subject === subject.name &&
+            a.questions?.topic === topic.topicName
+          ) || [];
+  
+          const questionsCompleted = topicAttempts.length;
+          const isCompleted = questionsCompleted >= topic.questionsRequired;
+  
+          return {
+            ...topic,
+            questionsCompleted,
+            completed: isCompleted
+          };
+        })
+      }));
+      
+      // Calculate overall completion status
+      const totalTopics = updatedSubjects.reduce((sum, s) => sum + s.topics.length, 0);
+      const completedTopics = updatedSubjects.reduce(
+        (sum, s) => sum + s.topics.filter(t => t.completed).length, 
+        0
+      );
+      const completionPercentage = Math.round((completedTopics / totalTopics) * 100);
+  
+      setStudyPlan(prev => prev ? {
+        ...prev,
+        subjects: updatedSubjects,
+        completion_status: completionPercentage
+      } : null);
+  
+    } catch (error) {
+      console.error('Error updating topic progress:', error);
+    }
+  }, [studyPlan]);
 
   // Real-time stats updater
   const updateLiveStats = useCallback(async () => {
@@ -166,80 +238,92 @@ const AIStudyPlanner: React.FC = () => {
     }
   }, []);
 
-  // Update topic progress
-  const updateTopicProgress = useCallback(async () => {
-    try {
-      if (!studyPlan) return;
-  
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-  
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-  
-      const { data: attempts } = await supabase
-        .from('question_attempts')
-        .select('*, questions(subject, chapter, topic)')
-        .eq('user_id', user.id)
-        .gte('created_at', today.toISOString());
-             
-      const updatedSubjects = studyPlan.subjects.map(subject => ({
-        ...subject,
-        topics: subject.topics.map(topic => {
-          const topicAttempts = attempts?.filter(a => 
-            a.questions?.subject === subject.name &&
-            a.questions?.topic === topic.topicName
-          ) || [];
-  
-          const questionsCompleted = topicAttempts.length;
-          const isCompleted = questionsCompleted >= topic.questionsRequired;
-  
-          return {
-            ...topic,
-            questionsCompleted,
-            completed: isCompleted
-          };
-        })
-      }));
-      
-      const totalTopics = updatedSubjects.reduce((sum, s) => sum + s.topics.length, 0);
-      const completedTopics = updatedSubjects.reduce(
-        (sum, s) => sum + s.topics.filter(t => t.completed).length, 
-        0
-      );
-      const completionPercentage = Math.round((completedTopics / totalTopics) * 100);
-  
-      setStudyPlan(prev => prev ? {
-        ...prev,
-        subjects: updatedSubjects,
-        completion_status: completionPercentage
-      } : null);
-  
-    } catch (error) {
-      console.error('Error updating topic progress:', error);
-    }
-  }, [studyPlan]);
+  // Auto-refresh live stats every 10 seconds
+  useEffect(() => {
+    updateLiveStats();
+    updateTopicProgress();
+    checkBurnout(); // ADD THIS
+    
+    const interval = setInterval(() => {
+      updateLiveStats();
+      updateTopicProgress();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [updateLiveStats, updateTopicProgress,checkBurnout]);
 
-  // Check burnout status
-  const checkBurnout = useCallback(async () => {
+  // ADD THIS CODE AFTER LINE 289 (after the existing useEffect for live stats)
+
+// Auto-adjustment checker - runs every 5 minutes
+useEffect(() => {
+  // Function to check if plan needs adjustment
+  const checkAdjustmentNeeded = async () => {
+    if (!studyPlan) return false;
+    
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-  
-      const { data, error } = await supabase.functions.invoke('check-burnout');
+      // Trigger 1: All topics completed (100% completion)
+      const topicCompleted = studyPlan.completion_status >= 100;
       
-      if (error) {
-        console.log('Burnout check not available yet');
-        return;
-      }
+      // Trigger 2: Accuracy dropped significantly today
+      const accuracyDropped = liveStats.accuracyToday < 60 && liveStats.questionsToday >= 10;
       
-      setBurnoutStatus(data);
+      // Trigger 3: Time-based refresh (6 hours since last update)
+      const lastUpdateTime = new Date(studyPlan.last_updated);
+      const hoursSinceUpdate = (Date.now() - lastUpdateTime.getTime()) / (1000 * 60 * 60);
+      const needsTimeBasedUpdate = hoursSinceUpdate >= 6;
+      
+      // Trigger 4: Student performing exceptionally well (>90% accuracy, time to increase difficulty)
+      const performingExcellent = liveStats.accuracyToday > 90 && liveStats.questionsToday >= 15;
+      
+      console.log('🔍 Adjustment Check:', {
+        topicCompleted,
+        accuracyDropped,
+        hoursSinceUpdate: hoursSinceUpdate.toFixed(1),
+        needsTimeBasedUpdate,
+        performingExcellent
+      });
+      
+      return topicCompleted || accuracyDropped || needsTimeBasedUpdate || performingExcellent;
       
     } catch (error) {
-      console.log('Burnout feature coming soon');
+      console.error('Error checking adjustment:', error);
+      return false;
     }
-  }, []);
+  };
 
+  // Main adjustment function
+  const performAutoAdjustment = async () => {
+    const shouldAdjust = await checkAdjustmentNeeded();
+    
+    if (shouldAdjust) {
+      console.log('📊 Triggering auto-adjustment...');
+      
+      // Show notification to user
+      setMessages(prev => [...prev, {
+        type: 'info',
+        text: '🔄 AI is adjusting your study plan based on performance...'
+      }]);
+      
+      // Generate new plan
+      await generateNewPlan();
+      
+      console.log('✅ Plan adjusted successfully!');
+    }
+  };
+
+  // Run check immediately on mount
+  performAutoAdjustment();
+  
+  // Then run every 5 minutes
+  const adjustmentInterval = setInterval(performAutoAdjustment, 5 * 60 * 1000);
+  
+  // Cleanup
+  return () => clearInterval(adjustmentInterval);
+}, [studyPlan, liveStats, generateNewPlan]);
+
+// Optional: Add state for adjustment notifications (add near line 25 with other states)
+// const [adjustmentMessages, setAdjustmentMessages] = useState<Array<{type: string, text: string}>>([]);
+  
   const fetchStudyPlan = async () => {
     try {
       setLoading(true);
@@ -270,8 +354,12 @@ const AIStudyPlanner: React.FC = () => {
       setLoading(false);
     }
   };
+
+    useEffect(() => {
+      fetchStudyPlan();
+    }, []);
   
-  const generateNewPlan = useCallback(async () => {
+  const generateNewPlan = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('generate-study-plan');
       
@@ -283,73 +371,7 @@ const AIStudyPlanner: React.FC = () => {
     } catch (error) {
       console.error('Error generating study plan:', error);
     }
-  }, []);
-
-  // Auto-refresh live stats every 10 seconds
-  useEffect(() => {
-    updateLiveStats();
-    updateTopicProgress();
-    checkBurnout();
-    
-    const interval = setInterval(() => {
-      updateLiveStats();
-      updateTopicProgress();
-    }, 10000);
-    
-    return () => clearInterval(interval);
-  }, [updateLiveStats, updateTopicProgress]);
-
-  // Auto-adjustment checker - runs every 5 minutes
-  useEffect(() => {
-    const checkAdjustmentNeeded = async () => {
-      if (!studyPlan) return false;
-      
-      try {
-        const topicCompleted = studyPlan.completion_status >= 100;
-        const accuracyDropped = liveStats.accuracyToday < 60 && liveStats.questionsToday >= 10;
-        
-        const lastUpdateTime = new Date(studyPlan.last_updated);
-        const hoursSinceUpdate = (Date.now() - lastUpdateTime.getTime()) / (1000 * 60 * 60);
-        const needsTimeBasedUpdate = hoursSinceUpdate >= 6;
-        
-        const performingExcellent = liveStats.accuracyToday > 90 && liveStats.questionsToday >= 15;
-        
-        console.log('🔍 Adjustment Check:', {
-          topicCompleted,
-          accuracyDropped,
-          hoursSinceUpdate: hoursSinceUpdate.toFixed(1),
-          needsTimeBasedUpdate,
-          performingExcellent
-        });
-        
-        return topicCompleted || accuracyDropped || needsTimeBasedUpdate || performingExcellent;
-        
-      } catch (error) {
-        console.error('Error checking adjustment:', error);
-        return false;
-      }
-    };
-
-    const performAutoAdjustment = async () => {
-      const shouldAdjust = await checkAdjustmentNeeded();
-      
-      if (shouldAdjust) {
-        console.log('📊 Triggering auto-adjustment...');
-        await generateNewPlan();
-        console.log('✅ Plan adjusted successfully!');
-      }
-    };
-
-    performAutoAdjustment();
-    
-    const adjustmentInterval = setInterval(performAutoAdjustment, 5 * 60 * 1000);
-    
-    return () => clearInterval(adjustmentInterval);
-  }, [studyPlan, liveStats, generateNewPlan]);
-
-  useEffect(() => {
-    fetchStudyPlan();
-  }, []);
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -433,7 +455,7 @@ const AIStudyPlanner: React.FC = () => {
                   <Activity className="h-3 w-3 mr-1" />LIVE
                 </Badge>
               </h3>
-              <p className="text-xs text-slate-500">Updates every 10 seconds • Auto-adjusts every 5 minutes</p>
+              <p className="text-xs text-slate-500">Updates every 10 seconds</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -463,7 +485,6 @@ const AIStudyPlanner: React.FC = () => {
             </Badge>
           </div>
         </div>
-        
         {/* Burnout Warning */}
         {burnoutStatus && burnoutStatus.shouldRest && (
           <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-lg p-4 shadow-lg">
@@ -520,8 +541,7 @@ const AIStudyPlanner: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* AI Metrics */}
+        {/* AI Metrics - Enhanced */}
         {studyPlan.ai_metrics && (
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">
             <div className="flex items-center justify-between mb-3">
@@ -618,6 +638,7 @@ const AIStudyPlanner: React.FC = () => {
                   : 'border-green-300 bg-green-50'
               }`}
             >
+              {/* Subject Header */}
               <button
                 onClick={() => toggleSubject(subjectIdx)}
                 className="w-full p-3 flex items-center justify-between hover:bg-white/50 transition-colors"
@@ -651,8 +672,10 @@ const AIStudyPlanner: React.FC = () => {
                 )}
               </button>
 
+              {/* Subject Details - Expandable */}
               {expandedSubjects.has(subjectIdx) && (
                 <div className="px-3 pb-3 space-y-2">
+                  {/* AI Insight */}
                   {subject.aiInsight && (
                     <div className="bg-white/70 rounded-lg p-2 border border-slate-200">
                       <p className="text-xs text-slate-700">
@@ -662,6 +685,7 @@ const AIStudyPlanner: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Topics */}
                   <div className="space-y-2">
                     {subject.topics.map((topic, topicIdx) => (
                       <div
@@ -677,6 +701,48 @@ const AIStudyPlanner: React.FC = () => {
                             )}
                           </div>
                           <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs">{getDifficultyIcon(topic.difficulty)}</span>
+                              <h6 className={`text-xs font-semibold flex-1 ${
+                                topic.completed ? 'line-through text-slate-500' : 'text-slate-800'
+                              }`}>
+                                {topic.name}
+                              </h6>
+                              <Badge variant="outline" className="text-xs">
+                                {topic.duration} min
+                              </Badge>
+                            </div>
+                            
+                            {/* Progress Bar */}
+                            <div className="mb-1">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-slate-600">
+                                  {topic.questionsCompleted}/{topic.questionsRequired} questions
+                                </span>
+                                <span className={`font-semibold ${
+                                  topic.completed ? 'text-green-600' : 'text-blue-600'
+                                }`}>
+                                  {Math.round((topic.questionsCompleted / topic.questionsRequired) * 100)}%
+                                </span>
+                              </div>
+                              <Progress 
+                                value={(topic.questionsCompleted / topic.questionsRequired) * 100} 
+                                className="h-1.5" 
+                              />
+                            </div>
+                            
+                            <p className="text-xs text-slate-600 mb-1">
+                              📌 {topic.reason}
+                            </p>
+                            
+                            {topic.aiRecommendation && (
+                              <div className="bg-indigo-50 rounded px-2 py-1 mt-1.5">
+                                <p className="text-xs text-indigo-700">
+                                  💡 <span className="font-medium">AI Tip:</span> {topic.aiRecommendation}
+                                </p>
+                              </div>
+                            )}
+
                             <div className="flex items-center gap-2 mt-2">
                               <Badge
                                 className={`text-xs ${

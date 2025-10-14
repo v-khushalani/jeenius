@@ -252,6 +252,78 @@ const AIStudyPlanner: React.FC = () => {
     return () => clearInterval(interval);
   }, [updateLiveStats, updateTopicProgress,checkBurnout]);
 
+  // ADD THIS CODE AFTER LINE 289 (after the existing useEffect for live stats)
+
+// Auto-adjustment checker - runs every 5 minutes
+useEffect(() => {
+  // Function to check if plan needs adjustment
+  const checkAdjustmentNeeded = async () => {
+    if (!studyPlan) return false;
+    
+    try {
+      // Trigger 1: All topics completed (100% completion)
+      const topicCompleted = studyPlan.completion_status >= 100;
+      
+      // Trigger 2: Accuracy dropped significantly today
+      const accuracyDropped = liveStats.accuracyToday < 60 && liveStats.questionsToday >= 10;
+      
+      // Trigger 3: Time-based refresh (6 hours since last update)
+      const lastUpdateTime = new Date(studyPlan.last_updated);
+      const hoursSinceUpdate = (Date.now() - lastUpdateTime.getTime()) / (1000 * 60 * 60);
+      const needsTimeBasedUpdate = hoursSinceUpdate >= 6;
+      
+      // Trigger 4: Student performing exceptionally well (>90% accuracy, time to increase difficulty)
+      const performingExcellent = liveStats.accuracyToday > 90 && liveStats.questionsToday >= 15;
+      
+      console.log('🔍 Adjustment Check:', {
+        topicCompleted,
+        accuracyDropped,
+        hoursSinceUpdate: hoursSinceUpdate.toFixed(1),
+        needsTimeBasedUpdate,
+        performingExcellent
+      });
+      
+      return topicCompleted || accuracyDropped || needsTimeBasedUpdate || performingExcellent;
+      
+    } catch (error) {
+      console.error('Error checking adjustment:', error);
+      return false;
+    }
+  };
+
+  // Main adjustment function
+  const performAutoAdjustment = async () => {
+    const shouldAdjust = await checkAdjustmentNeeded();
+    
+    if (shouldAdjust) {
+      console.log('📊 Triggering auto-adjustment...');
+      
+      // Show notification to user
+      setMessages(prev => [...prev, {
+        type: 'info',
+        text: '🔄 AI is adjusting your study plan based on performance...'
+      }]);
+      
+      // Generate new plan
+      await generateNewPlan();
+      
+      console.log('✅ Plan adjusted successfully!');
+    }
+  };
+
+  // Run check immediately on mount
+  performAutoAdjustment();
+  
+  // Then run every 5 minutes
+  const adjustmentInterval = setInterval(performAutoAdjustment, 5 * 60 * 1000);
+  
+  // Cleanup
+  return () => clearInterval(adjustmentInterval);
+}, [studyPlan, liveStats, generateNewPlan]);
+
+// Optional: Add state for adjustment notifications (add near line 25 with other states)
+// const [adjustmentMessages, setAdjustmentMessages] = useState<Array<{type: string, text: string}>>([]);
+  
   const fetchStudyPlan = async () => {
     try {
       setLoading(true);

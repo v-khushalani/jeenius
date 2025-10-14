@@ -333,7 +333,7 @@ const EnhancedDashboard = () => {
       
       <div className="container mx-auto px-3 sm:px-4 lg:px-8 max-w-7xl pt-20 sm:pt-24 lg:pt-28">
         {showBanner && notification && (
-          <div className={`mb-4 bg-gradient-to-r ${
+          <div className={`mt-2 sm:mt-0 mb-4 bg-gradient-to-r ${
             notification.color === 'green' ? 'from-green-500 to-emerald-600' :
             notification.color === 'orange' ? 'from-orange-500 to-red-600' :
             'from-blue-500 to-indigo-600'

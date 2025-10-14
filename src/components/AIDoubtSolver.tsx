@@ -131,7 +131,7 @@ Instructions:
       
       // Detailed error messages
       if (error.message?.includes('Rate limits exceeded') || error.message?.includes('429')) {
-        errorMsg = `⚠️ **Gemini API ka rate limit hit ho gaya!**
+        errorMsg = `⚠️ **JEEnie ka sone ka time hit ho gaya hai, thodi der baad please**
 
 **Solutions:**
 1. 1-2 minute wait karo
@@ -205,10 +205,6 @@ Instructions:
             <div className="flex items-center gap-3">
               <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl animate-pulse">
                 <Flame className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-white text-xl">JEEnie</h3>
-                <p className="text-xs text-purple-100">Powered by Gemini 1.5 Pro</p>
               </div>
             </div>
             <button
@@ -299,11 +295,6 @@ Instructions:
                 <Send size={20} />
               )}
             </Button>
-          </div>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-green-600 font-bold flex items-center gap-1">
-              ✓ Gemini 1.5 Pro via Supabase 🧞‍♂️
-            </span>
           </div>
         </div>
       </div>

@@ -337,7 +337,7 @@ const EnhancedDashboard = () => {
             notification.color === 'green' ? 'from-green-500 to-emerald-600' :
             notification.color === 'orange' ? 'from-orange-500 to-red-600' :
             'from-blue-500 to-indigo-600'
-          } text-white rounded-2xl p-4 shadow-xl relative overflow-hidden`}>
+          } text-white rounded-2xl p-3 sm:p-4 shadow-xl relative overflow-hidden`}>
             <div className="absolute inset-0 bg-white/10"></div>
             <div className="relative z-10 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1">
@@ -352,7 +352,7 @@ const EnhancedDashboard = () => {
                 }}
                 className="text-white/80 hover:text-white transition-colors shrink-0"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </div>
           </div>
@@ -371,7 +371,7 @@ const EnhancedDashboard = () => {
                   }}
                   className="absolute top-2 right-2 text-white/60 hover:text-white transition-colors z-20"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
 
                 <div className="flex flex-col gap-3 sm:gap-4">
@@ -560,14 +560,14 @@ const EnhancedDashboard = () => {
           </Card>
         </div>
     
-        <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
           <div className="lg:col-span-2">
             <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl h-full">
               <CardHeader className="border-b border-slate-100 p-3 sm:p-4">
                 <CardTitle className="flex items-center justify-between text-base sm:text-lg">
                   <div className="flex items-center gap-2">
                     <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-1.5 rounded-lg">
-                      <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                      <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-white" />
                     </div>
                     <span>Your Progress</span>
                   </div>
@@ -692,7 +692,7 @@ const EnhancedDashboard = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="text-center p-2 bg-white rounded-lg">
                       <p className="text-xs text-slate-500 mb-1">You</p>
-                      <p className="text-lg font-bold text-blue-600">{stats?.avgQuestionsPerDay || 0}</p>
+                      <p className="text-base sm:text-lg font-bold text-blue-600">{stats?.avgQuestionsPerDay || 0}</p>
                       <p className="text-xs text-slate-600">Q/day</p>
                     </div>
                     <div className="text-center p-2 bg-white rounded-lg">

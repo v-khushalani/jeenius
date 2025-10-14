@@ -485,7 +485,7 @@ const AIStudyPlanner: React.FC = () => {
                 <h4 className="font-semibold text-sm text-indigo-900">AI Performance Metrics</h4>
               </div>
               <Badge className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs">
-                {studyPlan.ai_metrics.adaptiveLevel.toUpperCase()}
+                studyPlan.ai_metrics?.adaptiveLevel?.toUpperCase() || 'BEGINNER'
               </Badge>
             </div>
             <div className="grid grid-cols-3 gap-2">

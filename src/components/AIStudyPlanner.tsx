@@ -264,14 +264,30 @@ const AIStudyPlanner: React.FC = () => {
 
       if (error) throw error;
 
-      const latestPlan = plans?.[0] as any;
-      const needsRefresh = !latestPlan || new Date(latestPlan.next_refresh_time) <= new Date();
+      // When fetching from database, parse JSON fields:
+const latestPlan = plans?.[0] as any;
 
-      if (needsRefresh) {
-        await generateNewPlan();
-      } else {
-        setStudyPlan(latestPlan as StudyPlan);
-      }
+if (latestPlan) {
+  // Parse JSON strings to objects
+  const parsedPlan = {
+    ...latestPlan,
+    subjects: typeof latestPlan.subjects === 'string' 
+      ? JSON.parse(latestPlan.subjects) 
+      : latestPlan.subjects || [],
+    performance: typeof latestPlan.performance === 'string'
+      ? JSON.parse(latestPlan.performance)
+      : latestPlan.performance || { overallAccuracy: 0, todayAccuracy: 0, strengths: [], weaknesses: [] },
+    recommendations: typeof latestPlan.recommendations === 'string'
+      ? JSON.parse(latestPlan.recommendations)
+      : latestPlan.recommendations || [],
+    ai_metrics: typeof latestPlan.ai_metrics === 'string'
+      ? JSON.parse(latestPlan.ai_metrics)
+      : latestPlan.ai_metrics || { learningRate: 0.5, retentionScore: 0.5, consistencyScore: 0.5, adaptiveLevel: 'beginner' }
+  };
+  
+  setStudyPlan(parsedPlan as StudyPlan);
+}
+      
     } catch (error) {
       console.error('Error fetching study plan:', error);
     } finally {

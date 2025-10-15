@@ -10,23 +10,30 @@ const FloatingAIButton = () => {
 
   // Check authentication status
   useEffect(() => {
+    let mounted = true;
+
     const checkAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
+        console.log('🔐 Initial Auth Check:', { session, error });
+
+        if (!mounted) return;
+
         if (error) {
-          console.error('Auth error:', error);
+          console.error('❌ Auth error:', error);
           setIsAuthenticated(false);
           return;
         }
 
-        // Only show button if user is logged in
-        setIsAuthenticated(session !== null);
+        // STRICT CHECK: Only true if session exists AND has user
+        const isLoggedIn = !!(session && session.user);
+        setIsAuthenticated(isLoggedIn);
         
-        console.log('🔐 Auth Check:', session ? 'Logged In ✅' : 'Not Logged In ❌');
+        console.log('🔐 Final Auth State:', isLoggedIn ? '✅ LOGGED IN' : '❌ NOT LOGGED IN');
       } catch (err) {
-        console.error('Auth check failed:', err);
-        setIsAuthenticated(false);
+        console.error('❌ Auth check failed:', err);
+        if (mounted) setIsAuthenticated(false);
       }
     };
 
@@ -34,16 +41,22 @@ const FloatingAIButton = () => {
 
     // Listen for auth state changes (login/logout events)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth State Changed:', event, session ? 'Logged In' : 'Logged Out');
-      setIsAuthenticated(session !== null);
+      console.log('🔄 Auth State Changed:', event, '| Session:', session ? 'EXISTS' : 'NULL');
+      
+      if (!mounted) return;
+
+      // STRICT CHECK: Only true if session exists AND has user
+      const isLoggedIn = !!(session && session.user);
+      setIsAuthenticated(isLoggedIn);
       
       // Close AI modal if user logs out
-      if (!session) {
+      if (!isLoggedIn) {
         setShowAI(false);
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -60,10 +73,18 @@ const FloatingAIButton = () => {
   };
 
   // CRITICAL: Don't render anything until auth check is complete
-  // If still loading (null) or not authenticated (false), return null
-  if (isAuthenticated !== true) {
+  // null = still loading, false = not authenticated, true = authenticated
+  if (isAuthenticated === null) {
+    console.log('⏳ Auth still loading...');
     return null;
   }
+
+  if (isAuthenticated === false) {
+    console.log('🚫 Not authenticated - hiding button');
+    return null;
+  }
+
+  console.log('✅ Authenticated - showing button');
 
   return (
     <>

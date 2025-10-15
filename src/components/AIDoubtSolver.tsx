@@ -314,30 +314,23 @@ Instructions:
 };
 
 function cleanAndFormatJeenieText(text: string) {
-  // Step 1: Make math readable and highlight it
-  text = text
-    .replace(/\$(.*?)\$/g, '<span class="font-mono bg-purple-50 px-1.5 py-0.5 rounded text-purple-700">$1</span>')
-    .replace(/\\frac{(.*?)}{(.*?)}/g, '<span class="font-mono bg-purple-50 px-1.5 py-0.5 rounded text-purple-700">($1)/($2)</span>')
+  return text
+    // Formula highlights
+    .replace(/\$(.*?)\$/g, '<span class="jeenius-formula">$1</span>')
+    .replace(/\\frac{(.*?)}{(.*?)}/g, '<span class="jeenius-formula">($1)/($2)</span>')
     .replace(/\\theta/g, 'θ')
     .replace(/\\sin/g, 'sin')
     .replace(/\\cos/g, 'cos')
     .replace(/\\tan/g, 'tan')
     .replace(/\\times/g, '×')
-    .replace(/\\div/g, '÷');
-
-  // Step 2: Replace bold & italic with HTML
-  text = text
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-700">$1</strong>') // bold
-    .replace(/\*(.*?)\*/g, '<em class="text-purple-600">$1</em>'); // italic
-
-  // Step 3: Add line breaks for better readability
-  text = text
+    .replace(/\\div/g, '÷')
+    // Text emphasis
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="jeenius-strong">$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em class="jeenius-em">$1</em>')
+    // Spacing
     .replace(/\n{2,}/g, '<br><br>')
     .replace(/\n/g, '<br>')
     .trim();
-
-  return text;
 }
-
 
 export default AIDoubtSolver;

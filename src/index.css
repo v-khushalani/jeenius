@@ -175,3 +175,35 @@
 html {
   scroll-behavior: smooth;
 }
+/* 🧠 JEEnius AI Formula & Highlight Theme */
+.jeenius-formula {
+  background-color: rgba(1, 48, 98, 0.08); /* subtle blue tint */
+  color: #013062;
+  font-family: 'Saira', monospace;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(1, 48, 98, 0.15);
+  box-shadow: 0 1px 3px rgba(1, 48, 98, 0.1);
+  transition: all 0.25s ease-in-out;
+}
+
+.jeenius-formula:hover {
+  background-color: rgba(1, 48, 98, 0.15);
+  color: #012245;
+  box-shadow: 0 0 6px rgba(1, 48, 98, 0.25);
+  transform: scale(1.02);
+}
+
+/* Bold & Important Text */
+.jeenius-strong {
+  color: #013062;
+  font-weight: 700;
+  text-shadow: 0 0 5px rgba(1, 48, 98, 0.15);
+}
+
+/* Italic or subtle emphasis */
+.jeenius-em {
+  color: #013062cc;
+  font-style: italic;
+}

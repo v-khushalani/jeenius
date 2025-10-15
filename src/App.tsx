@@ -38,7 +38,6 @@ import AnalyticsPage from "@/pages/AnalyticsPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import AdminDashboard from "@/pages/AdminDashboard";
-import AIStudyPlannerPage from "./pages/AIStudyPlannerPage";
 
 // Mobile pages
 import MobileDashboard from "./pages/mobile/MobileDashboard";
@@ -183,16 +182,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <MobileStudyPlanner />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* AI Study Planner - Separate Page */}
-            <Route
-              path="/ai-planner"
-              element={
-                <ProtectedRoute>
-                  <AIStudyPlannerPage />
                 </ProtectedRoute>
               }
             />

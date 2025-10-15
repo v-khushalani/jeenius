@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Brain } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -248,12 +247,6 @@ const Header = () => {
                       <LogOut className="w-4 h-4" />
                       <span>Logout</span>
                     </Button>
-                    <button 
-                      onClick={() => navigate('/ai-planner')} 
-                      className="px-3 py-2 bg-gradient-to-r from-purple-600 to-pink-700 hover:from-purple-700 hover:to-pink-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-lg"
-                    >
-                      🧠 AI Planner
-                    </button>
                   </>
                 ) : (
                   <Button 

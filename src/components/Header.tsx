@@ -26,6 +26,7 @@ const Header = () => {
   const protectedNavItems = [
     { name: 'Dashboard', href: '/dashboard', path: '/dashboard', icon: BarChart3 },
     { name: 'Study Now', href: '/study-now', path: '/study-now', icon: BookOpen, highlight: true },
+    { name: 'AI Study Planner', href: '/ai-planner', path: '/ai-planner', icon: Brain, highlight: false },
     { name: 'Tests', href: '/tests', path: '/tests', icon: Target },
   ];
 
@@ -115,7 +116,7 @@ const Header = () => {
           {/* Logo */}
           <div 
             className="flex items-center space-x-3 cursor-pointer"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(isAuthenticated ? '/dashboard' : '/')}
           >
           <img 
             src="/logo.png" 
@@ -163,20 +164,25 @@ const Header = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem onClick={() => handleNavigation('/profile')}>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 w-full">
                       <div className="w-4 h-4 rounded-full bg-primary"></div>
                       <span>Profile</span>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleNavigation('/settings')}>
-                    Settings
+                    <div className="flex items-center space-x-2 w-full">
+                      <span>⚙️</span>
+                      <span>Settings</span>
+                    </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={handleLogout}
                     className="text-red-600 focus:text-red-600"
                   >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
+                    <div className="flex items-center space-x-2 w-full">
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -206,51 +212,55 @@ const Header = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
-            <nav className="flex flex-col space-y-4">
+            <nav className="flex flex-col space-y-2">
               {navItems.map((item) => (
                 <button
                   key={item.name}
                   onClick={() => handleNavigation(item.path)}
-                  className={`text-left font-medium transition-colors flex items-center space-x-2 p-2 rounded ${
+                  className={`text-left font-medium transition-colors flex items-center space-x-3 p-3 rounded-lg ${
                     location.pathname === item.path
                       ? 'text-white bg-primary'
-                      : 'text-gray-700 hover:text-primary hover:bg-gray-100'
+                      : item.highlight
+                      ? 'text-primary bg-primary/10'
+                      : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  {item.icon && <item.icon className="w-4 h-4" />}
+                  {item.icon && <item.icon className="w-5 h-5" />}
                   <span>{item.name}</span>
                 </button>
               ))}
               
-              <div className="pt-4 space-y-3 border-t">
+              <div className="pt-3 space-y-2 border-t mt-3">
                 {isAuthenticated ? (
                   <>
                     <Button 
                       variant="outline"
-                      className="w-full"
+                      className="w-full justify-start text-left h-12 flex items-center space-x-3 px-3"
                       onClick={() => handleNavigation('/profile')}
                     >
-                      Profile
+                      <div className="w-5 h-5 rounded-full bg-primary"></div>
+                      <span>Profile</span>
                     </Button>
                     <Button 
                       variant="outline"
-                      className="w-full"
+                      className="w-full justify-start text-left h-12 flex items-center space-x-3 px-3"
                       onClick={() => handleNavigation('/settings')}
                     >
-                      Settings
+                      <span className="text-lg">⚙️</span>
+                      <span>Settings</span>
                     </Button>
                     <Button 
                       variant="outline"
                       onClick={handleLogout}
-                      className="w-full flex items-center justify-center space-x-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
+                      className="w-full justify-start text-left h-12 flex items-center space-x-3 px-3 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                     >
-                      <LogOut className="w-4 h-4" />
+                      <LogOut className="w-5 h-5" />
                       <span>Logout</span>
                     </Button>
                   </>
                 ) : (
                   <Button 
-                    className="w-full bg-primary hover:bg-primary/90 text-white"
+                    className="w-full bg-primary hover:bg-primary/90 text-white h-12"
                     onClick={() => handleNavigation('/login')}
                   >
                     Sign In / Get Started
@@ -258,9 +268,9 @@ const Header = () => {
                 )}
                 <button
                   onClick={toggleLanguage}
-                  className="flex items-center justify-center space-x-1 text-gray-600 w-full py-2"
+                  className="flex items-center justify-center space-x-2 text-gray-600 w-full py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  <Globe className="w-4 h-4" />
+                  <Globe className="w-5 h-5" />
                   <span className="text-sm font-medium">{language}</span>
                 </button>
               </div>

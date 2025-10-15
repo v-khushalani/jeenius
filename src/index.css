@@ -201,9 +201,74 @@ html {
   font-weight: 700;
   text-shadow: 0 0 5px rgba(1, 48, 98, 0.15);
 }
+/* 🌐 JEEnius Global Theme */
+body {
+  background-color: #E9E9E9;
+  color: #0F172A; /* Dark slate text */
+  font-family: 'Saira', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.jeenius-window {
+  background-color: #E9E9E9;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.jeenius-chat {
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(1, 48, 98, 0.08);
+  padding: 1rem;
+  margin: 1rem auto;
+  width: 90%;
+  max-width: 800px;
+}
 
 /* Italic or subtle emphasis */
 .jeenius-em {
   color: #013062cc;
   font-style: italic;
+}
+/* 💬 Chat bubbles */
+.jeenius-ai {
+  background-color: #FFFFFF;
+  color: #013062;
+  border-left: 4px solid #013062;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  margin: 0.5rem 0;
+  box-shadow: 0 2px 6px rgba(1, 48, 98, 0.05);
+}
+
+.jeenius-user {
+  background-color: #F0F4F8;
+  color: #0F172A;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  text-align: right;
+}
+.jeenius-formula {
+  background-color: rgba(1, 48, 98, 0.08);
+  color: #013062;
+  font-family: 'Saira', monospace;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(1, 48, 98, 0.15);
+  transition: all 0.25s ease-in-out;
+}
+
+.jeenius-formula:hover {
+  background-color: rgba(1, 48, 98, 0.15);
+  color: #012245;
+  transform: scale(1.02);
+}
+
+.jeenius-strong {
+  color: #013062;
+  font-weight: 700;
+  text-shadow: 0 0 5px rgba(1, 48, 98, 0.15);
 }

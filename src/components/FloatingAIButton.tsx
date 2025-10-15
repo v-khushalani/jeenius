@@ -8,59 +8,38 @@ const FloatingAIButton = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null = loading
 
-  // Check authentication status
+  // ✅ Improved Authentication Logic
   useEffect(() => {
     let mounted = true;
-
-    const checkAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        console.log('🔐 Initial Auth Check:', { session, error });
-
-        if (!mounted) return;
-
-        if (error) {
-          console.error('❌ Auth error:', error);
-          setIsAuthenticated(false);
-          return;
-        }
-
-        // STRICT CHECK: Only true if session exists AND has user
-        const isLoggedIn = !!(session && session.user);
-        setIsAuthenticated(isLoggedIn);
-        
-        console.log('🔐 Final Auth State:', isLoggedIn ? '✅ LOGGED IN' : '❌ NOT LOGGED IN');
-      } catch (err) {
-        console.error('❌ Auth check failed:', err);
-        if (mounted) setIsAuthenticated(false);
-      }
-    };
-
-    checkAuth();
-
-    // Listen for auth state changes (login/logout events)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth State Changed:', event, '| Session:', session ? 'EXISTS' : 'NULL');
-      
+  
+    const updateAuthState = (session: any) => {
       if (!mounted) return;
-
-      // STRICT CHECK: Only true if session exists AND has user
       const isLoggedIn = !!(session && session.user);
       setIsAuthenticated(isLoggedIn);
-      
-      // Close AI modal if user logs out
-      if (!isLoggedIn) {
-        setShowAI(false);
-      }
+      if (!isLoggedIn) setShowAI(false);
+      console.log('🔐 Auth state updated:', isLoggedIn ? '✅ LOGGED IN' : '❌ LOGGED OUT');
+    };
+  
+    // 1️⃣ Check initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) console.error('❌ Auth error:', error);
+      console.log('🔍 Initial session check:', session);
+      updateAuthState(session);
     });
-
+  
+    // 2️⃣ Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('🔄 Auth state changed:', _event, session);
+      updateAuthState(session);
+    });
+  
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
+  
   // Dummy question for general doubts (outside practice mode)
   const generalQuestion = {
     question: "I have a doubt...",

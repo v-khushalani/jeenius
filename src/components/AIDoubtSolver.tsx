@@ -260,7 +260,7 @@ Instructions:
                 )}
                 <div
                   className="jeenius-ai"
-                  dangerouslySetInnerHTML={{ __html: cleanAndFormatJeenieText(aiResponse) }}
+                  dangerouslySetInnerHTML={{ __html: msg.content }}
                 />
               </div>
             </div>

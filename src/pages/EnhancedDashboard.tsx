@@ -1,4 +1,4 @@
-import AIStudyPlanner from '../components/AIStudyPlanner';
+import Leaderboard from '../components/Leaderboard';
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -706,7 +706,7 @@ const EnhancedDashboard = () => {
             </Card>
           </div>
 
-          <AIStudyPlanner />
+          <Leaderboard />
         </div>
       </div>
     </div>

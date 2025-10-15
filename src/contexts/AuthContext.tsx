@@ -28,32 +28,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Listen for auth changes FIRST (sync-only)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth state change:', event, session?.user?.id);
+    let mounted = true;
+  
+    const updateAuthState = (session: Session | null) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
-
-      // Defer any Supabase calls to avoid deadlocks
+    };
+  
+    // 1️⃣ Fetch initial session FIRST
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) console.error('❌ Initial session error:', error);
+      console.log('🔍 Initial session check:', session?.user?.id || 'none');
+      updateAuthState(session);
+    });
+  
+    // 2️⃣ Listen for subsequent auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.id || 'none');
+      updateAuthState(session);
+  
+      // 🔧 If just signed in, ensure profile exists
       if (event === 'SIGNED_IN' && session?.user) {
-        setTimeout(() => {
-          createUserProfileIfNeeded(session.user);
-        }, 0);
+        setTimeout(() => createUserProfileIfNeeded(session.user), 0);
+      }
+  
+      // 🧹 If signed out, clear everything immediately
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setSession(null);
       }
     });
-
-    // Then fetch initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔍 Initial session check:', session?.user?.id);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+  
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
+  
   const createUserProfileIfNeeded = async (user: User) => {
     try {
       console.log('🔍 Checking profile for user:', user.id);

@@ -488,25 +488,6 @@ if (latestPlan) {
           )}
         </div>
 
-        {/* Live Performance Stats */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
-            <div className="text-2xl font-bold text-green-600">{liveStats.questionsToday}</div>
-            <p className="text-xs text-green-700 mt-1">Questions Today</p>
-            <p className="text-xs text-green-600">Target: 30</p>
-          </div>
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200">
-            <div className="text-2xl font-bold text-blue-600">{liveStats.accuracyToday}%</div>
-            <p className="text-xs text-blue-700 mt-1">Today's Accuracy</p>
-            <p className="text-xs text-blue-600">Target: 75%</p>
-          </div>
-          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-3 border border-orange-200">
-            <div className="text-2xl font-bold text-orange-600">{liveStats.streak} 🔥</div>
-            <p className="text-xs text-orange-700 mt-1">Day Streak</p>
-            <p className="text-xs text-orange-600">Keep going!</p>
-          </div>
-        </div>
-
         {/* AI Metrics */}
         {studyPlan.ai_metrics && (
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">

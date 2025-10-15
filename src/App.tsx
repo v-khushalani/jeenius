@@ -7,8 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import FloatingAIButton from '@/components/FloatingAIButton';
 
-import "./index.css";
-
 // Main pages
 import Index from "./pages/Index";
 import StudyNowPage from "./pages/StudyNowPage";
@@ -218,26 +216,5 @@ const App = () => (
     </BrowserRouter>
   </QueryClientProvider>
 );
-
-function App() {
-  return (
-    <div className="jeenius-window">
-      {/* 🧠 JEEnius Header */}
-      <header
-        className="w-full text-white p-4 text-xl font-bold"
-        style={{
-          background: "linear-gradient(90deg, #013062 0%, #0269A4 100%)",
-        }}
-      >
-        JEEnius AI — by VK’s Academy
-      </header>
-
-      {/* Chat Section */}
-      <main className="jeenius-chat">
-        {/* your chat component or Gemini/JEEnie component goes here */}
-      </main>
-    </div>
-  );
-}
 
 export default App;

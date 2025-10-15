@@ -259,8 +259,8 @@ Instructions:
                   </div>
                 )}
                 <div
-                  className="text-sm whitespace-pre-wrap leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: msg.content }}
+                  className="jeenius-ai"
+                  dangerouslySetInnerHTML={{ __html: cleanAndFormatJeenieText(aiResponse) }}
                 />
               </div>
             </div>
@@ -315,19 +315,14 @@ Instructions:
 
 function cleanAndFormatJeenieText(text: string) {
   return text
-    // Formula highlights
     .replace(/\$(.*?)\$/g, '<span class="jeenius-formula">$1</span>')
     .replace(/\\frac{(.*?)}{(.*?)}/g, '<span class="jeenius-formula">($1)/($2)</span>')
     .replace(/\\theta/g, 'θ')
     .replace(/\\sin/g, 'sin')
     .replace(/\\cos/g, 'cos')
     .replace(/\\tan/g, 'tan')
-    .replace(/\\times/g, '×')
-    .replace(/\\div/g, '÷')
-    // Text emphasis
     .replace(/\*\*(.*?)\*\*/g, '<strong class="jeenius-strong">$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em class="jeenius-em">$1</em>')
-    // Spacing
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/\n{2,}/g, '<br><br>')
     .replace(/\n/g, '<br>')
     .trim();

@@ -130,8 +130,7 @@ const Leaderboard: React.FC = () => {
       );
 
       // Filter out null values and sort by total questions
-      const validUsers = userStats
-        .filter((u): u is LeaderboardUser => u !== null && u.total_questions > 0)
+      const validUsers = (userStats.filter((u) => u && u.total_questions > 0) as LeaderboardUser[])
         .sort((a, b) => {
           // Primary sort: total questions
           if (b.total_questions !== a.total_questions) {

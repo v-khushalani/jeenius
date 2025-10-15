@@ -17,8 +17,6 @@ import {
   ChevronDown,
   ChevronUp,
   Activity,
-  BarChart3,
-  Zap,
   Calendar,
   BookOpen
 } from "lucide-react";
@@ -103,7 +101,6 @@ const AIStudyPlanner: React.FC = () => {
     return diffDays;
   };
 
-  // Fetch syllabus completion stats
   const fetchSyllabusStats = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -114,12 +111,12 @@ const AIStudyPlanner: React.FC = () => {
         .select('status')
         .eq('user_id', user.id);
 
-      if (priorities) {
+      if (priorities && priorities.length > 0) {
         const total = priorities.length;
         const pending = priorities.filter(p => p.status === 'pending').length;
         const inProgress = priorities.filter(p => p.status === 'in_progress').length;
         const completed = priorities.filter(p => p.status === 'completed').length;
-        const percentage = Math.round((completed / total) * 100);
+        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
         setSyllabusStats({
           totalTopics: total,
@@ -195,7 +192,7 @@ const AIStudyPlanner: React.FC = () => {
 
   const updateTopicProgress = useCallback(async () => {
     try {
-      if (!studyPlan) return;
+      if (!studyPlan || !studyPlan.subjects) return;
   
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -211,7 +208,7 @@ const AIStudyPlanner: React.FC = () => {
              
       const updatedSubjects = studyPlan.subjects.map(subject => ({
         ...subject,
-        topics: subject.topics.map(topic => {
+        topics: (subject.topics || []).map(topic => {
           const topicAttempts = attempts?.filter(a => 
             a.questions?.subject === subject.name &&
             a.questions?.topic === topic.topicName
@@ -228,12 +225,12 @@ const AIStudyPlanner: React.FC = () => {
         })
       }));
       
-      const totalTopics = updatedSubjects.reduce((sum, s) => sum + s.topics.length, 0);
+      const totalTopics = updatedSubjects.reduce((sum, s) => sum + (s.topics?.length || 0), 0);
       const completedTopics = updatedSubjects.reduce(
-        (sum, s) => sum + s.topics.filter(t => t.completed).length, 
+        (sum, s) => sum + (s.topics?.filter(t => t.completed).length || 0), 
         0
       );
-      const completionPercentage = Math.round((completedTopics / totalTopics) * 100);
+      const completionPercentage = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
   
       setStudyPlan(prev => prev ? {
         ...prev,
@@ -251,9 +248,11 @@ const AIStudyPlanner: React.FC = () => {
       setLoading(true);
       
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-      // Initialize student profile if doesn't exist
       await supabase.functions.invoke('initialize-student');
 
       const { data: plans, error } = await supabase
@@ -345,6 +344,7 @@ const AIStudyPlanner: React.FC = () => {
     return 'text-red-600';
   };
 
+  // EARLY RETURN 1: Loading
   if (loading) {
     return (
       <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
@@ -356,10 +356,9 @@ const AIStudyPlanner: React.FC = () => {
         </CardContent>
       </Card>
     );
-    // Yaha se function END - aage nahi jayega
   }
   
-  // ===== EARLY RETURN 2: No data check =====
+  // EARLY RETURN 2: No plan
   if (!studyPlan) {
     return (
       <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
@@ -371,10 +370,9 @@ const AIStudyPlanner: React.FC = () => {
         </CardContent>
       </Card>
     );
-    // Yaha se function END
   }
   
-  // ===== EARLY RETURN 3: Empty subjects check =====
+  // EARLY RETURN 3: Empty subjects
   if (!studyPlan.subjects || studyPlan.subjects.length === 0) {
     return (
       <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl">
@@ -386,12 +384,11 @@ const AIStudyPlanner: React.FC = () => {
         </CardContent>
       </Card>
     );
-    // Yaha se function END
   }
 
   const daysRemaining = calculateDaysRemaining();
   const topicsPerDay = syllabusStats 
-    ? (syllabusStats.pendingTopics + syllabusStats.inProgressTopics) / daysRemaining 
+    ? (syllabusStats.pendingTopics + syllabusStats.inProgressTopics) / Math.max(daysRemaining, 1)
     : 0;
 
   return (
@@ -538,22 +535,22 @@ const AIStudyPlanner: React.FC = () => {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <p className="text-xs text-slate-600">Overall Accuracy</p>
-              <p className="text-lg font-bold text-slate-900">{studyPlan.performance.overallAccuracy}%</p>
+              <p className="text-lg font-bold text-slate-900">{studyPlan.performance?.overallAccuracy || 0}%</p>
             </div>
             <div>
               <p className="text-xs text-slate-600">Today's Accuracy</p>
-              <p className="text-lg font-bold text-slate-900">{studyPlan.performance.todayAccuracy}%</p>
+              <p className="text-lg font-bold text-slate-900">{studyPlan.performance?.todayAccuracy || 0}%</p>
             </div>
           </div>
           
-          {studyPlan.performance.strengths.length > 0 && (
+          {studyPlan.performance?.strengths && studyPlan.performance.strengths.length > 0 && (
             <div className="mt-2">
               <p className="text-xs text-green-700 font-semibold">💪 Strengths:</p>
               <p className="text-xs text-green-600">{studyPlan.performance.strengths.join(', ')}</p>
             </div>
           )}
           
-          {studyPlan.performance.weaknesses.length > 0 && (
+          {studyPlan.performance?.weaknesses && studyPlan.performance.weaknesses.length > 0 && (
             <div className="mt-2">
               <p className="text-xs text-red-700 font-semibold">🎯 Focus Areas:</p>
               <p className="text-xs text-red-600">{studyPlan.performance.weaknesses.join(', ')}</p>
@@ -562,7 +559,7 @@ const AIStudyPlanner: React.FC = () => {
         </div>
 
         {/* Smart Recommendations */}
-        {studyPlan.recommendations?.length > 0 && (
+        {studyPlan.recommendations && studyPlan.recommendations.length > 0 && (
           <div className="space-y-2">
             <h4 className="font-semibold text-sm flex items-center gap-2">
               <Lightbulb className="h-4 w-4 text-yellow-600" />
@@ -598,7 +595,7 @@ const AIStudyPlanner: React.FC = () => {
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-sm flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-blue-600" />
-              Today's Schedule ({studyPlan.total_study_time} mins)
+              Today's Schedule ({studyPlan.total_study_time || 0} mins)
             </h4>
             <div className="flex items-center gap-2">
               <Progress value={studyPlan.completion_status || 0} className="h-2 w-20" />
@@ -609,7 +606,7 @@ const AIStudyPlanner: React.FC = () => {
           </div>
 
           {/* Subjects List */}
-          {(studyPlan?.subjects || []).map((subject, subjectIdx) => (
+          {studyPlan.subjects.map((subject, subjectIdx) => (
             <div
               key={subjectIdx}
               className={`rounded-lg border-2 overflow-hidden transition-all ${
@@ -641,10 +638,10 @@ const AIStudyPlanner: React.FC = () => {
                         {subject.allocatedTime} mins
                       </span>
                       <span className="text-xs text-slate-600">
-                        {subject.topics.length} topics
+                        {subject.topics?.length || 0} topics
                       </span>
                       <span className="text-xs text-slate-600">
-                        {subject.topics.filter(t => t.completed).length}/{subject.topics.length} done
+                        {subject.topics?.filter(t => t.completed).length || 0}/{subject.topics?.length || 0} done
                       </span>
                     </div>
                   </div>
@@ -668,7 +665,7 @@ const AIStudyPlanner: React.FC = () => {
                   )}
 
                   <div className="space-y-2">
-                    {subject.topics.map((topic, topicIdx) => (
+                    {(subject.topics || []).map((topic, topicIdx) => (
                       <div
                         key={topicIdx}
                         className={`bg-white rounded-lg p-2.5 border transition-all ${
@@ -688,7 +685,7 @@ const AIStudyPlanner: React.FC = () => {
                           <div className="flex-1">
                             <div className="flex items-start justify-between">
                               <div>
-                                <h6 className="text-sm font-medium text-slate-900">{topic.topicName}</h6>
+                                <h6 className="text-sm font-medium text-slate-900">{topic.topicName || topic.name}</h6>
                                 {topic.chapter && (
                                   <p className="text-xs text-slate-500">{topic.chapter}</p>
                                 )}
@@ -705,7 +702,7 @@ const AIStudyPlanner: React.FC = () => {
                                     ? 'bg-red-100 text-red-700'
                                     : topic.focusArea === 'revision'
                                     ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-green-100 text-green-700'
+                                  : 'bg-green-100 text-green-700'
                                 }`}
                               >
                                 {topic.focusArea === 'weakness' ? '🎯 Weakness' :
@@ -723,11 +720,11 @@ const AIStudyPlanner: React.FC = () => {
                               <div className="flex justify-between text-xs mb-1">
                                 <span className="text-slate-600">Progress</span>
                                 <span className="font-semibold text-slate-700">
-                                  {topic.questionsCompleted}/{topic.questionsRequired}
+                                  {topic.questionsCompleted || 0}/{topic.questionsRequired || 0}
                                 </span>
                               </div>
                               <Progress 
-                                value={(topic.questionsCompleted / topic.questionsRequired) * 100} 
+                                value={topic.questionsRequired > 0 ? (topic.questionsCompleted / topic.questionsRequired) * 100 : 0} 
                                 className="h-1.5"
                               />
                             </div>
@@ -746,7 +743,6 @@ const AIStudyPlanner: React.FC = () => {
               )}
             </div>
           ))}
-
         </div>
 
         {/* Last Updated */}

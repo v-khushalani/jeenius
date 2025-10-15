@@ -116,9 +116,10 @@ Instructions:
       const aiText = functionData?.content;
       
       if (aiText) {
+        const cleaned = cleanAndFormatJeenieText(aiText);
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: aiText
+          content: cleaned
         }]);
       } else {
         throw new Error('No response from AI');
@@ -257,9 +258,10 @@ Instructions:
                     <span className="text-xs font-bold text-purple-600">JEEnie 🧞‍♂️</span>
                   </div>
                 )}
-                <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                  {msg.content}
-                </div>
+                <div
+                  className="text-sm whitespace-pre-wrap leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: msg.content }}
+                />
               </div>
             </div>
           ))}
@@ -310,5 +312,32 @@ Instructions:
     </div>
   );
 };
+
+function cleanAndFormatJeenieText(text: string) {
+  // Step 1: Make math readable and highlight it
+  text = text
+    .replace(/\$(.*?)\$/g, '<span class="font-mono bg-purple-50 px-1.5 py-0.5 rounded text-purple-700">$1</span>')
+    .replace(/\\frac{(.*?)}{(.*?)}/g, '<span class="font-mono bg-purple-50 px-1.5 py-0.5 rounded text-purple-700">($1)/($2)</span>')
+    .replace(/\\theta/g, 'θ')
+    .replace(/\\sin/g, 'sin')
+    .replace(/\\cos/g, 'cos')
+    .replace(/\\tan/g, 'tan')
+    .replace(/\\times/g, '×')
+    .replace(/\\div/g, '÷');
+
+  // Step 2: Replace bold & italic with HTML
+  text = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-700">$1</strong>') // bold
+    .replace(/\*(.*?)\*/g, '<em class="text-purple-600">$1</em>'); // italic
+
+  // Step 3: Add line breaks for better readability
+  text = text
+    .replace(/\n{2,}/g, '<br><br>')
+    .replace(/\n/g, '<br>')
+    .trim();
+
+  return text;
+}
+
 
 export default AIDoubtSolver;

@@ -21,7 +21,6 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import AuthCallback from '@/pages/AuthCallback';
 
-
 // Feature pages
 import Pricing from "./pages/Pricing";
 import FeaturesPage from "./pages/FeaturesPage";
@@ -29,6 +28,7 @@ import LessonBuilderPage from "./pages/LessonBuilderPage";
 import WhyUsPage from "./pages/WhyUsPage";
 import GoalSelectionPage from '@/pages/GoalSelectionPage';
 import PeerBattleSystem from './pages/PeerBattleSystem';
+import AIStudyPlannerPage from './pages/AIStudyPlannerPage';
 
 // Enhanced Dashboard
 import EnhancedDashboard from "./pages/EnhancedDashboard";
@@ -75,7 +75,6 @@ const App = () => (
             <Route path="/signup" element={<Navigate to="/login" replace />} /> {/* Redirect signup to login since we only use Google */}
             <Route path="/auth/callback" element={<AuthCallback />} />
             
-            
             {/* Public Battle */}
             <Route path="/battle" element={<PeerBattleSystem />} />
             
@@ -99,6 +98,15 @@ const App = () => (
               } 
             />
 
+            {/* AI Study Planner */}
+            <Route
+              path="/ai-planner"
+              element={
+                <ProtectedRoute>
+                  <AIStudyPlannerPage />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Study Routes */}
             <Route
@@ -198,7 +206,6 @@ const App = () => (
                 </div>
               } 
             />
-            
             
             {/* Catch-all route - 404 */}
             <Route path="*" element={<NotFound />} />

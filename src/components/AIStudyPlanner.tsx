@@ -559,13 +559,13 @@ const AIStudyPlanner: React.FC = () => {
         </div>
 
         {/* Smart Recommendations */}
-        {studyPlan.recommendations && studyPlan.recommendations.length > 0 && (
+        {studyPlan.recommendations && Array.isArray(studyPlan.recommendations) && studyPlan.recommendations.length > 0 && (
           <div className="space-y-2">
             <h4 className="font-semibold text-sm flex items-center gap-2">
               <Lightbulb className="h-4 w-4 text-yellow-600" />
               Smart Recommendations
             </h4>
-            {studyPlan.recommendations.slice(0, 3).map((rec, idx) => (
+            {(studyPlan.recommendations || []).slice(0, 3).map((rec, idx) => (
               <div
                 key={idx}
                 className={`p-3 rounded-lg border-l-4 ${

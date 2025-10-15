@@ -1,10 +1,52 @@
-import React, { useState } from 'react';
-import { Bot, Sparkles, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import AIDoubtSolver from './AIDoubtSolver';
 
 const FloatingAIButton = () => {
   const [showAI, setShowAI] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null = loading
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Auth error:', error);
+          setIsAuthenticated(false);
+          return;
+        }
+
+        // Only show button if user is logged in
+        setIsAuthenticated(session !== null);
+        
+        console.log('🔐 Auth Check:', session ? 'Logged In ✅' : 'Not Logged In ❌');
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
+
+    // Listen for auth state changes (login/logout events)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 Auth State Changed:', event, session ? 'Logged In' : 'Logged Out');
+      setIsAuthenticated(session !== null);
+      
+      // Close AI modal if user logs out
+      if (!session) {
+        setShowAI(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Dummy question for general doubts (outside practice mode)
   const generalQuestion = {
@@ -16,6 +58,12 @@ const FloatingAIButton = () => {
     correct_option: "",
     explanation: ""
   };
+
+  // CRITICAL: Don't render anything until auth check is complete
+  // If still loading (null) or not authenticated (false), return null
+  if (isAuthenticated !== true) {
+    return null;
+  }
 
   return (
     <>

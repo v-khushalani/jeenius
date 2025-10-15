@@ -13,5 +13,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,        // ✅ must be true
     autoRefreshToken: true,      // ✅ keeps user logged in
     detectSessionInUrl: true,    // ✅ required for magic link / OAuth
+    storage: localStorage,       // ✅ Explicitly set storage
   },
 });

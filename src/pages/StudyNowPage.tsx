@@ -327,7 +327,7 @@ const handleAnswer = async (answer) => {
   const question = practiceQuestions[currentQuestionIndex];
   const isCorrect = answer === question.correct_option;
   
-  // Save to database
+  // Save to database with subject/topic
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -338,8 +338,19 @@ const handleAnswer = async (answer) => {
       is_correct: isCorrect,
       time_taken: 30,
       attempted_at: new Date().toISOString(),
-      mode: 'study' // 🔥 ADD THIS LINE
+      mode: 'study'
     });
+
+    // 🔥 NEW: Calculate topic mastery after each attempt
+    if (selectedTopic) {
+      await supabase.functions.invoke('calculate-topic-mastery', {
+        body: {
+          subject: selectedSubject,
+          chapter: selectedChapter,
+          topic: selectedTopic
+        }
+      });
+    }
   } catch (error) {
     console.error('Error saving attempt:', error);
   }

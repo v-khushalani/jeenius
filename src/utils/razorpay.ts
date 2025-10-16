@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { SUBSCRIPTION_PLANS } from '@/config/subscriptionPlans';
 
 // Load Razorpay script
 export const loadRazorpayScript = (): Promise<boolean> => {

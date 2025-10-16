@@ -12,7 +12,7 @@ import Header from '@/components/Header';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import {
   Flame, ArrowLeft, Lightbulb, XCircle, CheckCircle2, Trophy, Target,
-  Sparkles, Zap, Play, Lock, CheckCircle2
+  Sparkles, Zap, Play, Lock
 } from "lucide-react";
 
 const StudyNowPage = () => {
@@ -638,7 +638,7 @@ const handleAnswer = async (answer) => {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {chapters.map((chapter) => (
+              {chapters.map((chapter) => {
                  // Check if chapter is locked (example: first 5 are free)
                 const isLocked = !chapter.is_free && chapter.sequence > 2;
                  if (isLocked) {

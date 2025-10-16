@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import FloatingAIButton from '@/components/FloatingAIButton';
 import AIDoubtSolver from '@/components/AIDoubtSolver';
 import React, { useState, useEffect } from "react";
@@ -11,7 +12,7 @@ import Header from '@/components/Header';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import {
   Flame, ArrowLeft, Lightbulb, XCircle, CheckCircle2, Trophy, Target,
-  Sparkles, Zap, Play, Lock
+  Sparkles, Zap, Play, Lock, CheckCircle2
 } from "lucide-react";
 
 const StudyNowPage = () => {

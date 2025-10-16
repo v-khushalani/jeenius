@@ -1,4 +1,3 @@
-import { Star, Lock } from 'lucide-react';
 import { UsageLimitBanner } from '@/components/paywall/UsageLimitBanner';
 import { FreemiumBadge } from '@/components/paywall/FreemiumBadge';
 import Leaderboard from '../components/Leaderboard';
@@ -22,6 +21,8 @@ import {
   X,
   Sparkles,
   Lightbulb,
+  Star, 
+  Lock
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";

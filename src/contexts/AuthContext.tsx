@@ -26,9 +26,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const listenerRef = React.useRef<any>(null);
 
   useEffect(() => {
     let mounted = true;
+    console.log("🚀 Setting up Supabase Auth listener (runs once)");
   
     const updateAuthState = (session: Session | null) => {
       if (!mounted) return;
@@ -39,31 +41,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
     // 1️⃣ Fetch initial session FIRST
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) console.error('❌ Initial session error:', error);
-      console.log('🔍 Initial session check:', session?.user?.id || 'none');
+      if (error) console.error("❌ Initial session error:", error);
+      console.log("🔍 Initial session check:", session?.user?.id || "none");
       updateAuthState(session);
     });
   
-    // 2️⃣ Listen for subsequent auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.id || 'none');
-      updateAuthState(session);
+    // 2️⃣ Remove any existing listener before creating a new one
+    if (listenerRef.current) {
+      console.log("🧹 Removing old auth listener...");
+      listenerRef.current.subscription.unsubscribe();
+    }
   
-      // 🔧 If just signed in, ensure profile exists
-      if (event === 'SIGNED_IN' && session?.user) {
-        setTimeout(() => createUserProfileIfNeeded(session.user), 0);
-      }
+    // 3️⃣ Listen for subsequent auth state changes
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("📢 Auth event:", event, session?.user?.id || "none");
+        updateAuthState(session);
   
-      // 🧹 If signed out, clear everything immediately
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setSession(null);
+        if (event === "SIGNED_IN" && session?.user) {
+          setTimeout(() => createUserProfileIfNeeded(session.user), 0);
+        }
+  
+        if (event === "SIGNED_OUT") {
+          setUser(null);
+          setSession(null);
+        }
       }
-    });
+    );
+  
+    listenerRef.current = listener; // ✅ store listener reference
   
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      if (listenerRef.current) {
+        console.log("🧹 Cleaning up Supabase listener on unmount");
+        listenerRef.current.subscription.unsubscribe();
+        listenerRef.current = null;
+      }
     };
   }, []);
 

@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import FloatingAIButton from '@/components/FloatingAIButton';
+import SubscriptionPlans from '@/pages/SubscriptionPlans';
+
 
 // Main pages
 import Index from "./pages/Index";
@@ -87,6 +89,7 @@ const App = () => (
             <Route path="/test-results" element={<TestResultsPage />} />
 
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/subscription-plans" element={<SubscriptionPlans />} />
             
             {/* Protected Routes - Main Dashboard */}
             <Route 

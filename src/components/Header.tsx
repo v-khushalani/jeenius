@@ -101,16 +101,21 @@ const Header = () => {
     localStorage.setItem('appBannerDismissed', 'true');
   };
 
-  // Calculate header height dynamically
-  const headerHeight = showAppBanner ? 104 : 64; // 40px banner + 64px header OR just 64px header
-
-  // Update CSS variable for other components to use
+  // Add/remove class to body for dynamic spacing
   React.useEffect(() => {
-    document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
-  }, [headerHeight]);
+    if (showAppBanner) {
+      document.body.classList.add('has-app-banner');
+    } else {
+      document.body.classList.remove('has-app-banner');
+    }
+    
+    return () => {
+      document.body.classList.remove('has-app-banner');
+    };
+  }, [showAppBanner]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200" style={{ height: showAppBanner ? '104px' : '64px' }}>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200">
       {/* Mobile App Promotion Bar */}
       {showAppBanner && (
         <div className="bg-gradient-to-r from-green-500 to-blue-600 text-white text-center py-2 text-sm relative">

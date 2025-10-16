@@ -1,3 +1,6 @@
+import { Star, Lock } from 'lucide-react';
+import { UsageLimitBanner } from '@/components/paywall/UsageLimitBanner';
+import { FreemiumBadge } from '@/components/paywall/FreemiumBadge';
 import Leaderboard from '../components/Leaderboard';
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -427,7 +430,41 @@ const EnhancedDashboard = () => {
             </div>
           </div>
         )}
-
+        {/* Usage Stats for Free Users */}
+        <div className="mb-6">
+          <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">Your Plan</h3>
+                <FreemiumBadge isPremium={false} />
+              </div>
+              
+              <div className="space-y-4">
+                <UsageLimitBanner
+                  type="chapters"
+                  used={3}
+                  limit={5}
+                  onUpgrade={() => navigate('/subscription-plans')}
+                />
+                
+                <UsageLimitBanner
+                  type="questions"
+                  used={stats?.questionsToday || 0}
+                  limit={50}
+                  onUpgrade={() => navigate('/subscription-plans')}
+                />
+              </div>
+              
+              <Button
+                onClick={() => navigate('/subscription-plans')}
+                className="w-full mt-4 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold"
+              >
+                <Star className="w-4 h-4 mr-2" />
+                Upgrade to Premium
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 mt-6">
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
             <CardContent className="p-3 sm:p-4">

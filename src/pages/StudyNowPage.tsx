@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 const StudyNowPage = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('subjects');
   const [subjects, setSubjects] = useState([]);
@@ -639,8 +640,8 @@ const handleAnswer = async (answer) => {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {chapters.map((chapter) => (
                  // Check if chapter is locked (example: first 5 are free)
-                const isLocked = chapter.sequence > 5;
-                
+                const isLocked = !chapter.is_free && chapter.sequence > 2;
+                  
                 if (isLocked) {
                   return (
                     <Card 

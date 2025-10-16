@@ -1,3 +1,6 @@
+import React from 'react';
+import { Star } from 'lucide-react';
+
 export const FreemiumBadge: React.FC<{ isPremium: boolean }> = ({ isPremium }) => {
   if (isPremium) {
     return (

@@ -1,56 +1,74 @@
+// src/config/subscriptionPlans.ts
+
 export const SUBSCRIPTION_PLANS = {
   monthly: {
-    id: 'monthly',
     name: 'Monthly Plan',
-    price: 299,
+    price: 49,
+    displayDuration: 'per month',
     duration: 30, // days
-    displayDuration: '1 Month',
-    features: [
-      'Unlimited Chapters Access',
-      'Unlimited Practice Questions',
-      'AI-Powered Doubt Solving',
-      'Personalized Study Planner',
-      'Progress Analytics',
-      'Mobile App Access'
-    ],
     popular: false,
-    savings: 0
+    bestValue: false,
+    savings: 0,
+    originalPrice: null,
+    features: [
+      '✅ Unlimited Chapters Access',
+      '✅ Unlimited Questions Daily',
+      '✅ AI-Powered Doubt Solver',
+      '✅ Personalized Study Plans',
+      '✅ Advanced Analytics',
+      '✅ Mock Tests & Battle Mode',
+      '✅ Priority Support'
+    ]
   },
   quarterly: {
-    id: 'quarterly',
     name: 'Quarterly Plan',
-    price: 799,
+    price: 129,
+    displayDuration: 'for 3 months',
     duration: 90, // days
-    displayDuration: '3 Months',
-    features: [
-      'Everything in Monthly',
-      'Save ₹100',
-      'Priority Support',
-      'Advanced Analytics',
-      'Video Solutions',
-      'Live Doubt Sessions'
-    ],
     popular: true,
-    savings: 100,
-    originalPrice: 899
+    bestValue: false,
+    savings: 98,
+    originalPrice: 897, // 299 * 3
+    features: [
+      '✅ All Monthly Features',
+      '✅ Save ₹98 (11% OFF)',
+      '✅ Unlimited Chapters Access',
+      '✅ Unlimited Questions Daily',
+      '✅ AI-Powered Doubt Solver',
+      '✅ Advanced Analytics',
+      '✅ Mock Tests & Battle Mode'
+    ]
   },
   yearly: {
-    id: 'yearly',
     name: 'Yearly Plan',
-    price: 2499,
+    price: 499,
+    displayDuration: 'for 12 months',
     duration: 365, // days
-    displayDuration: '12 Months',
-    features: [
-      'Everything in Quarterly',
-      'Save ₹1089',
-      'Personal Mentor',
-      'Exclusive Study Material',
-      'JEE Strategy Sessions',
-      'Guaranteed Rank Improvement'
-    ],
     popular: false,
+    bestValue: true,
     savings: 1089,
-    originalPrice: 3588,
-    bestValue: true
+    originalPrice: 3588, // 299 * 12
+    features: [
+      '✅ All Quarterly Features',
+      '✅ Save ₹1089 (30% OFF)',
+      '✅ Unlimited Everything',
+      '✅ Lifetime Access to Updates',
+      '✅ VIP Support Channel',
+      '✅ Early Access to New Features',
+      '🎁 Free JEE Strategy E-Book'
+    ]
   }
+};
+
+// Freemium Limits
+export const FREE_LIMITS = {
+  chapters: 5,
+  dailyQuestions: 15,
+  aiQueries: 0
+};
+
+// Check if user is premium
+export const checkIsPremium = (subscriptionEndDate: string | null): boolean => {
+  if (!subscriptionEndDate) return false;
+  return new Date(subscriptionEndDate) > new Date();
 };

@@ -14,6 +14,10 @@ import {
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [language, setLanguage] = useState('EN');
+  const [showAppBanner, setShowAppBanner] = useState(() => {
+    const dismissed = localStorage.getItem('appBannerDismissed');
+    return dismissed !== 'true';
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, signOut } = useAuth();
@@ -92,24 +96,38 @@ const Header = () => {
     window.open('https://play.google.com/store/apps/details?id=com.jeenius.app', '_blank');
   };
 
+  const dismissAppBanner = () => {
+    setShowAppBanner(false);
+    localStorage.setItem('appBannerDismissed', 'true');
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200">
       {/* Mobile App Promotion Bar */}
-      <div className="bg-gradient-to-r from-green-500 to-blue-600 text-white text-center py-2 text-sm">
-        <div className="flex items-center justify-center space-x-2">
-          <Smartphone className="w-4 h-4" />
-          <span>📱 Get the full JEEnius experience - Download our Android App now!</span>
-          <Button 
-            size="sm" 
-            variant="secondary" 
-            className="ml-2 bg-white text-green-600 text-xs py-1 px-2 h-6"
-            onClick={handleDownloadApp}
+      {showAppBanner && (
+        <div className="bg-gradient-to-r from-green-500 to-blue-600 text-white text-center py-2 text-sm relative">
+          <div className="flex items-center justify-center space-x-2">
+            <Smartphone className="w-4 h-4" />
+            <span>📱 Get the full JEEnius experience - Download our Android App now!</span>
+            <Button 
+              size="sm" 
+              variant="secondary" 
+              className="ml-2 bg-white text-green-600 text-xs py-1 px-2 h-6"
+              onClick={handleDownloadApp}
+            >
+              <Download className="w-3 h-3 mr-1" />
+              Download
+            </Button>
+          </div>
+          <button 
+            onClick={dismissAppBanner}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:text-gray-200 p-1"
+            aria-label="Dismiss banner"
           >
-            <Download className="w-3 h-3 mr-1" />
-            Download
-          </Button>
+            <X className="w-4 h-4" />
+          </button>
         </div>
-      </div>
+      )}
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -162,7 +180,7 @@ const Header = () => {
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-48 bg-white border border-gray-200 shadow-lg">
                   <DropdownMenuItem onClick={() => handleNavigation('/profile')}>
                     <div className="flex items-center space-x-2 w-full">
                       <div className="w-4 h-4 rounded-full bg-primary"></div>
@@ -266,13 +284,6 @@ const Header = () => {
                     Sign In / Get Started
                   </Button>
                 )}
-                <button
-                  onClick={toggleLanguage}
-                  className="flex items-center justify-center space-x-2 text-gray-600 w-full py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  <Globe className="w-5 h-5" />
-                  <span className="text-sm font-medium">{language}</span>
-                </button>
               </div>
             </nav>
           </div>

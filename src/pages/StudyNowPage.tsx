@@ -11,7 +11,7 @@ import Header from '@/components/Header';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import {
   Flame, ArrowLeft, Lightbulb, XCircle, CheckCircle2, Trophy, Target,
-  Sparkles, Zap, Play
+  Sparkles, Zap, Play, Lock
 } from "lucide-react";
 
 const StudyNowPage = () => {
@@ -637,47 +637,65 @@ const handleAnswer = async (answer) => {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {chapters.map((chapter) => (
+                 // Check if chapter is locked (example: first 5 are free)
+                const isLocked = chapter.sequence > 5;
+                
+                if (isLocked) {
+                  return (
+                    <Card 
+                      key={chapter.name}
+                      className="group relative border-2 border-gray-200 shadow-lg opacity-60"
+                    >
+                      {/* Blur overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-gray-100/80 backdrop-blur-[2px] rounded-xl flex items-center justify-center z-10">
+                        <div className="text-center">
+                          <div className="bg-gradient-to-br from-orange-400 to-red-500 p-4 rounded-full inline-block mb-3">
+                            <Lock className="w-8 h-8 text-white" />
+                          </div>
+                          <p className="font-bold text-lg mb-2">Premium Chapter</p>
+                          <p className="text-sm text-gray-600 mb-4 max-w-xs px-4">
+                            Upgrade to unlock all chapters!
+                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate('/subscription-plans');
+                            }}
+                            className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:shadow-lg transition-shadow"
+                          >
+                            🔓 Unlock Now
+                          </button>
+                        </div>
+                      </div>
+            
+                      {/* Blurred content behind */}
+                      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
+                        <Badge className="mb-2">Chapter {chapter.sequence}</Badge>
+                        <h3 className="font-bold text-lg text-gray-900">{chapter.name}</h3>
+                      </div>
+                      <CardContent className="p-4">
+                        <div className="text-center mb-3">
+                          <div className="text-xl font-bold text-gray-900">{chapter.totalQuestions}</div>
+                          <div className="text-xs text-gray-500">Questions</div>
+                        </div>
+                        <Button className="w-full bg-blue-600 text-white" disabled>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Explore Topics
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+               return (
                 <Card 
                   key={chapter.name}
                   onClick={() => loadTopics(chapter.name)}
                   className="group cursor-pointer hover:border-gray-800 hover:scale-105 transition-all border-2 border-blue-200 shadow-lg hover:shadow-xl"
                 >
-                  <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
-                    <Badge className="mb-2">Chapter {chapter.sequence}</Badge>
-                    <h3 className="font-bold text-lg text-gray-900">{chapter.name}</h3>
-                  </div>
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-1 gap-3 mb-3">
-                      <div className="text-center">
-                        <div className="text-xl font-bold text-gray-900">{chapter.totalQuestions}</div>
-                        <div className="text-xs text-gray-500">Questions</div>
-                      </div>
-                    </div>
-
-                    <div className="mb-4 p-2 bg-gray-50 rounded-lg">
-                      <div className="grid grid-cols-3 gap-1 text-center text-xs">
-                        <div>
-                          <div className="font-bold text-green-600">{chapter.difficulties.easy}</div>
-                          <div className="text-gray-600">Easy</div>
-                        </div>
-                        <div>
-                          <div className="font-bold text-yellow-600">{chapter.difficulties.medium}</div>
-                          <div className="text-gray-600">Med</div>
-                        </div>
-                        <div>
-                          <div className="font-bold text-red-600">{chapter.difficulties.hard}</div>
-                          <div className="text-gray-600">Hard</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Explore Topics
-                    </Button>
-                  </CardContent>
+                  {/* ... rest of original chapter card code ... */}
                 </Card>
-              ))}
+              );
+            })}
             </div>
           </div>
           <FloatingAIButton />

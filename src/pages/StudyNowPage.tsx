@@ -37,20 +37,24 @@ const StudyNowPage = () => {
   const [showPaywall, setShowPaywall] = useState(false);
   
   // Fetch subjects with stats and profile
-  useEffect(() => {
+    useEffect(() => {
     fetchSubjects();
     loadProfile();
   }, []);
-
+  
+  // Make sure loadProfile is setting the profile state correctly
   const loadProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user?.id)
+        .eq('id', user.id)
         .single();
       
+      console.log('Loaded profile:', profileData); // DEBUG
       setProfile(profileData);
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -144,12 +148,14 @@ const StudyNowPage = () => {
       setLoading(false);
     }
   };
-
+  
   const loadChapters = async (subject) => {
     setLoading(true);
     setSelectedSubject(subject);
     
-    const isLocked = !profile?.is_premium && index >= 2;
+     // Add this inside your loadChapters function, right after setSelectedSubject
+    console.log('Profile data:', profile);
+    console.log('Is Premium?', profile?.is_premium);
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -160,7 +166,7 @@ const StudyNowPage = () => {
         .eq('subject', subject);
       
       if (error) throw error;
-
+  
       const uniqueChapters = [...new Set(data.map(q => q.chapter))];
       
       const { data: userAttempts } = await supabase
@@ -170,7 +176,7 @@ const StudyNowPage = () => {
         .eq('questions.subject', subject);
       
       const chapterStats = await Promise.all(
-        uniqueChapters.map(async (chapter, index) => {
+        uniqueChapters.map(async (chapter, index) => {  // index is NOW properly defined here
           const chapterQuestions = data.filter(q => q.chapter === chapter);
           const totalQuestions = chapterQuestions.length;
           
@@ -179,7 +185,7 @@ const StudyNowPage = () => {
             medium: chapterQuestions.filter(q => q.difficulty === 'Medium').length,
             hard: chapterQuestions.filter(q => q.difficulty === 'Hard').length
           };
-
+  
           const chapterAttempts = userAttempts?.filter(
             a => a.questions?.chapter === chapter
           ) || [];
@@ -188,10 +194,10 @@ const StudyNowPage = () => {
           const correct = chapterAttempts.filter(a => a.is_correct).length;
           const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
           const progress = attempted > 0 ? Math.min(100, Math.round((attempted / totalQuestions) * 100)) : 0;
-
-          // Check if locked - first 2 chapters are free
+  
+          // Check if locked - first 2 chapters are free (index 0 and 1)
           const isLocked = !profile?.is_premium && index >= 2;
-
+  
           return {
             name: chapter,
             sequence: index + 1,
@@ -200,11 +206,11 @@ const StudyNowPage = () => {
             attempted,
             accuracy,
             progress,
-            isLocked
+            isLocked  // This will now work correctly
           };
         })
       );
-
+  
       setChapters(chapterStats);
       setView('chapters');
       
@@ -215,7 +221,7 @@ const StudyNowPage = () => {
       setLoading(false);
     }
   };
-
+    
   const loadTopics = async (chapter) => {
     setLoading(true);
     setSelectedChapter(chapter);

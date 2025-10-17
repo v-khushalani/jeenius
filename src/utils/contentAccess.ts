@@ -156,7 +156,7 @@ export const canAttemptQuestion = async (userId: string): Promise<AccessResult> 
       .single();
 
     const questionsAttempted = todayAttempts?.length || 0;
-    const dailyLimit = limit?.limit_value || 50;
+    const dailyLimit = limit?.limit_value || 25;
 
     if (questionsAttempted < dailyLimit) {
       return {

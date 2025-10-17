@@ -149,6 +149,8 @@ const StudyNowPage = () => {
     setLoading(true);
     setSelectedSubject(subject);
     
+    const isLocked = !profile?.is_premium && index >= 2;
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       

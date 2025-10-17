@@ -31,6 +31,9 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix=\"/api\")
 
+# Import subscription routes
+from routes.subscriptions import router as subscriptions_router
+
 
 # Define Models
 class StatusCheck(BaseModel):
@@ -376,6 +379,9 @@ async def track_usage(request: TrackUsageRequest):
 
 # Include the router in the main app
 app.include_router(api_router)
+
+# Include subscription routes (these already have /api prefix)
+app.include_router(subscriptions_router)
 
 app.add_middleware(
     CORSMiddleware,

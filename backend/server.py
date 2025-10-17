@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
 from datetime import datetime, timedelta
-from supabase import create_client, Client
+import hashlib
+import hmac
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -41,28 +42,28 @@ class StatusCheckCreate(BaseModel):
     client_name: str
 
 # Subscription Models
-class CreateOrderRequest(BaseModel):
+class SubscriptionOrderCreate(BaseModel):
     amount: int
     plan_id: str
     user_id: str
 
-class CreateOrderResponse(BaseModel):
+class SubscriptionOrderResponse(BaseModel):
     order_id: str
     amount: int
     currency: str = \"INR\"
 
-class VerifyPaymentRequest(BaseModel):
+class PaymentVerification(BaseModel):
     razorpay_order_id: str
     razorpay_payment_id: str
     razorpay_signature: str
     user_id: str
     plan_id: str
 
-class VerifyPaymentResponse(BaseModel):
+class PaymentVerificationResponse(BaseModel):
     verified: bool
     subscription_id: Optional[str] = None
     message: str
-
+    
 class SubscriptionStatusResponse(BaseModel):
     is_premium: bool
     plan_id: Optional[str] = None
@@ -106,96 +107,107 @@ async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
-
-# Subscription Management Routes
-@api_router.post(\"/subscriptions/create-order\", response_model=CreateOrderResponse)
-async def create_order(request: CreateOrderRequest):
+# Subscription and Payment Routes (Mock Implementation)
+@api_router.post(\"/subscriptions/create-order\", response_model=SubscriptionOrderResponse)
+async def create_subscription_order(order_data: SubscriptionOrderCreate):
     \"\"\"
-    Mock Razorpay order creation
+    Create a mock Razorpay order for subscription payment
     In production, this would call Razorpay API
     \"\"\"
     try:
         # Generate mock order ID
-        order_id = f\"order_mock_{uuid.uuid4().hex[:16]}\"
+        order_id = f\"order_mock_{uuid.uuid4().hex[:12]}\"
         
-        logger.info(f\"Created mock order {order_id} for user {request.user_id}, plan {request.plan_id}\")
+        logger.info(f\"Creating mock order: {order_id} for user {order_data.user_id}\")
         
-        return CreateOrderResponse(
+        # Store order in database for verification later
+        order_record = {
+            \"order_id\": order_id,
+            \"user_id\": order_data.user_id,
+            \"plan_id\": order_data.plan_id,
+            \"amount\": order_data.amount,
+            \"currency\": \"INR\",
+            \"status\": \"created\",
+            \"created_at\": datetime.utcnow().isoformat()
+        }
+        
+        await db.payment_orders.insert_one(order_record)
+        
+        return SubscriptionOrderResponse(
             order_id=order_id,
-            amount=request.amount,
+            amount=order_data.amount,
             currency=\"INR\"
         )
     except Exception as e:
-        logger.error(f\"Error creating order: {e}\")
+        logger.error(f\"Error creating order: {str(e)}\")
         raise HTTPException(status_code=500, detail=\"Failed to create order\")
 
-
-@api_router.post(\"/subscriptions/verify-payment\", response_model=VerifyPaymentResponse)
-async def verify_payment(request: VerifyPaymentRequest):
+@api_router.post(\"/subscriptions/verify-payment\", response_model=PaymentVerificationResponse)
+async def verify_subscription_payment(payment_data: PaymentVerification):
     \"\"\"
-    Mock payment verification and subscription creation
+    Verify mock payment and create subscription
     In production, this would verify Razorpay signature
     \"\"\"
     try:
-        if not supabase:
-            raise HTTPException(status_code=500, detail=\"Supabase not configured\")
+        logger.info(f\"Verifying payment for user {payment_data.user_id}\")
         
-        # Mock verification - always success
-        verified = True
+        # Get order from database
+        order = await db.payment_orders.find_one({\"order_id\": payment_data.razorpay_order_id})
         
-        if not verified:
-            return VerifyPaymentResponse(
+        if not order:
+            return PaymentVerificationResponse(
                 verified=False,
-                message=\"Payment verification failed\"
+                message=\"Order not found\"
             )
         
-        # Get plan details
-        plan_configs = {
-            'monthly': {'duration_days': 30, 'price': 299},
-            'quarterly': {'duration_days': 90, 'price': 799},
-            'yearly': {'duration_days': 365, 'price': 2499}
+        # Mock verification - In production, verify signature with Razorpay secret
+        # For now, we accept all payments as valid
+        
+        # Calculate subscription duration based on plan
+        plan_durations = {
+            \"monthly\": 30,
+            \"quarterly\": 90,
+            \"yearly\": 365
         }
         
-        plan_config = plan_configs.get(request.plan_id)
-        if not plan_config:
-            raise HTTPException(status_code=400, detail=\"Invalid plan\")
-        
-        # Create subscription in Supabase
+        duration_days = plan_durations.get(payment_data.plan_id, 30)
         start_date = datetime.utcnow()
-        end_date = start_date + timedelta(days=plan_config['duration_days'])
+        end_date = start_date + timedelta(days=duration_days)
         
-        subscription_data = {
-            'id': str(uuid.uuid4()),
-            'user_id': request.user_id,
-            'plan_id': request.plan_id,
-            'status': 'active',
-            'start_date': start_date.isoformat(),
-            'end_date': end_date.isoformat(),
-            'amount': plan_config['price'],
-            'payment_id': request.razorpay_payment_id,
-            'order_id': request.razorpay_order_id,
-            'created_at': start_date.isoformat()
+        # Create subscription record (this would be in Supabase in production)
+        subscription_id = str(uuid.uuid4())
+        subscription_record = {
+            \"id\": subscription_id,
+            \"user_id\": payment_data.user_id,
+            \"plan_id\": payment_data.plan_id,
+            \"status\": \"active\",
+            \"start_date\": start_date.isoformat(),
+            \"end_date\": end_date.isoformat(),
+            \"payment_id\": payment_data.razorpay_payment_id,
+            \"order_id\": payment_data.razorpay_order_id,
+            \"amount\": order.get(\"amount\", 0),
+            \"created_at\": datetime.utcnow().isoformat()
         }
         
-        result = supabase.table('subscriptions').insert(subscription_data).execute()
+        await db.subscriptions.insert_one(subscription_record)
         
-        # Update user profile to mark as premium
-        supabase.table('profiles').update({
-            'is_premium': True,
-            'updated_at': datetime.utcnow().isoformat()
-        }).eq('id', request.user_id).execute()
+        # Update order status
+        await db.payment_orders.update_one(
+            {\"order_id\": payment_data.razorpay_order_id},
+            {\"$set\": {\"status\": \"completed\", \"payment_id\": payment_data.razorpay_payment_id}}
+        )
         
-        logger.info(f\"Created subscription for user {request.user_id}, plan {request.plan_id}\")
+        logger.info(f\"Subscription created: {subscription_id} for user {payment_data.user_id}\")
         
-        return VerifyPaymentResponse(
+        return PaymentVerificationResponse(
             verified=True,
-            subscription_id=subscription_data['id'],
-            message=\"Subscription activated successfully\"
+            subscription_id=subscription_id,
+            message=\"Payment verified and subscription activated\"
         )
         
     except Exception as e:
-        logger.error(f\"Error verifying payment: {e}\")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f\"Error verifying payment: {str(e)}\")
+        raise HTTPException(status_code=500, detail=\"Payment verification failed\")
 
 
 @api_router.get(\"/subscriptions/status/{user_id}\", response_model=SubscriptionStatusResponse)

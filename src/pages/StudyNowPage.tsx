@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import FloatingAIButton from '@/components/FloatingAIButton';
 import AIDoubtSolver from '@/components/AIDoubtSolver';
+import { SubscriptionPaywall } from '@/components/paywall/SubscriptionPaywall';
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,167 +33,179 @@ const StudyNowPage = () => {
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0, streak: 0 });
   const [userStats, setUserStats] = useState({ attempted: 0, accuracy: 0 });
   const [showAIModal, setShowAIModal] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
   
-  // Fetch subjects with stats
+  // Fetch subjects with stats and profile
   useEffect(() => {
     fetchSubjects();
+    loadProfile();
   }, []);
+
+  const loadProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+      
+      setProfile(profileData);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
 
   const fetchSubjects = async () => {
     setLoading(true);
     try {
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Fetch all questions
-    const { data: allQuestions, error } = await supabase
-      .from('questions')
-      .select('subject, difficulty');
+      const { data: { user } } = await supabase.auth.getUser();
       
-    if (error) throw error;
-
-    // Get unique subjects
-    const uniqueSubjects = [...new Set(allQuestions.map(q => q.subject))];
-    
-    // Fetch user's attempts for stats
-    const { data: userAttempts } = await supabase
-      .from('question_attempts')
-      .select('*, questions!inner(subject)')
-      .eq('user_id', user?.id);
-
-    const subjectStats = await Promise.all(
-      uniqueSubjects.map(async (subject) => {
-        // Total questions in this subject
-        const subjectQuestions = allQuestions.filter(q => q.subject === subject);
-        const totalQuestions = subjectQuestions.length;
+      const { data: allQuestions, error } = await supabase
+        .from('questions')
+        .select('subject, difficulty');
         
-        // Difficulty breakdown
-        const difficulties = {
-          easy: subjectQuestions.filter(q => q.difficulty === 'Easy').length,
-          medium: subjectQuestions.filter(q => q.difficulty === 'Medium').length,
-          hard: subjectQuestions.filter(q => q.difficulty === 'Hard').length
-        };
+      if (error) throw error;
 
-        // User's attempts in this subject
-        const subjectAttempts = userAttempts?.filter(
-          a => a.questions?.subject === subject
-        ) || [];
-        
-        const attempted = subjectAttempts.length;
-        const correct = subjectAttempts.filter(a => a.is_correct).length;
-        const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+      const uniqueSubjects = [...new Set(allQuestions.map(q => q.subject))];
+      
+      const { data: userAttempts } = await supabase
+        .from('question_attempts')
+        .select('*, questions!inner(subject)')
+        .eq('user_id', user?.id);
 
-        const icons = {
-          'Physics': '⚛️',
-          'Chemistry': '🧪',
-          'Mathematics': '📐'
-        };
+      const subjectStats = await Promise.all(
+        uniqueSubjects.map(async (subject) => {
+          const subjectQuestions = allQuestions.filter(q => q.subject === subject);
+          const totalQuestions = subjectQuestions.length;
+          
+          const difficulties = {
+            easy: subjectQuestions.filter(q => q.difficulty === 'Easy').length,
+            medium: subjectQuestions.filter(q => q.difficulty === 'Medium').length,
+            hard: subjectQuestions.filter(q => q.difficulty === 'Hard').length
+          };
 
-        const colors = {
-          'Physics': {
-            color: 'from-blue-500 to-indigo-600',
-            bgColor: 'from-blue-50 to-indigo-50',
-            borderColor: 'border-blue-200'
-          },
-          'Chemistry': {
-            color: 'from-green-500 to-emerald-600',
-            bgColor: 'from-green-50 to-emerald-50',
-            borderColor: 'border-green-200'
-          },
-          'Mathematics': {
-            color: 'from-purple-500 to-pink-600',
-            bgColor: 'from-purple-50 to-pink-50',
-            borderColor: 'border-purple-200'
-          }
-        };
+          const subjectAttempts = userAttempts?.filter(
+            a => a.questions?.subject === subject
+          ) || [];
+          
+          const attempted = subjectAttempts.length;
+          const correct = subjectAttempts.filter(a => a.is_correct).length;
+          const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
 
-        return {
-          name: subject,
-          emoji: icons[subject] || '📚',
-          ...colors[subject],
-          totalQuestions,
-          difficulties,
-          attempted,
-          accuracy
-        };
-      })
-    );
+          const icons = {
+            'Physics': '⚛️',
+            'Chemistry': '🧪',
+            'Mathematics': '📐'
+          };
 
-    // Overall stats for banner
-    const totalAttempted = userAttempts?.length || 0;
-    const totalCorrect = userAttempts?.filter(a => a.is_correct).length || 0;
-    const overallAccuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
-    
-    setUserStats({ attempted: totalAttempted, accuracy: overallAccuracy });
-    setSubjects(subjectStats);
+          const colors = {
+            'Physics': {
+              color: 'from-blue-500 to-indigo-600',
+              bgColor: 'from-blue-50 to-indigo-50',
+              borderColor: 'border-blue-200'
+            },
+            'Chemistry': {
+              color: 'from-green-500 to-emerald-600',
+              bgColor: 'from-green-50 to-emerald-50',
+              borderColor: 'border-green-200'
+            },
+            'Mathematics': {
+              color: 'from-purple-500 to-pink-600',
+              bgColor: 'from-purple-50 to-pink-50',
+              borderColor: 'border-purple-200'
+            }
+          };
 
-  } catch (error) {
-    console.error('Error fetching subjects:', error);
-    toast.error('Failed to load subjects');
-  } finally {
-    setLoading(false);
-  }
-};
+          return {
+            name: subject,
+            emoji: icons[subject] || '📚',
+            ...colors[subject],
+            totalQuestions,
+            difficulties,
+            attempted,
+            accuracy
+          };
+        })
+      );
+
+      const totalAttempted = userAttempts?.length || 0;
+      const totalCorrect = userAttempts?.filter(a => a.is_correct).length || 0;
+      const overallAccuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
+      
+      setUserStats({ attempted: totalAttempted, accuracy: overallAccuracy });
+      setSubjects(subjectStats);
+
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      toast.error('Failed to load subjects');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadChapters = async (subject) => {
     setLoading(true);
     setSelectedSubject(subject);
     
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const { data, error } = await supabase
-      .from('questions')
-      .select('chapter, difficulty')
-      .eq('subject', subject);
-    
-    if (error) throw error;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase
+        .from('questions')
+        .select('chapter, difficulty')
+        .eq('subject', subject);
+      
+      if (error) throw error;
 
-    const uniqueChapters = [...new Set(data.map(q => q.chapter))];
-    
-    // Fetch user attempts for chapters
-    const { data: userAttempts } = await supabase
-      .from('question_attempts')
-      .select('*, questions!inner(subject, chapter)')
-      .eq('user_id', user?.id)
-      .eq('questions.subject', subject);
-    
-    const chapterStats = await Promise.all(
-      uniqueChapters.map(async (chapter, index) => {
-        const chapterQuestions = data.filter(q => q.chapter === chapter);
-        const totalQuestions = chapterQuestions.length;
-        
-        const difficulties = {
-          easy: chapterQuestions.filter(q => q.difficulty === 'Easy').length,
-          medium: chapterQuestions.filter(q => q.difficulty === 'Medium').length,
-          hard: chapterQuestions.filter(q => q.difficulty === 'Hard').length
-        };
+      const uniqueChapters = [...new Set(data.map(q => q.chapter))];
+      
+      const { data: userAttempts } = await supabase
+        .from('question_attempts')
+        .select('*, questions!inner(subject, chapter)')
+        .eq('user_id', user?.id)
+        .eq('questions.subject', subject);
+      
+      const chapterStats = await Promise.all(
+        uniqueChapters.map(async (chapter, index) => {
+          const chapterQuestions = data.filter(q => q.chapter === chapter);
+          const totalQuestions = chapterQuestions.length;
+          
+          const difficulties = {
+            easy: chapterQuestions.filter(q => q.difficulty === 'Easy').length,
+            medium: chapterQuestions.filter(q => q.difficulty === 'Medium').length,
+            hard: chapterQuestions.filter(q => q.difficulty === 'Hard').length
+          };
 
-        // Chapter attempts
-        const chapterAttempts = userAttempts?.filter(
-          a => a.questions?.chapter === chapter
-        ) || [];
-        
-        const attempted = chapterAttempts.length;
-        const correct = chapterAttempts.filter(a => a.is_correct).length;
-        const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
-        const progress = attempted > 0 ? Math.min(100, Math.round((attempted / totalQuestions) * 100)) : 0;
+          const chapterAttempts = userAttempts?.filter(
+            a => a.questions?.chapter === chapter
+          ) || [];
+          
+          const attempted = chapterAttempts.length;
+          const correct = chapterAttempts.filter(a => a.is_correct).length;
+          const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+          const progress = attempted > 0 ? Math.min(100, Math.round((attempted / totalQuestions) * 100)) : 0;
 
-        return {
-          name: chapter,
-          sequence: index + 1,
-          totalQuestions,
-          difficulties,
-          attempted,
-          accuracy,
-          progress
-        };
-      })
-    );
+          // Check if locked - first 2 chapters are free
+          const isLocked = !profile?.is_premium && index >= 2;
 
-    setChapters(chapterStats);
-    setView('chapters');
-    
+          return {
+            name: chapter,
+            sequence: index + 1,
+            totalQuestions,
+            difficulties,
+            attempted,
+            accuracy,
+            progress,
+            isLocked
+          };
+        })
+      );
+
+      setChapters(chapterStats);
+      setView('chapters');
+      
     } catch (error) {
       console.error('Error fetching chapters:', error);
       toast.error('Failed to load chapters');
@@ -202,80 +215,72 @@ const StudyNowPage = () => {
   };
 
   const loadTopics = async (chapter) => {
-  setLoading(true);
-  setSelectedChapter(chapter);
-  
-  try {
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
+    setLoading(true);
+    setSelectedChapter(chapter);
     
-    // Fetch all topics for this chapter
-    const { data, error } = await supabase
-      .from('questions')
-      .select('topic, difficulty')
-      .eq('subject', selectedSubject)
-      .eq('chapter', chapter);
-    
-    if (error) throw error;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase
+        .from('questions')
+        .select('topic, difficulty')
+        .eq('subject', selectedSubject)
+        .eq('chapter', chapter);
+      
+      if (error) throw error;
 
-    // Get unique topics (remove null/empty)
-    const uniqueTopics = [...new Set(data.map(q => q.topic).filter(Boolean))];
-    
-    if (uniqueTopics.length === 0) {
-      // If no topics, start practice directly
-      startPractice(null);
-      return;
+      const uniqueTopics = [...new Set(data.map(q => q.topic).filter(Boolean))];
+      
+      if (uniqueTopics.length === 0) {
+        startPractice(null);
+        return;
+      }
+
+      const { data: userAttempts } = await supabase
+        .from('question_attempts')
+        .select('*, questions!inner(subject, chapter, topic)')
+        .eq('user_id', user?.id)
+        .eq('questions.subject', selectedSubject)
+        .eq('questions.chapter', chapter);
+
+      const topicStats = await Promise.all(
+        uniqueTopics.map(async (topic) => {
+          const topicQuestions = data.filter(q => q.topic === topic);
+          const totalQuestions = topicQuestions.length;
+          
+          const difficulties = {
+            easy: topicQuestions.filter(q => q.difficulty === 'Easy').length,
+            medium: topicQuestions.filter(q => q.difficulty === 'Medium').length,
+            hard: topicQuestions.filter(q => q.difficulty === 'Hard').length
+          };
+
+          const topicAttempts = userAttempts?.filter(
+            a => a.questions?.topic === topic
+          ) || [];
+          
+          const attempted = topicAttempts.length;
+          const correct = topicAttempts.filter(a => a.is_correct).length;
+          const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+
+          return {
+            name: topic,
+            totalQuestions,
+            difficulties,
+            attempted,
+            accuracy
+          };
+        })
+      );
+
+      setTopics(topicStats);
+      setView('topics');
+    } catch (error) {
+      console.error('Error fetching topics:', error);
+      toast.error('Failed to load topics');
+    } finally {
+      setLoading(false);
     }
-
-    // Fetch user's attempts for these topics
-    const { data: userAttempts } = await supabase
-      .from('question_attempts')
-      .select('*, questions!inner(subject, chapter, topic)')
-      .eq('user_id', user?.id)
-      .eq('questions.subject', selectedSubject)
-      .eq('questions.chapter', chapter);
-
-    const topicStats = await Promise.all(
-      uniqueTopics.map(async (topic) => {
-        // Get all questions for this topic
-        const topicQuestions = data.filter(q => q.topic === topic);
-        const totalQuestions = topicQuestions.length;
-        
-        // Count difficulties
-        const difficulties = {
-          easy: topicQuestions.filter(q => q.difficulty === 'Easy').length,
-          medium: topicQuestions.filter(q => q.difficulty === 'Medium').length,
-          hard: topicQuestions.filter(q => q.difficulty === 'Hard').length
-        };
-
-        // Get user's attempts for this topic
-        const topicAttempts = userAttempts?.filter(
-          a => a.questions?.topic === topic
-        ) || [];
-        
-        const attempted = topicAttempts.length;
-        const correct = topicAttempts.filter(a => a.is_correct).length;
-        const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
-
-        return {
-          name: topic,
-          totalQuestions,
-          difficulties,
-          attempted,
-          accuracy
-        };
-      })
-    );
-
-    setTopics(topicStats);
-    setView('topics');
-  } catch (error) {
-    console.error('Error fetching topics:', error);
-    toast.error('Failed to load topics');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
   
   const startPractice = async (topic = null) => {
     setLoading(true);
@@ -302,7 +307,6 @@ const StudyNowPage = () => {
         return;
       }
 
-      // Shuffle and select questions
       const shuffled = data.sort(() => Math.random() - 0.5);
       const selected = shuffled.slice(0, Math.min(25, shuffled.length));
 
@@ -320,53 +324,51 @@ const StudyNowPage = () => {
     }
   };
 
-const handleAnswer = async (answer) => {
-  if (showResult) return;
-  
-  setSelectedAnswer(answer);
-  setShowResult(true);
-  
-  const question = practiceQuestions[currentQuestionIndex];
-  const isCorrect = answer === question.correct_option;
-  
-  // Save to database with subject/topic
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
+  const handleAnswer = async (answer) => {
+    if (showResult) return;
     
-    await supabase.from('question_attempts').insert({
-      user_id: user.id,
-      question_id: question.id,
-      selected_option: answer,
-      is_correct: isCorrect,
-      time_taken: 30,
-      attempted_at: new Date().toISOString(),
-      mode: 'study'
-    });
-
-    // 🔥 NEW: Calculate topic mastery after each attempt
-    if (selectedTopic) {
-      await supabase.functions.invoke('calculate-topic-mastery', {
-        body: {
-          subject: selectedSubject,
-          chapter: selectedChapter,
-          topic: selectedTopic
-        }
+    setSelectedAnswer(answer);
+    setShowResult(true);
+    
+    const question = practiceQuestions[currentQuestionIndex];
+    const isCorrect = answer === question.correct_option;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      await supabase.from('question_attempts').insert({
+        user_id: user.id,
+        question_id: question.id,
+        selected_option: answer,
+        is_correct: isCorrect,
+        time_taken: 30,
+        attempted_at: new Date().toISOString(),
+        mode: 'study'
       });
-    }
-  } catch (error) {
-    console.error('Error saving attempt:', error);
-  }
-  
-  setSessionStats(prev => ({
-    correct: prev.correct + (isCorrect ? 1 : 0),
-    total: prev.total + 1,
-    streak: isCorrect ? prev.streak + 1 : 0
-  }));
 
-  setTimeout(() => {
-    nextQuestion();
-  }, 100);
-};
+      if (selectedTopic) {
+        await supabase.functions.invoke('calculate-topic-mastery', {
+          body: {
+            subject: selectedSubject,
+            chapter: selectedChapter,
+            topic: selectedTopic
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error saving attempt:', error);
+    }
+    
+    setSessionStats(prev => ({
+      correct: prev.correct + (isCorrect ? 1 : 0),
+      total: prev.total + 1,
+      streak: isCorrect ? prev.streak + 1 : 0
+    }));
+
+    setTimeout(() => {
+      nextQuestion();
+    }, 100);
+  };
 
   const nextQuestion = () => {
     if (currentQuestionIndex < practiceQuestions.length - 1) {
@@ -492,20 +494,15 @@ const handleAnswer = async (answer) => {
                   })}
                 </div>
 
-                {/* 🔥 YAHA PE ADD KARO - Line ~520 ke aas paas */}
-               <div className="mt-6 flex justify-center">
+                <div className="mt-6 flex justify-center">
                   <Button
-                    onClick={() => {
-                      console.log('Button clicked!'); // Debug log
-                      setShowAIModal(true);
-                    }}
+                    onClick={() => setShowAIModal(true)}
                     className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-semibold shadow-lg px-6 py-3"
                   >
                     <Sparkles className="w-5 h-5 mr-2" />
                     Ask AI for Help
                   </Button>
                 </div>
-
                 
                 {showResult && question.explanation && (
                   <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600">
@@ -522,11 +519,11 @@ const handleAnswer = async (answer) => {
             </Card>
           </div>
         </div>
-          <AIDoubtSolver 
+        <AIDoubtSolver 
           question={practiceQuestions[currentQuestionIndex]}
           isOpen={showAIModal}
           onClose={() => setShowAIModal(false)}
-          />
+        />
       </div>
     );
   }
@@ -538,20 +535,20 @@ const handleAnswer = async (answer) => {
         <Header />
         <div className="pt-24 pb-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="mb-12 text-center">
-            <div className="max-w-3xl mx-auto p-8 rounded-2xl bg-white border border-gray-200 shadow-lg">
-              <div className="flex justify-center gap-3">
-                <Badge className="bg-green-50 text-green-700 border-green-200 px-4 py-1.5">
-                  <Target className="w-4 h-4 mr-1" />
-                  Attempted: {userStats.attempted}
-                </Badge>
-                <Badge className="bg-blue-50 text-blue-700 border-blue-200 px-4 py-1.5">
-                  <Trophy className="w-4 h-4 mr-1" />
-                  Accuracy: {userStats.accuracy}%
-                </Badge>
+            <div className="mb-12 text-center">
+              <div className="max-w-3xl mx-auto p-8 rounded-2xl bg-white border border-gray-200 shadow-lg">
+                <div className="flex justify-center gap-3">
+                  <Badge className="bg-green-50 text-green-700 border-green-200 px-4 py-1.5">
+                    <Target className="w-4 h-4 mr-1" />
+                    Attempted: {userStats.attempted}
+                  </Badge>
+                  <Badge className="bg-blue-50 text-blue-700 border-blue-200 px-4 py-1.5">
+                    <Trophy className="w-4 h-4 mr-1" />
+                    Accuracy: {userStats.accuracy}%
+                  </Badge>
+                </div>
               </div>
-            </div>
-          </div>  
+            </div>  
             <div className="grid md:grid-cols-3 gap-6">
               {subjects.map((subject) => (
                 <Card 
@@ -638,47 +635,88 @@ const handleAnswer = async (answer) => {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {chapters.map((chapter) => {
-              // Check if chapter is locked (first 2 are free)
-              const isLocked = chapter.sequence > 2;
-              
-              if (isLocked) {
+              {chapters.map((chapter) => {
+                if (chapter.isLocked) {
+                  return (
+                    <Card 
+                      key={chapter.name}
+                      className="group relative border-2 border-gray-200 shadow-lg opacity-60"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-gray-100/80 backdrop-blur-[2px] rounded-xl flex items-center justify-center z-10">
+                        <div className="text-center">
+                          <div className="bg-gradient-to-br from-orange-400 to-red-500 p-4 rounded-full inline-block mb-3">
+                            <Lock className="w-8 h-8 text-white" />
+                          </div>
+                          <p className="font-bold text-lg mb-2">Premium Chapter</p>
+                          <p className="text-sm text-gray-600 mb-4 max-w-xs px-4">
+                            Upgrade to unlock all chapters!
+                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate('/subscription-plans');
+                            }}
+                            className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:shadow-lg transition-shadow"
+                          >
+                            🔓 Unlock Now
+                          </button>
+                        </div>
+                      </div>
+            
+                      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
+                        <Badge className="mb-2">Chapter {chapter.sequence}</Badge>
+                        <h3 className="font-bold text-lg text-gray-900">{chapter.name}</h3>
+                      </div>
+                      <CardContent className="p-4">
+                        <div className="text-center mb-3">
+                          <div className="text-xl font-bold text-gray-900">{chapter.totalQuestions}</div>
+                          <div className="text-xs text-gray-500">Questions</div>
+                        </div>
+                        
+                        <div className="mb-4 p-2 bg-gray-50 rounded-lg">
+                          <div className="grid grid-cols-3 gap-1 text-center text-xs">
+                            <div>
+                              <div className="font-bold text-green-600">{chapter.difficulties.easy}</div>
+                              <div className="text-gray-600">Easy</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-yellow-600">{chapter.difficulties.medium}</div>
+                              <div className="text-gray-600">Med</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-red-600">{chapter.difficulties.hard}</div>
+                              <div className="text-gray-600">Hard</div>
+                            </div>
+                          </div>
+                        </div>
+            
+                        <Button className="w-full bg-blue-600 text-white" disabled>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Explore Topics
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+            
                 return (
                   <Card 
                     key={chapter.name}
-                    className="group relative border-2 border-gray-200 shadow-lg opacity-60"
+                    onClick={() => loadTopics(chapter.name)}
+                    className="group cursor-pointer hover:border-gray-800 hover:scale-105 transition-all border-2 border-blue-200 shadow-lg hover:shadow-xl"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-gray-100/80 backdrop-blur-[2px] rounded-xl flex items-center justify-center z-10">
-                      <div className="text-center">
-                        <div className="bg-gradient-to-br from-orange-400 to-red-500 p-4 rounded-full inline-block mb-3">
-                          <Lock className="w-8 h-8 text-white" />
-                        </div>
-                        <p className="font-bold text-lg mb-2">Premium Chapter</p>
-                        <p className="text-sm text-gray-600 mb-4 max-w-xs px-4">
-                          Upgrade to unlock all chapters!
-                        </p>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate('/subscription-plans');
-                          }}
-                          className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:shadow-lg transition-shadow"
-                        >
-                          🔓 Unlock Now
-                        </button>
-                      </div>
-                    </div>
-          
                     <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
                       <Badge className="mb-2">Chapter {chapter.sequence}</Badge>
                       <h3 className="font-bold text-lg text-gray-900">{chapter.name}</h3>
                     </div>
                     <CardContent className="p-4">
-                      <div className="text-center mb-3">
-                        <div className="text-xl font-bold text-gray-900">{chapter.totalQuestions}</div>
-                        <div className="text-xs text-gray-500">Questions</div>
+                      <div className="grid grid-cols-1 gap-3 mb-3">
+                        <div className="text-center">
+                          <div className="text-xl font-bold text-gray-900">{chapter.totalQuestions}</div>
+                          <div className="text-xs text-gray-500">Questions</div>
+                        </div>
                       </div>
-                      
+            
                       <div className="mb-4 p-2 bg-gray-50 rounded-lg">
                         <div className="grid grid-cols-3 gap-1 text-center text-xs">
                           <div>
@@ -695,61 +733,16 @@ const handleAnswer = async (answer) => {
                           </div>
                         </div>
                       </div>
-          
-                      <Button className="w-full bg-blue-600 text-white" disabled>
+            
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                         <Sparkles className="w-4 h-4 mr-2" />
                         Explore Topics
                       </Button>
                     </CardContent>
                   </Card>
                 );
-              }
-          
-              return (
-                <Card 
-                  key={chapter.name}
-                  onClick={() => loadTopics(chapter.name)}
-                  className="group cursor-pointer hover:border-gray-800 hover:scale-105 transition-all border-2 border-blue-200 shadow-lg hover:shadow-xl"
-                >
-                  <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
-                    <Badge className="mb-2">Chapter {chapter.sequence}</Badge>
-                    <h3 className="font-bold text-lg text-gray-900">{chapter.name}</h3>
-                  </div>
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-1 gap-3 mb-3">
-                      <div className="text-center">
-                        <div className="text-xl font-bold text-gray-900">{chapter.totalQuestions}</div>
-                        <div className="text-xs text-gray-500">Questions</div>
-                      </div>
-                    </div>
-          
-                    <div className="mb-4 p-2 bg-gray-50 rounded-lg">
-                      <div className="grid grid-cols-3 gap-1 text-center text-xs">
-                        <div>
-                          <div className="font-bold text-green-600">{chapter.difficulties.easy}</div>
-                          <div className="text-gray-600">Easy</div>
-                        </div>
-                        <div>
-                          <div className="font-bold text-yellow-600">{chapter.difficulties.medium}</div>
-                          <div className="text-gray-600">Med</div>
-                        </div>
-                        <div>
-                          <div className="font-bold text-red-600">{chapter.difficulties.hard}</div>
-                          <div className="text-gray-600">Hard</div>
-                        </div>
-                      </div>
-                    </div>
-          
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Explore Topics
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-            
+              })}
+            </div>
           </div>
           <FloatingAIButton />
         </div>

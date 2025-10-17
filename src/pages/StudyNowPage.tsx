@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Header from '@/components/Header';
+import { canAccessChapter, canAttemptQuestion, trackQuestionAttempt } from '@/utils/contentAccess';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import {
   Flame, ArrowLeft, Lightbulb, XCircle, CheckCircle2, Trophy, Target,
@@ -49,8 +50,19 @@ const StudyNowPage = () => {
   const loadProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
+      // Track chapter access when user opens it
+      if (user?.id) {
+        await supabase.from('user_content_access').upsert({
+          user_id: user.id,
+          content_type: 'chapter',
+          content_identifier: chapter,
+          subject: selectedSubject,
+          accessed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,content_type,content_identifier,subject',
+          ignoreDuplicates: false
+        });
+      }
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -177,9 +189,33 @@ const StudyNowPage = () => {
         .select('*, questions!inner(subject, chapter)')
         .eq('user_id', user?.id)
         .eq('questions.subject', subject);
+
+      // Check if user has premium subscription
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('status', 'active')
+        .gte('end_date', new Date().toISOString())
+        .single();
+      
+      const isPremium = !!subscription;
+      
+      // Get user's accessed chapters
+      const { data: accessedChapters } = await supabase
+        .from('user_content_access')
+        .select('content_identifier, subject')
+        .eq('user_id', user?.id)
+        .eq('content_type', 'chapter')
+        .eq('subject', subject);
+      
+      const accessedChapterNames = new Set(
+        accessedChapters?.map(a => a.content_identifier) || []
+      );
+
       
       const chapterStats = await Promise.all(
-        uniqueChapters.map(async (chapter, index) => {  // index is NOW properly defined here
+        uniqueChapters.map(async (chapter, index) => {
           const chapterQuestions = data.filter(q => q.chapter === chapter);
           const totalQuestions = chapterQuestions.length;
           
@@ -198,8 +234,19 @@ const StudyNowPage = () => {
           const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
           const progress = attempted > 0 ? Math.min(100, Math.round((attempted / totalQuestions) * 100)) : 0;
   
-          // Check if locked - first 2 chapters are free (index 0 and 1)
-          const isLocked = !profile?.is_premium && index >= 2;
+         // Determine if chapter is locked
+          // Premium users: nothing locked
+          // Free users: 5 chapters total across ALL subjects (tracked in accessed chapters)
+          const isAlreadyAccessed = accessedChapterNames.has(chapter);
+          const totalAccessedCount = await supabase
+            .from('user_content_access')
+            .select('content_identifier, subject', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('content_type', 'chapter');
+          
+          const totalChaptersAccessed = totalAccessedCount.count || 0;
+          const isLocked = !isPremium && !isAlreadyAccessed && totalChaptersAccessed >= 5;
+  
   
           return {
             name: chapter,
@@ -209,7 +256,7 @@ const StudyNowPage = () => {
             attempted,
             accuracy,
             progress,
-            isLocked  // This will now work correctly
+            isLocked
           };
         })
       );

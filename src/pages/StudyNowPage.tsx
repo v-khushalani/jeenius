@@ -35,6 +35,9 @@ const StudyNowPage = () => {
   const [showAIModal, setShowAIModal] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallType, setPaywallType] = useState<'chapter' | 'test' | 'ai'>('chapter');
+  const [paywallMessage, setPaywallMessage] = useState('');
+  
   
   // Fetch subjects with stats and profile
     useEffect(() => {
@@ -616,6 +619,14 @@ const StudyNowPage = () => {
           </div>
           <FloatingAIButton />
         </div>
+        {showPaywall && (
+          <SubscriptionPaywall
+            contentType={paywallType}
+            onClose={() => setShowPaywall(false)}
+            onUpgrade={() => navigate('/subscription-plans')}
+            message={paywallMessage}
+          />
+        )}
       </div>
     );
   }
@@ -662,7 +673,9 @@ const StudyNowPage = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate('/subscription-plans');
+                              setPaywallType('chapter');
+                              setPaywallMessage(`Unlock ${chapter.name} and all premium chapters!`);
+                              setShowPaywall(true);
                             }}
                             className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:shadow-lg transition-shadow"
                           >
@@ -754,6 +767,14 @@ const StudyNowPage = () => {
           </div>
           <FloatingAIButton />
         </div>
+        {showPaywall && (
+          <SubscriptionPaywall
+            contentType={paywallType}
+            onClose={() => setShowPaywall(false)}
+            onUpgrade={() => navigate('/subscription-plans')}
+            message={paywallMessage}
+          />
+        )}
       </div>
     );
   }
@@ -837,6 +858,14 @@ const StudyNowPage = () => {
           </div>
           <FloatingAIButton />
         </div>
+        {showPaywall && (
+          <SubscriptionPaywall
+            contentType={paywallType}
+            onClose={() => setShowPaywall(false)}
+            onUpgrade={() => navigate('/subscription-plans')}
+            message={paywallMessage}
+          />
+        )}
       </div>
     );
   }

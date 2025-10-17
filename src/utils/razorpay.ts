@@ -106,6 +106,31 @@ const verifyPayment = async (
       throw new Error('Payment verification failed');
     }
 
+    // Create subscription in Supabase
+    const plan = SUBSCRIPTION_PLANS[planId];
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + plan.duration);
+
+    const { error: supabaseError } = await supabase
+      .from('subscriptions')
+      .insert({
+        user_id: userId,
+        plan_id: planId,
+        status: 'active',
+        amount: plan.price,
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        razorpay_order_id: paymentResponse.razorpay_order_id,
+        razorpay_payment_id: paymentResponse.razorpay_payment_id,
+        razorpay_signature: paymentResponse.razorpay_signature
+      });
+
+    if (supabaseError) {
+      console.error('Supabase subscription error:', supabaseError);
+      // Don't fail the whole flow, MongoDB backup exists
+    }
+
     // Success!
     alert('🎉 Payment successful! Your subscription is now active.');
     window.location.href = '/dashboard';

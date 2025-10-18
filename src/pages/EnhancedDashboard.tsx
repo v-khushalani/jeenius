@@ -22,7 +22,8 @@ import {
   X,
   Sparkles,
   Lightbulb,
-  Star, 
+  Star,
+  Crown,
   Lock
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";

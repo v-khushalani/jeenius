@@ -1,9 +1,20 @@
+// src/utils/razorpay.ts
 import { supabase } from '@/integrations/supabase/client';
-import { SUBSCRIPTION_PLANS } from '@/config/subscriptionPlans';
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 // Load Razorpay script
 export const loadRazorpayScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.onload = () => resolve(true);
@@ -12,117 +23,114 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-// Initialize Razorpay Payment
+// Create order in backend
+export const createOrder = async (planId: string, userId: string) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+      body: { planId, userId }
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Order creation error:', error);
+    throw error;
+  }
+};
+
+// Verify payment after success
+export const verifyPayment = async (
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  userId: string,
+  planId: string
+) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('verify-razorpay-payment', {
+      body: {
+        orderId,
+        paymentId,
+        signature,
+        userId,
+        planId
+      }
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    throw error;
+  }
+};
+
+// Initialize payment flow
 export const initializePayment = async (
   planId: string,
   userId: string,
-  userEmail: string,
-  userName: string
+  email: string,
+  name: string
 ) => {
   try {
-    // 1. Load Razorpay script
-    const scriptLoaded = await loadRazorpayScript();
-    if (!scriptLoaded) {
+    // Load Razorpay script
+    const isLoaded = await loadRazorpayScript();
+    if (!isLoaded) {
       throw new Error('Failed to load Razorpay SDK');
     }
 
-    // 2. Get plan details
-    const plan = SUBSCRIPTION_PLANS[planId];
-    if (!plan) {
-      throw new Error('Invalid plan selected');
-    }
+    // Create order
+    const orderData = await createOrder(planId, userId);
 
-    // 3. Create order on backend (Supabase Edge Function)
-    const { data: orderData, error: orderError } = await supabase.functions.invoke(
-      'create-razorpay-order',
-      {
-        body: {
-          amount: plan.price,
-          plan_id: planId,
-          user_id: userId
-        }
-      }
-    );
-
-    if (orderError || !orderData) {
-      throw new Error('Failed to create order');
-    }
-
-    // 4. Configure Razorpay options
+    // Razorpay options
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Your Razorpay Key ID
-      amount: plan.price * 100, // Convert to paise
+      amount: orderData.amount,
       currency: 'INR',
-      name: 'JEEnius',
-      description: `${plan.name} Subscription`,
-      image: '/logo.png', // Your logo
+      name: 'PrepGenius',
+      description: `${orderData.planName} Subscription`,
       order_id: orderData.orderId,
-      handler: async function (response: any) {
-        // 5. Payment successful - verify on backend
-        await verifyPayment(response, userId, planId);
-      },
       prefill: {
-        name: userName,
-        email: userEmail,
-        contact: '' // Optional: add phone number if available
-      },
-      notes: {
-        plan_id: planId,
-        user_id: userId
+        name,
+        email,
       },
       theme: {
-        color: '#10b981' // Your primary color
+        color: '#3B82F6'
+      },
+      handler: async function (response: any) {
+        try {
+          // Verify payment
+          await verifyPayment(
+            response.razorpay_order_id,
+            response.razorpay_payment_id,
+            response.razorpay_signature,
+            userId,
+            planId
+          );
+
+          // Show success message
+          alert('🎉 Payment Successful! Welcome to Premium!');
+          
+          // Redirect to dashboard
+          window.location.href = '/dashboard';
+        } catch (error) {
+          console.error('Payment verification failed:', error);
+          alert('Payment verification failed. Please contact support.');
+        }
       },
       modal: {
-        ondismiss: function () {
+        ondismiss: function() {
           console.log('Payment cancelled by user');
         }
       }
     };
 
-    // 6. Open Razorpay checkout
-    const razorpay = new (window as any).Razorpay(options);
+    // Open Razorpay checkout
+    const razorpay = new window.Razorpay(options);
     razorpay.open();
-
-    razorpay.on('payment.failed', function (response: any) {
-      console.error('Payment failed:', response.error);
-      alert(`Payment failed: ${response.error.description}`);
-    });
 
   } catch (error) {
     console.error('Payment initialization error:', error);
     throw error;
-  }
-};
-
-// Verify payment and create subscription
-const verifyPayment = async (
-  paymentResponse: any,
-  userId: string,
-  planId: string
-) => {
-  try {
-    // Call backend to verify payment signature
-    const { data, error } = await supabase.functions.invoke('verify-razorpay-payment', {
-      body: {
-        razorpay_order_id: paymentResponse.razorpay_order_id,
-        razorpay_payment_id: paymentResponse.razorpay_payment_id,
-        razorpay_signature: paymentResponse.razorpay_signature,
-        user_id: userId,
-        plan_id: planId
-      }
-    });
-
-    if (error || !data.verified) {
-      throw new Error('Payment verification failed');
-    }
-
-    // Success!
-    alert('🎉 Payment successful! Your subscription is now active.');
-    window.location.href = '/dashboard';
-
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    alert('Payment verification failed. Please contact support.');
   }
 };

@@ -194,12 +194,6 @@ const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 bg-white border border-gray-200 shadow-lg">
-                  <DropdownMenuItem onClick={() => handleNavigation('/subscription-plans')}>
-                    <div className=\"flex items-center space-x-2 w-full text-green-600 font-semibold\">
-                      <Award className=\"w-4 h-4\" />
-                      <span>Upgrade to Premium</span>
-                    </div>
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleNavigation('/profile')}>
                     <div className="flex items-center space-x-2 w-full">
                       <div className="w-4 h-4 rounded-full bg-primary"></div>

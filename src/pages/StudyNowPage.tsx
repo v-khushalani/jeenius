@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Header from '@/components/Header';
-import { canAccessChapter, canAttemptQuestion, trackQuestionAttempt } from '@/utils/contentAccess';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import {
   Flame, ArrowLeft, Lightbulb, XCircle, CheckCircle2, Trophy, Target,
@@ -36,40 +35,22 @@ const StudyNowPage = () => {
   const [showAIModal, setShowAIModal] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [paywallType, setPaywallType] = useState<'chapter' | 'test' | 'ai'>('chapter');
-  const [paywallMessage, setPaywallMessage] = useState('');
-  
   
   // Fetch subjects with stats and profile
-    useEffect(() => {
+  useEffect(() => {
     fetchSubjects();
     loadProfile();
   }, []);
-  
-  // Make sure loadProfile is setting the profile state correctly
+
   const loadProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      // Track chapter access when user opens it
-      if (user?.id) {
-        await supabase.from('user_content_access').upsert({
-          user_id: user.id,
-          content_type: 'chapter',
-          content_identifier: chapter,
-          subject: selectedSubject,
-          accessed_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,content_type,content_identifier,subject',
-          ignoreDuplicates: false
-        });
-      }
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', user?.id)
         .single();
       
-      console.log('Loaded profile:', profileData); // DEBUG
       setProfile(profileData);
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -163,14 +144,10 @@ const StudyNowPage = () => {
       setLoading(false);
     }
   };
-  
+
   const loadChapters = async (subject) => {
     setLoading(true);
     setSelectedSubject(subject);
-    
-     // Add this inside your loadChapters function, right after setSelectedSubject
-    console.log('Profile data:', profile);
-    console.log('Is Premium?', profile?.is_premium);
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -181,7 +158,7 @@ const StudyNowPage = () => {
         .eq('subject', subject);
       
       if (error) throw error;
-  
+
       const uniqueChapters = [...new Set(data.map(q => q.chapter))];
       
       const { data: userAttempts } = await supabase
@@ -189,30 +166,6 @@ const StudyNowPage = () => {
         .select('*, questions!inner(subject, chapter)')
         .eq('user_id', user?.id)
         .eq('questions.subject', subject);
-
-      // Check if user has premium subscription
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('status', 'active')
-        .gte('end_date', new Date().toISOString())
-        .single();
-      
-      const isPremium = !!subscription;
-      
-      // Get user's accessed chapters
-      const { data: accessedChapters } = await supabase
-        .from('user_content_access')
-        .select('content_identifier, subject')
-        .eq('user_id', user?.id)
-        .eq('content_type', 'chapter')
-        .eq('subject', subject);
-      
-      const accessedChapterNames = new Set(
-        accessedChapters?.map(a => a.content_identifier) || []
-      );
-
       
       const chapterStats = await Promise.all(
         uniqueChapters.map(async (chapter, index) => {
@@ -224,7 +177,7 @@ const StudyNowPage = () => {
             medium: chapterQuestions.filter(q => q.difficulty === 'Medium').length,
             hard: chapterQuestions.filter(q => q.difficulty === 'Hard').length
           };
-  
+
           const chapterAttempts = userAttempts?.filter(
             a => a.questions?.chapter === chapter
           ) || [];
@@ -233,21 +186,10 @@ const StudyNowPage = () => {
           const correct = chapterAttempts.filter(a => a.is_correct).length;
           const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
           const progress = attempted > 0 ? Math.min(100, Math.round((attempted / totalQuestions) * 100)) : 0;
-  
-         // Determine if chapter is locked
-          // Premium users: nothing locked
-          // Free users: 5 chapters total across ALL subjects (tracked in accessed chapters)
-          const isAlreadyAccessed = accessedChapterNames.has(chapter);
-          const totalAccessedCount = await supabase
-            .from('user_content_access')
-            .select('content_identifier, subject', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('content_type', 'chapter');
-          
-          const totalChaptersAccessed = totalAccessedCount.count || 0;
-          const isLocked = !isPremium && !isAlreadyAccessed && totalChaptersAccessed >= 5;
-  
-  
+
+          // Check if locked - first 2 chapters are free
+          const isLocked = !profile?.is_premium && index >= 2;
+
           return {
             name: chapter,
             sequence: index + 1,
@@ -260,7 +202,7 @@ const StudyNowPage = () => {
           };
         })
       );
-  
+
       setChapters(chapterStats);
       setView('chapters');
       
@@ -271,7 +213,7 @@ const StudyNowPage = () => {
       setLoading(false);
     }
   };
-    
+
   const loadTopics = async (chapter) => {
     setLoading(true);
     setSelectedChapter(chapter);
@@ -666,14 +608,6 @@ const StudyNowPage = () => {
           </div>
           <FloatingAIButton />
         </div>
-        {showPaywall && (
-          <SubscriptionPaywall
-            contentType={paywallType}
-            onClose={() => setShowPaywall(false)}
-            onUpgrade={() => navigate('/subscription-plans')}
-            message={paywallMessage}
-          />
-        )}
       </div>
     );
   }
@@ -720,9 +654,7 @@ const StudyNowPage = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPaywallType('chapter');
-                              setPaywallMessage(`Unlock ${chapter.name} and all premium chapters!`);
-                              setShowPaywall(true);
+                              navigate('/subscription-plans');
                             }}
                             className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:shadow-lg transition-shadow"
                           >
@@ -814,14 +746,6 @@ const StudyNowPage = () => {
           </div>
           <FloatingAIButton />
         </div>
-        {showPaywall && (
-          <SubscriptionPaywall
-            contentType={paywallType}
-            onClose={() => setShowPaywall(false)}
-            onUpgrade={() => navigate('/subscription-plans')}
-            message={paywallMessage}
-          />
-        )}
       </div>
     );
   }
@@ -905,14 +829,6 @@ const StudyNowPage = () => {
           </div>
           <FloatingAIButton />
         </div>
-        {showPaywall && (
-          <SubscriptionPaywall
-            contentType={paywallType}
-            onClose={() => setShowPaywall(false)}
-            onUpgrade={() => navigate('/subscription-plans')}
-            message={paywallMessage}
-          />
-        )}
       </div>
     );
   }

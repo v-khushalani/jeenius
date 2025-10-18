@@ -156,7 +156,7 @@ export const canAttemptQuestion = async (userId: string): Promise<AccessResult> 
       .single();
 
     const questionsAttempted = todayAttempts?.length || 0;
-    const dailyLimit = limit?.limit_value || 25;
+    const dailyLimit = limit?.limit_value || 50;
 
     if (questionsAttempted < dailyLimit) {
       return {
@@ -236,7 +236,7 @@ export const canUseAI = async (userId: string): Promise<AccessResult> => {
       .single();
 
     const queriesUsed = todayQueries?.length || 0;
-    const dailyLimit = limit?.limit_value || 0;
+    const dailyLimit = limit?.limit_value || 20;
 
     if (queriesUsed < dailyLimit) {
       return {
@@ -356,9 +356,9 @@ export const getUserUsageStats = async (userId: string): Promise<UsageStats> => 
       chaptersAccessed: uniqueChapters.size,
       chaptersLimit: limitsMap.chapters || 5,
       questionsToday: questionsToday?.length || 0,
-      questionsDailyLimit: limitsMap.questions_per_day || 25,
+      questionsDailyLimit: limitsMap.questions_per_day || 50,
       aiQueriesToday: aiQueriesToday?.length || 0,
-      aiDailyLimit: limitsMap.ai_queries_per_day || 0
+      aiDailyLimit: limitsMap.ai_queries_per_day || 20
     };
 
   } catch (error) {

@@ -2,31 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Bot, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import AIDoubtSolver from './AIDoubtSolver';
-import { canUseAI } from '@/utils/contentAccess';
-
 
 const FloatingAIButton = () => {
   const [showAI, setShowAI] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null = loading
-  const [canAccessAI, setCanAccessAI] = useState(false);
 
   // ✅ Improved Authentication Logic
   useEffect(() => {
     let mounted = true;
   
-    const updateAuthState = async (session: any) => {
+    const updateAuthState = (session: any) => {
       if (!mounted) return;
       const isLoggedIn = !!(session && session.user);
       setIsAuthenticated(isLoggedIn);
-      if (!isLoggedIn) {
-              setShowAI(false);
-              setCanAccessAI(false);
-            } else {
-              // Check if user can use AI
-              const aiAccess = await canUseAI(session.user.id);
-              setCanAccessAI(aiAccess.allowed);
-            }
+      if (!isLoggedIn) setShowAI(false);
       console.log('🔐 Auth state updated:', isLoggedIn ? '✅ LOGGED IN' : '❌ LOGGED OUT');
     };
   
@@ -68,13 +58,13 @@ const FloatingAIButton = () => {
     return null;
   }
 
-  if (isAuthenticated === false || !canAccessAI) {
-    console.log('🚫 Not authenticated or no AI access - hiding button');
+  if (isAuthenticated === false) {
+    console.log('🚫 Not authenticated - hiding button');
     return null;
   }
 
-  console.log('✅ Authenticated with AI access - showing button');
-  
+  console.log('✅ Authenticated - showing button');
+
   return (
     <>
       {/* Floating Button */}

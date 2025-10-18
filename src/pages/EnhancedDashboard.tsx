@@ -1,3 +1,4 @@
+import { usePremium } from '@/hooks/usePremium';
 import { UsageLimitBanner } from '@/components/paywall/UsageLimitBanner';
 import { FreemiumBadge } from '@/components/paywall/FreemiumBadge';
 import Leaderboard from '../components/Leaderboard';
@@ -40,6 +41,8 @@ const EnhancedDashboard = () => {
   const [showBanner, setShowBanner] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
   const [currentTime] = useState(new Date().getHours());
+  const { isPremium, daysRemaining, limits, checkDailyQuestionLimit } = usePremium();
+
 
   useEffect(() => {
     if (user) {
@@ -432,40 +435,67 @@ const EnhancedDashboard = () => {
           </div>
         )}
         {/* Usage Stats for Free Users */}
-        <div className="mb-6">
-          <Card className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold">Your Plan</h3>
-                <FreemiumBadge isPremium={false} />
+        <div className="mb-4">
+        {profile?.is_premium ? (
+          <Card className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-400">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-gradient-to-br from-yellow-500 to-amber-600 p-2 rounded-xl">
+                    <Crown className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-amber-900">Premium Active</span>
+                      <Badge className="bg-yellow-500 text-white text-xs">
+                        {Math.ceil((new Date(profile.premium_until).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days left
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-amber-700">✨ Unlimited access to all features</p>
+                  </div>
+                </div>
+                <Sparkles className="w-6 h-6 text-amber-600" />
               </div>
-              
-              <div className="space-y-4">
-                <UsageLimitBanner
-                  type="chapters"
-                  used={3}
-                  limit={5}
-                  onUpgrade={() => navigate('/subscription-plans')}
-                />
-                
-                <UsageLimitBanner
-                  type="questions"
-                  used={stats?.questionsToday || 0}
-                  limit={50}
-                  onUpgrade={() => navigate('/subscription-plans')}
-                />
-              </div>
-              
-              <Button
-                onClick={() => navigate('/subscription-plans')}
-                className="w-full mt-4 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold"
-              >
-                <Star className="w-4 h-4 mr-2" />
-                Upgrade to Premium
-              </Button>
             </CardContent>
           </Card>
-        </div>
+        ) : (
+          <Card className="bg-white/90 border border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-slate-200 text-slate-700 text-xs">Free Plan</Badge>
+                    <span className="text-xs text-slate-500">Limited Access</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-3 h-3 text-slate-500" />
+                      <span className="text-slate-600">
+                        <span className="font-bold text-slate-800">{stats?.questionsToday || 0}/50</span> questions
+                      </span>
+                    </div>
+                    <div className="h-3 w-px bg-slate-300" />
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-3 h-3 text-slate-500" />
+                      <span className="text-slate-600">
+                        <span className="font-bold text-slate-800">3/5</span> chapters
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => navigate('/subscription-plans')}
+                  size="sm"
+                  className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold shrink-0"
+                >
+                  <Star className="w-3 h-3 mr-1" />
+                  Upgrade
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 mt-6">
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
             <CardContent className="p-3 sm:p-4">

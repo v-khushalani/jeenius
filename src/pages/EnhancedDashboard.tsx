@@ -437,7 +437,7 @@ const EnhancedDashboard = () => {
         )}
         {/* Usage Stats for Free Users */}
         <div className="mb-4">
-        {profile?.is_premium ? (
+        {profile?.is_premium && profile?.premium_until ? (
           <Card className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-400">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -449,7 +449,7 @@ const EnhancedDashboard = () => {
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-amber-900">Premium Active</span>
                       <Badge className="bg-yellow-500 text-white text-xs">
-                        {Math.ceil((new Date(profile.premium_until).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days left
+                        {Math.max(0, Math.ceil((new Date(profile.premium_until).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days left
                       </Badge>
                     </div>
                     <p className="text-xs text-amber-700">✨ Unlimited access to all features</p>
